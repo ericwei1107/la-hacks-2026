@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/config.schema.json",
+  "title": "Config",
+  "description": "GET/POST /config on the brain. Knobs override the preset when present.",
+  "type": "object",
+  "required": [
+    "difficulty",
+    "bot_character",
+    "player"
+  ],
+  "properties": {
+    "difficulty": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "knobs": {
+      "type": "object",
+      "properties": {
+        "reaction_delay_frames": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "frame_perfect_chance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "punish_accuracy": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "exploit_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "combo_set": {
+          "type": "string",
+          "enum": [
+            "short",
+            "short_plus_optimal",
+            "optimal"
+          ]
+        },
+        "movement_set": {
+          "type": "string",
+          "enum": [
+            "basic",
+            "sidestep",
+            "character",
+            "full"
+          ]
+        },
+        "mixup_temperature": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 5
+        },
+        "execution_error": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "bot_character": {
+      "type": "string",
+      "enum": [
+        "devil_jin",
+        "kazuya",
+        "king",
+        "shaheen",
+        "unknown"
+      ]
+    },
+    "player": {
+      "type": "string"
+    },
+    "demo_mode": {
+      "type": "boolean"
+    },
+    "voice": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/event.schema.json",
+  "title": "Event",
+  "type": "object",
+  "required": [
+    "t",
+    "session_id",
+    "frame",
+    "round",
+    "kind"
+  ],
+  "properties": {
+    "t": {
+      "const": "event"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "frame": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "round_start",
+        "round_end",
+        "hit",
+        "counter_hit",
+        "block",
+        "whiff",
+        "throw",
+        "throw_break",
+        "knockdown",
+        "wakeup",
+        "heat_activate",
+        "rage_art",
+        "side_switch",
+        "decision_point"
+      ]
+    },
+    "actor": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "target": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "move_id": {
+      "type": "integer"
+    },
+    "hit_level": {
+      "type": "string",
+      "enum": [
+        "none",
+        "high",
+        "mid",
+        "low",
+        "special_low",
+        "throw"
+      ]
+    },
+    "frame_advantage": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "damage": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "situation": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "detail": {
+      "type": "object"
+    }
+  }
+}

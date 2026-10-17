@@ -1,0 +1,15 @@
+{
+  "t": "event",
+  "session_id": "2026-10-17T13-05-00_sahil_djin_vs_kaz",
+  "frame": 812,
+  "round": 1,
+  "kind": "block",
+  "actor": 1,
+  "target": 0,
+  "move_id": 1702,
+  "hit_level": "mid",
+  "frame_advantage": -6,
+  "damage": 0,
+  "situation": "after_block:df1",
+  "detail": {}
+}

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/report.schema.json",
+  "title": "Report",
+  "description": "Post-set analysis produced by the replay service POST /analyze/{session}.",
+  "type": "object",
+  "required": [
+    "session_id",
+    "result",
+    "habits",
+    "decision_points",
+    "went_well",
+    "drills"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "result": {
+      "type": "string"
+    },
+    "habits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "situation",
+          "count",
+          "p",
+          "min_change"
+        ],
+        "properties": {
+          "situation": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "mastery": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "min_change": {
+            "type": "string"
+          },
+          "moments": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "decision_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "frame",
+          "round",
+          "situation",
+          "actual",
+          "best",
+          "options"
+        ],
+        "properties": {
+          "frame": {
+            "type": "integer"
+          },
+          "round": {
+            "type": "integer"
+          },
+          "situation": {
+            "type": "string"
+          },
+          "actual": {
+            "type": "string"
+          },
+          "best": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "p"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "p": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          },
+          "why": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "integer"
+          },
+          "good": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "went_well": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "drills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

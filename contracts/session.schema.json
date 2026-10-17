@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/session.schema.json",
+  "title": "SessionMeta",
+  "description": "data/sessions/<session_id>.json, written at session start and updated at each round end.",
+  "type": "object",
+  "required": [
+    "session_id",
+    "started_at",
+    "player",
+    "human_slot",
+    "human_character",
+    "bot_character",
+    "difficulty",
+    "rounds"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "game_version": {
+      "const": "3.02.02"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "practice",
+        "versus",
+        "synthetic"
+      ]
+    },
+    "stage": {
+      "type": "string"
+    },
+    "player": {
+      "type": "string"
+    },
+    "human_slot": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "human_character": {
+      "type": "string",
+      "enum": [
+        "devil_jin",
+        "kazuya",
+        "king",
+        "shaheen",
+        "unknown"
+      ]
+    },
+    "bot_character": {
+      "type": "string",
+      "enum": [
+        "devil_jin",
+        "kazuya",
+        "king",
+        "shaheen",
+        "unknown"
+      ]
+    },
+    "difficulty": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "rounds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "round",
+          "winner"
+        ],
+        "properties": {
+          "round": {
+            "type": "integer"
+          },
+          "winner": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "start_frame": {
+            "type": "integer"
+          },
+          "end_frame": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "result": {
+      "type": "string"
+    },
+    "recording": {
+      "type": "string"
+    }
+  }
+}

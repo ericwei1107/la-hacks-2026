@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/profile.schema.json",
+  "title": "Profile",
+  "description": "data/profiles/<player>_<character>.json. Beta counts are [successes, prior]; bandit arms are [successes, failures]; decay and discount are applied at read time.",
+  "type": "object",
+  "required": [
+    "player",
+    "character",
+    "sessions",
+    "habits",
+    "mastery",
+    "bandits"
+  ],
+  "properties": {
+    "player": {
+      "type": "string"
+    },
+    "character": {
+      "type": "string",
+      "enum": [
+        "devil_jin",
+        "kazuya",
+        "king",
+        "shaheen",
+        "unknown"
+      ]
+    },
+    "sessions": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "habits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "mastery": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "p_learned",
+          "observations",
+          "fixed"
+        ],
+        "properties": {
+          "p_learned": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "observations": {
+            "type": "integer"
+          },
+          "fixed": {
+            "type": "boolean"
+          },
+          "last_retest": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "bandits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "predictor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "history": {
+      "type": "array"
+    }
+  }
+}

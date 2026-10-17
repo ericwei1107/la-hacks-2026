@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/metrics.schema.json",
+  "title": "LearningMetrics",
+  "description": "Served by the analytics service GET /learning/{session}; built from data/learning/<session_id>.jsonl.",
+  "type": "object",
+  "required": [
+    "session_id",
+    "rounds"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "rounds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/round"
+      }
+    },
+    "time_to_detect": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "time_to_mastery": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "finetune": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "after": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "round": {
+      "type": "object",
+      "required": [
+        "round",
+        "prediction_accuracy",
+        "habits"
+      ],
+      "properties": {
+        "t": {
+          "const": "learning_round"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "prediction_accuracy": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "habits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "p",
+              "n"
+            ],
+            "properties": {
+              "p": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "n": {
+                "type": "integer"
+              },
+              "mastery": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "fixed": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "bandit": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "player_changed": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

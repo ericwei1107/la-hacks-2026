@@ -1,0 +1,34 @@
+{
+  "session_id": "2026-10-17T13-05-00_sahil_djin_vs_kaz",
+  "rounds": [
+    {
+      "t": "learning_round",
+      "session_id": "2026-10-17T13-05-00_sahil_djin_vs_kaz",
+      "round": 1,
+      "prediction_accuracy": 0.41,
+      "habits": {
+        "low_defense": {
+          "p": 0.6,
+          "n": 5,
+          "mastery": 0.2,
+          "fixed": false
+        }
+      },
+      "bandit": {
+        "after_block:df1|duck": {
+          "mid_launcher": 0.7,
+          "throw": 0.3
+        }
+      },
+      "player_changed": false
+    }
+  ],
+  "time_to_detect": {
+    "low_defense": 2
+  },
+  "time_to_mastery": {},
+  "finetune": {
+    "before": null,
+    "after": null
+  }
+}

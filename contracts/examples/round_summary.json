@@ -1,0 +1,37 @@
+{
+  "t": "round_summary",
+  "session_id": "2026-10-17T13-05-00_sahil_djin_vs_kaz",
+  "round": 1,
+  "frame": 3480,
+  "winner": 1,
+  "human_slot": 0,
+  "human_character": "devil_jin",
+  "bot_character": "kazuya",
+  "difficulty": 3,
+  "human_damage_taken": 190,
+  "bot_damage_taken": 96,
+  "top_habits": [
+    {
+      "situation": "low_defense",
+      "action": "hit",
+      "p": 0.71,
+      "n": 7,
+      "mastery": 0.22,
+      "fixed": false
+    }
+  ],
+  "biggest_moments": [
+    {
+      "frame": 1490,
+      "kind": "hit",
+      "move_id": 1736,
+      "damage": 24,
+      "situation": "low_defense"
+    }
+  ],
+  "exploited": [
+    "low_defense"
+  ],
+  "newly_fixed": [],
+  "regressed": []
+}

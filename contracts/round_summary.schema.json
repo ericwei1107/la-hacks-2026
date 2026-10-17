@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/round_summary.schema.json",
+  "title": "RoundSummary",
+  "description": "Written at round end by the brain, appended to the recording, and POSTed to the replay service /coach/round.",
+  "type": "object",
+  "required": [
+    "t",
+    "session_id",
+    "round",
+    "winner",
+    "human_slot",
+    "human_damage_taken",
+    "bot_damage_taken",
+    "top_habits",
+    "biggest_moments"
+  ],
+  "properties": {
+    "t": {
+      "const": "round_summary"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "frame": {
+      "type": "integer"
+    },
+    "winner": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        0,
+        1,
+        null
+      ]
+    },
+    "human_slot": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "human_character": {
+      "type": "string",
+      "enum": [
+        "devil_jin",
+        "kazuya",
+        "king",
+        "shaheen",
+        "unknown"
+      ]
+    },
+    "bot_character": {
+      "type": "string",
+      "enum": [
+        "devil_jin",
+        "kazuya",
+        "king",
+        "shaheen",
+        "unknown"
+      ]
+    },
+    "difficulty": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "human_damage_taken": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bot_damage_taken": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "top_habits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "situation",
+          "action",
+          "p",
+          "n"
+        ],
+        "properties": {
+          "situation": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mastery": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "fixed": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "biggest_moments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "frame",
+          "kind"
+        ],
+        "properties": {
+          "frame": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "round_start",
+              "round_end",
+              "hit",
+              "counter_hit",
+              "block",
+              "whiff",
+              "throw",
+              "throw_break",
+              "knockdown",
+              "wakeup",
+              "heat_activate",
+              "rage_art",
+              "side_switch",
+              "decision_point"
+            ]
+          },
+          "move_id": {
+            "type": "integer"
+          },
+          "damage": {
+            "type": "integer"
+          },
+          "situation": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "exploited": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "newly_fixed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "regressed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

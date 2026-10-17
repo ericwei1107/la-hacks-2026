@@ -1,0 +1,22 @@
+{
+  "aggression": 0.5,
+  "risk_tolerance": 0.3,
+  "target_habits": [
+    {
+      "situation": "low_defense",
+      "action": "hit",
+      "weight": 0.7
+    }
+  ],
+  "option_weights": {
+    "mid": 1.0,
+    "low": 1.4,
+    "throw": 0.8,
+    "launcher": 0.6,
+    "backdash": 0.9,
+    "sidestep": 0.9,
+    "wait": 0.7
+  },
+  "wall_strategy": "none",
+  "note": "Going low while you stand-block after df+1"
+}

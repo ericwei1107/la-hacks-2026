@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/gameplan.schema.json",
+  "title": "GamePlan",
+  "description": "Produced by the plan thread; read by the tactical layer. Never names a single move.",
+  "type": "object",
+  "required": [
+    "aggression",
+    "risk_tolerance",
+    "target_habits",
+    "option_weights",
+    "note"
+  ],
+  "properties": {
+    "aggression": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "risk_tolerance": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "target_habits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "situation",
+          "action",
+          "weight"
+        ],
+        "properties": {
+          "situation": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "option_weights": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "enum": [
+          "mid",
+          "low",
+          "throw",
+          "launcher",
+          "backdash",
+          "sidestep",
+          "approach",
+          "wait"
+        ]
+      },
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 3
+      }
+    },
+    "wall_strategy": {
+      "type": "string",
+      "enum": [
+        "none",
+        "carry",
+        "avoid"
+      ]
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 80
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "session_id": "2026-10-17T13-05-00_sahil_djin_vs_kaz",
+  "generated_at": "2026-10-17T13:20:00Z",
+  "result": "loss 1-2",
+  "habits": [
+    {
+      "situation": "low_defense",
+      "action": "hit",
+      "count": 9,
+      "p": 0.67,
+      "mastery": 0.3,
+      "min_change": "Crouch-block after you block df+1",
+      "moments": [
+        812,
+        1490
+      ]
+    }
+  ],
+  "decision_points": [
+    {
+      "frame": 812,
+      "round": 1,
+      "situation": "after blocking df+1 at close range",
+      "actual": "press",
+      "best": "block_low",
+      "options": [
+        {
+          "name": "block_low",
+          "command": "d/b",
+          "p": 0.62
+        },
+        {
+          "name": "press",
+          "command": "1",
+          "p": 0.18
+        },
+        {
+          "name": "sidestep",
+          "command": "u",
+          "p": 0.2
+        }
+      ],
+      "why": "Kazuya's hellsweep follows df+1 here; crouch-blocking it gives a launch punish.",
+      "cost": 24,
+      "good": false
+    }
+  ],
+  "went_well": [
+    "Broke 4 of 5 throws"
+  ],
+  "drills": [
+    "Practice: record dummy doing df+1 then hellsweep or mid, block on reaction"
+  ]
+}

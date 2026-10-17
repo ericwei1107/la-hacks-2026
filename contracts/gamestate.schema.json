@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kumite.local/contracts/gamestate.schema.json",
+  "title": "GameState",
+  "description": "One record per game frame. Units: positions in mm (1 raw unit = 1 mm), frames at 60 per second counted by the round frame counter.",
+  "type": "object",
+  "required": [
+    "t",
+    "session_id",
+    "frame",
+    "round",
+    "human_slot",
+    "players",
+    "derived"
+  ],
+  "properties": {
+    "t": {
+      "const": "state"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "frame": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "human_slot": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "players": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/player"
+      }
+    },
+    "derived": {
+      "type": "object",
+      "required": [
+        "distance_mm",
+        "distance_bucket",
+        "situation"
+      ],
+      "properties": {
+        "distance_mm": {
+          "type": "number"
+        },
+        "distance_bucket": {
+          "type": "string",
+          "enum": [
+            "point_blank",
+            "close",
+            "mid",
+            "far",
+            "very_far"
+          ]
+        },
+        "frame_advantage": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "situation": {
+          "type": "string",
+          "enum": [
+            "neutral",
+            "pressure",
+            "defense",
+            "punish_window",
+            "combo",
+            "knockdown",
+            "wakeup",
+            "throw",
+            "round_over"
+          ]
+        },
+        "bearing_deg": {
+          "type": "number"
+        },
+        "timer_s": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "player": {
+      "type": "object",
+      "required": [
+        "slot",
+        "character_id",
+        "character",
+        "health",
+        "max_health",
+        "x",
+        "y",
+        "z",
+        "side",
+        "move_id",
+        "frame_in_move",
+        "move_total",
+        "free_movement",
+        "hit_level",
+        "hit_reaction",
+        "being_thrown"
+      ],
+      "properties": {
+        "slot": {
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "character_id": {
+          "type": "integer"
+        },
+        "character": {
+          "type": "string",
+          "enum": [
+            "devil_jin",
+            "kazuya",
+            "king",
+            "shaheen",
+            "unknown"
+          ]
+        },
+        "health": {
+          "type": "integer"
+        },
+        "recoverable_limit": {
+          "type": "integer"
+        },
+        "max_health": {
+          "type": "integer"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        },
+        "facing": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "side": {
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "move_id": {
+          "type": "integer"
+        },
+        "frame_in_move": {
+          "type": "integer"
+        },
+        "move_total": {
+          "type": "integer"
+        },
+        "free_movement": {
+          "type": "boolean"
+        },
+        "hit_level": {
+          "type": "string",
+          "enum": [
+            "none",
+            "high",
+            "mid",
+            "low",
+            "special_low",
+            "throw"
+          ]
+        },
+        "hit_reaction": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "integer"
+        },
+        "basic_state": {
+          "type": "integer"
+        },
+        "being_thrown": {
+          "type": "string",
+          "enum": [
+            "none",
+            "press_1",
+            "press_2",
+            "press_12"
+          ]
+        },
+        "throw_escaped": {
+          "type": "boolean"
+        },
+        "heat_gauge": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "heat_active": {
+          "type": "boolean"
+        },
+        "heat_used": {
+          "type": "boolean"
+        },
+        "rage_active": {
+          "type": "boolean"
+        },
+        "power_crush": {
+          "type": "boolean"
+        },
+        "first_active": {
+          "type": "integer"
+        },
+        "last_active": {
+          "type": "integer"
+        },
+        "first_airborne": {
+          "type": "integer"
+        },
+        "last_airborne": {
+          "type": "integer"
+        },
+        "dir_held": {
+          "type": "string",
+          "enum": [
+            "n",
+            "f",
+            "b",
+            "d",
+            "u",
+            "df",
+            "db",
+            "uf",
+            "ub"
+          ]
+        },
+        "buttons_held": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "heat",
+              "rage"
+            ]
+          }
+        },
+        "buttons_pressed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "heat",
+              "rage"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

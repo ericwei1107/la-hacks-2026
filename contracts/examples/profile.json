@@ -1,0 +1,43 @@
+{
+  "player": "sahil",
+  "character": "devil_jin",
+  "sessions": 1,
+  "habits": {
+    "low_defense": {
+      "blocked": [
+        1,
+        1
+      ],
+      "hit": [
+        4,
+        1
+      ],
+      "low_parry": [
+        0,
+        1
+      ]
+    }
+  },
+  "mastery": {
+    "low_defense": {
+      "p_learned": 0.31,
+      "observations": 9,
+      "fixed": false,
+      "last_retest": null
+    }
+  },
+  "bandits": {
+    "after_block:df1|duck": {
+      "mid_launcher": [
+        4,
+        2
+      ],
+      "throw": [
+        1,
+        3
+      ]
+    }
+  },
+  "predictor": null,
+  "history": []
+}

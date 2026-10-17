@@ -1,0 +1,10 @@
+{
+  "difficulty": 3,
+  "knobs": {
+    "reaction_delay_frames": 18
+  },
+  "bot_character": "kazuya",
+  "player": "sahil",
+  "demo_mode": false,
+  "voice": true
+}
