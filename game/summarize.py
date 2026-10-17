@@ -2,6 +2,7 @@ import argparse
 import copy
 import json
 import sys
+import zipfile
 from collections import Counter
 from pathlib import Path
 
@@ -18,9 +19,21 @@ OUTCOME_WINDOW = 60
 BREAK_WINDOW = 25
 
 
+def zip_members(path):
+    with zipfile.ZipFile(path) as z:
+        return {name: z.read(name).decode("utf-8") for name in z.namelist()}
+
+
+def recording_text(path):
+    if str(path).endswith(".zip"):
+        members = zip_members(path)
+        return next(text for name, text in members.items() if name.endswith(".jsonl"))
+    return Path(path).read_text(encoding="utf-8")
+
+
 def load_jsonl(path):
     records = []
-    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    lines = recording_text(path).splitlines()
     for i, line in enumerate(lines):
         if not line.strip():
             continue
@@ -34,27 +47,36 @@ def load_jsonl(path):
 
 def find_session(path, sid):
     path = Path(path)
+    if path.suffix == ".zip":
+        for name, text in zip_members(path).items():
+            if name.endswith(".session.json"):
+                return f"{path.as_posix()}:{name}", text
     for candidate in (path.with_name(f"{path.stem}.session.json"), data_dir() / "sessions" / f"{sid}.json"):
         if candidate.exists():
-            return candidate
+            return str(candidate), candidate.read_text(encoding="utf-8")
     return None
 
 
-def check_session(path):
+def check_session(text):
     schema = json.loads((CONTRACTS / "session.schema.json").read_text())
-    meta = json.loads(Path(path).read_text(encoding="utf-8"))
+    meta = json.loads(text)
     errors = list(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(meta))
     return meta, errors
 
 
 def event_key(ev):
-    return tuple(ev.get(k) for k in ("round", "frame", "kind", "actor", "target", "move_id", "hit_level", "frame_advantage", "damage"))
+    detail = ev.get("detail") or {}
+    keys = ("round", "frame", "kind", "actor", "target", "move_id", "hit_level", "frame_advantage", "damage")
+    return tuple(ev.get(k) for k in keys) + (detail.get("reason"), detail.get("winner"))
 
 
-def replay(states):
-    tracker = Tracker(states[0]["session_id"] if states else "")
+def replay(states, mode="practice", rounds_to_win=3):
+    versus = mode == "versus"
+    tracker = Tracker(states[0]["session_id"] if states else "", timeouts=versus, rounds_to_win=rounds_to_win if versus else None)
     events = []
     for s in states:
+        if tracker.match_over and tracker.prev is not None and s["frame"] < tracker.prev["frame"]:
+            break
         events.extend(tracker.step(copy.deepcopy(s)))
     events.extend(tracker.finish())
     return events
@@ -122,20 +144,21 @@ def main(argv=None):
     print(f"{args.recording}: {len(states)} states, {len(events)} events, rounds {sorted({r['round'] for r in records})}")
 
     failures = 0
-    session_path = find_session(args.recording, sid)
-    if session_path is None:
+    found = find_session(args.recording, sid)
+    if found is None:
         print("session: FAIL no session JSON found")
         failures += 1
         meta = {}
     else:
-        meta, errors = check_session(session_path)
+        session_path, session_text = found
+        meta, errors = check_session(session_text)
         for e in errors:
             print(f"session: FAIL {'/'.join(map(str, e.absolute_path)) or '(root)'}: {e.message}")
         failures += len(errors)
         if not errors:
             print(f"session: ok {session_path} human P{meta['human_slot'] + 1} {meta['human_character']} vs {meta['bot_character']}, rounds {meta['rounds']}")
 
-    replayed = replay(states)
+    replayed = replay(states, meta.get("mode", "practice"))
     recorded_keys = Counter(event_key(e) for e in events)
     replayed_keys = Counter(event_key(e) for e in replayed)
     if recorded_keys == replayed_keys:
