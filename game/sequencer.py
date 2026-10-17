@@ -14,12 +14,18 @@ class Move:
     frames: list
     prepress: bool = False
     earliest: int | None = None
+    force: bool = False
+    lead: int = 0
     tag: dict = field(default_factory=dict)
     error: str | None = None
     queued_frame: int | None = None
     start_frame: int | None = None
     done_frame: int | None = None
     cancelled: bool = False
+
+
+def first_press(frames):
+    return next((i for i, mask in enumerate(frames) if mask[1]), 0)
 
 
 def onsets(frames):
@@ -61,9 +67,9 @@ class Sequencer:
         self.finished = []
         self.last_frame = None
 
-    def submit(self, notation, prepress=False, earliest=None, frame=None, error=True, **tag):
-        frames = compile_notation(notation, self.timing)
-        move = Move(notation, frames, prepress, earliest, tag, queued_frame=frame)
+    def submit(self, notation, prepress=False, earliest=None, frame=None, error=True, force=False, timing=None, **tag):
+        frames = compile_notation(notation, timing or self.timing)
+        move = Move(notation, frames, prepress, earliest, force, first_press(frames), tag, queued_frame=frame)
         if error and self.difficulty is not None:
             move.frames, move.error = apply_execution_error(frames, self.difficulty.execution_error, self.rng)
         self.queue.append(move)
@@ -88,9 +94,9 @@ class Sequencer:
     def ready(self, move, frame, bot):
         if move.earliest is not None and frame < move.earliest:
             return False
-        if bot["free_movement"]:
+        if move.force or bot["free_movement"]:
             return True
-        return move.prepress and bot["frames_until_actionable"] <= self.latency
+        return move.prepress and bot["frames_until_actionable"] <= self.latency + move.lead
 
     def on_frame(self, frame, bot, live=True):
         if not live:

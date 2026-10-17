@@ -29,7 +29,8 @@ def fmt_record(rec):
     if rec.get("t") == "event":
         return fmt_event(rec)
     detail = rec.get("reflex") or {}
-    extra = " ".join(f"{k}={v}" for k, v in detail.items() if k != "kind" and v is not None)
+    extra = " ".join(f"{k}=0x{v:04X}" if k.endswith("move_id") and isinstance(v, int) else f"{k}={v}"
+                     for k, v in detail.items() if k != "kind" and v is not None)
     return f"r{rec['round']} f{rec['frame']:>6} {rec.get('source', rec['t']):<12} {detail.get('kind', '')} -> {rec.get('chosen')} {extra}"
 
 

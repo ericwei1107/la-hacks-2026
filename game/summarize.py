@@ -7,13 +7,15 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from game.hotloop import fmt_event
+from game.hotloop import fmt_event, fmt_record
 from game.recorder import data_dir
 from game.state import Tracker
 
 CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
 JABS = {"devil_jin": 0x643}
 CONNECT_KINDS = ("block", "hit", "counter_hit")
+OUTCOME_WINDOW = 60
+BREAK_WINDOW = 25
 
 
 def load_jsonl(path):
@@ -56,6 +58,50 @@ def replay(states):
         events.extend(tracker.step(copy.deepcopy(s)))
     events.extend(tracker.finish())
     return events
+
+
+def first_event(events, frame, rnd, window, test):
+    for ev in events:
+        if ev["round"] == rnd and frame <= ev["frame"] <= frame + window and test(ev):
+            return ev
+    return None
+
+
+def outcome(rec, events, bot):
+    kind = rec["reflex"]["kind"]
+    rnd = rec["round"]
+    if kind == "block":
+        ev = first_event(events, rec["frame_asked"], rnd, OUTCOME_WINDOW,
+                         lambda e: e.get("target") == bot and e["kind"] in CONNECT_KINDS + ("throw",))
+        return ev["kind"] if ev else "no contact"
+    if kind == "punish":
+        if rec["chosen"] == "none":
+            return "not attempted"
+        ev = first_event(events, rec["frame"], rnd, OUTCOME_WINDOW,
+                         lambda e: e.get("actor") == bot and e["kind"] in CONNECT_KINDS + ("whiff",))
+        return f"{ev['kind']} mv 0x{ev['move_id']:04X}" if ev else "no result"
+    if kind == "throw_break":
+        ev = first_event(events, rec["frame"], rnd, BREAK_WINDOW, lambda e: e["kind"] == "throw_break" and e.get("actor") == bot)
+        return "broke" if ev else "thrown"
+    return ""
+
+
+def reflex_section(records, events, human):
+    decisions = [r for r in records if r.get("t") == "tactical" and r.get("source") == "reflex"]
+    if not decisions:
+        print("reflex decisions: none")
+        return
+    bot = 1 - human
+    print("reflex decisions (=> what happened next):")
+    totals = {}
+    for rec in decisions:
+        result = outcome(rec, events, bot)
+        print(f"  {fmt_record(rec)}  => {result}")
+        kind = rec["reflex"]["kind"]
+        key = "rolled miss" if rec["reflex"].get("rolled_miss") else result.split(" ")[0]
+        totals.setdefault(kind, Counter())[key] += 1
+    for kind, counts in sorted(totals.items()):
+        print(f"  {kind}: {sum(counts.values())} decisions, " + ", ".join(f"{k} {n}" for k, n in counts.most_common()))
 
 
 def main(argv=None):
@@ -116,6 +162,7 @@ def main(argv=None):
             print(f"blocked jab 0x{jab:X}: {advs} (tekkendocs: +1)")
         else:
             print(f"blocked jab 0x{jab:X}: none found in this recording")
+    reflex_section(records, events, human)
     print("PASS" if failures == 0 else f"{failures} failure(s)")
     return 1 if failures else 0
 
