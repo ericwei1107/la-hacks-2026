@@ -86,11 +86,11 @@ def exchange(attacker=0, move=JAB, total=27, connect_at=10, level_code=HIGH, lev
         o = idle(d, f)
         if start <= f < att_end:
             a.update(move_id=move, frame_in_move=f - start + 1, move_total=total, free_movement=0,
-                     hit_level=level_code, hit_level_name=level, hit_reaction=reaction if f >= c else 0)
+                     hit_level=level_code, hit_level_name=level)
         if f == c:
-            o.update(move_id=0x5C6, frame_in_move=1, move_total=def_total, free_movement=0)
+            o.update(move_id=0x5C6, frame_in_move=1, move_total=def_total, free_movement=0, hit_reaction=reaction)
         elif c < f < def_end:
-            o.update(move_id=def_move, frame_in_move=f - c, move_total=def_total, free_movement=0)
+            o.update(move_id=def_move, frame_in_move=f - c, move_total=def_total, free_movement=0, hit_reaction=reaction)
         if f >= c:
             o["health"] = 190 - damage
         pair = [None, None]

@@ -203,14 +203,15 @@ class Tracker:
         return out
 
     def _connections(self, state, prev, connected, struck, out):
-        for a in (0, 1):
-            d = 1 - a
+        for d in (0, 1):
+            a = 1 - d
             att = state["players"][a]
-            if att["hit_reaction"] and not prev["players"][a]["hit_reaction"]:
+            code = state["players"][d]["hit_reaction"]
+            if code and not prev["players"][d]["hit_reaction"]:
                 self.pending.append({
                     "attacker": a,
                     "frame": state["frame"],
-                    "code": att["hit_reaction"],
+                    "code": code,
                     "move_id": att["move_id"],
                     "hit_level": att["hit_level"],
                     "health_before": prev["players"][d]["health"],

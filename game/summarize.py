@@ -45,6 +45,10 @@ def check_session(path):
     return meta, errors
 
 
+def event_key(ev):
+    return tuple(ev.get(k) for k in ("round", "frame", "kind", "actor", "target", "move_id", "hit_level", "frame_advantage", "damage"))
+
+
 def replay(states):
     tracker = Tracker(states[0]["session_id"] if states else "")
     events = []
@@ -79,12 +83,17 @@ def main(argv=None):
         if not errors:
             print(f"session: ok {session_path} human P{meta['human_slot'] + 1} {meta['human_character']} vs {meta['bot_character']}, rounds {meta['rounds']}")
 
-    recorded = Counter(e["kind"] for e in events)
-    replayed = Counter(e["kind"] for e in replay(states))
-    if recorded == replayed:
-        print(f"replay: ok, re-running the tracker on the states reproduces {sum(replayed.values())} events")
+    replayed = replay(states)
+    recorded_keys = Counter(event_key(e) for e in events)
+    replayed_keys = Counter(event_key(e) for e in replayed)
+    if recorded_keys == replayed_keys:
+        print(f"replay: ok, re-running the tracker on the states reproduces all {len(replayed)} events")
     else:
-        print(f"replay: MISMATCH recorded {dict(recorded)} vs replayed {dict(replayed)}")
+        print("replay: MISMATCH between recorded events and the current tracker")
+        for key in sorted((recorded_keys - replayed_keys).elements(), key=str):
+            print(f"  only recorded: {key}")
+        for key in sorted((replayed_keys - recorded_keys).elements(), key=str):
+            print(f"  only replayed: {key}")
         failures += 1
 
     print("events:")
