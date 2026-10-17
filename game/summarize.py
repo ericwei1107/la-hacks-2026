@@ -7,7 +7,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from game.record import fmt_event
+from game.hotloop import fmt_event
 from game.recorder import data_dir
 from game.state import Tracker
 

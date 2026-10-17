@@ -1,0 +1,26 @@
+{
+  "buttons": {
+    "1": "X",
+    "2": "Y",
+    "3": "A",
+    "4": "B"
+  },
+  "directions": {
+    "u": "DPAD_UP",
+    "d": "DPAD_DOWN",
+    "left": "DPAD_LEFT",
+    "right": "DPAD_RIGHT"
+  },
+  "menu": {
+    "a": "A",
+    "b": "B",
+    "x": "X",
+    "y": "Y",
+    "start": "START",
+    "back": "BACK",
+    "lb": "LEFT_SHOULDER",
+    "rb": "RIGHT_SHOULDER"
+  },
+  "kill_key": "PAUSE",
+  "input_latency_frames": 2
+}
