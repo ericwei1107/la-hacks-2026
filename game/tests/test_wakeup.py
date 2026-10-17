@@ -136,6 +136,8 @@ class WakeupChoiceTest(unittest.TestCase):
         self.assertEqual(self.situation_of(2000, recovering), "recovering_mid")
         attacking = dict(recovering, frame_in_move=15)
         self.assertEqual(self.situation_of(1000, attacking), "pressure")
+        idle_restart = {"move_id": 0x8001, "frame_in_move": 1, "move_total": 100, "free_movement": 0}
+        self.assertEqual(self.situation_of(2000, idle_restart), "pressure")
 
     def test_favourite_per_situation_at_low_temperature(self):
         kinds = {o["notation"]: o["kind"] for o in WAKEUPS["face_up"]}

@@ -80,6 +80,12 @@ def outcome(rec, events, bot):
         ev = first_event(events, rec["frame"], rnd, OUTCOME_WINDOW,
                          lambda e: e.get("actor") == bot and e["kind"] in CONNECT_KINDS + ("whiff",))
         return f"{ev['kind']} mv 0x{ev['move_id']:04X}" if ev else "no result"
+    if kind == "wakeup":
+        ev = first_event(events, rec["frame"], rnd, OUTCOME_WINDOW,
+                         lambda e: e.get("target") == bot and e["kind"] in CONNECT_KINDS + ("throw",))
+        if ev is None:
+            return "clean getup"
+        return f"{ev['kind']} by mv 0x{ev['move_id']:04X} +{ev['frame'] - rec['frame']}"
     if kind == "throw_break":
         ev = first_event(events, rec["frame"], rnd, BREAK_WINDOW, lambda e: e["kind"] == "throw_break" and e.get("actor") == bot)
         return "broke" if ev else "thrown"

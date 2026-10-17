@@ -6,7 +6,7 @@ from pathlib import Path
 
 from game.notation import compile_notation
 from game.sequencer import first_press
-from game.state import DOWNED_BIT, JUGGLED_BIT, PUNISH_THRESHOLD, active, lying
+from game.state import DOWNED_BIT, GENERIC_BASE, GENERIC_MASK, JUGGLED_BIT, PUNISH_THRESHOLD, active, lying
 
 ROOT = Path(__file__).resolve().parent.parent
 FALLBACK_PATH = Path(__file__).resolve().parent / "punishers_fallback.json"
@@ -79,7 +79,8 @@ def load_wakeups(character, path=WAKEUP_PATH):
 
 def wakeup_situation(state, bot, opp):
     distance = state["derived"]["distance_mm"]
-    recovering = not opp["free_movement"] and opp["frames_until_actionable"] >= RECOVERING_FRAMES and not active(opp)
+    recovering = (not opp["free_movement"] and opp["frames_until_actionable"] >= RECOVERING_FRAMES and not active(opp)
+                  and opp["move_id"] & GENERIC_MASK != GENERIC_BASE)
     if recovering and distance < CLOSE_MM:
         return "recovering_close"
     if recovering and distance < MID_MM:
