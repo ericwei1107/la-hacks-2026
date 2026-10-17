@@ -299,6 +299,56 @@ class LyingTest(unittest.TestCase):
         self.assertFalse(lying(self.player(status=0x6084, move_id=0x0092, move_total=5)))
 
 
+def round_frames(frames, healths=(190, 190), start=0):
+    seq = []
+    for f in range(start, start + frames):
+        a, d = idle(0, f, health=healths[0]), idle(1, f, health=healths[1])
+        seq.append((f, [a, d]))
+    return seq
+
+
+def ko_frames(winner, start=0, frames=20):
+    seq = round_frames(frames, start=start)
+    loser = 1 - winner
+    for f, pair in seq[frames // 2:]:
+        pair[loser]["health"] = 0
+    return seq
+
+
+class TimeoutTest(Base):
+    def test_versus_counter_reset_without_ko_is_a_timeout(self):
+        tracker = Tracker(SID, timeouts=True, rounds_to_win=3)
+        _, _, events = self.run_frames(round_frames(30, (10, 106)) + round_frames(10), tracker=tracker)
+        end = self.only(events, "round_end")
+        self.assertEqual(end["detail"], {"reason": "time", "winner": 1})
+        self.assertEqual(end["frame"], 29)
+        self.assertEqual(tracker.rounds[0]["winner"], 1)
+        self.assertEqual(tracker.wins[1], 1)
+
+    def test_equal_health_timeout_is_a_draw(self):
+        tracker = Tracker(SID, timeouts=True)
+        _, _, events = self.run_frames(round_frames(30, (90, 90)) + round_frames(10), tracker=tracker)
+        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "time", "winner": None})
+
+    def test_practice_reset_is_not_a_timeout(self):
+        _, _, events = self.run_frames(round_frames(30, (10, 106)) + round_frames(10))
+        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "counter_reset", "winner": None})
+
+    def test_match_over_after_rounds_to_win(self):
+        tracker = Tracker(SID, timeouts=True, rounds_to_win=3)
+        seq = ko_frames(0) + ko_frames(0) + round_frames(30, (10, 106)) + ko_frames(0)
+        self.assertFalse(tracker.match_over)
+        _, _, events = self.run_frames(seq, tracker=tracker)
+        self.assertEqual([r["winner"] for r in tracker.rounds], [0, 0, 1, 0])
+        self.assertTrue(tracker.match_over)
+        self.assertEqual(dict(tracker.wins), {0: 3, 1: 1})
+
+    def test_practice_never_ends_the_match(self):
+        tracker = Tracker(SID)
+        self.run_frames(ko_frames(0) + ko_frames(0) + ko_frames(0) + ko_frames(0), tracker=tracker)
+        self.assertFalse(tracker.match_over)
+
+
 class StringTest(Base):
     def test_continued_string_has_no_advantage_and_second_block_counts(self):
         _, states, events = self.run_frames(string_frames())

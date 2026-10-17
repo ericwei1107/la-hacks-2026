@@ -13,6 +13,7 @@ def add_session_args(parser):
     parser.add_argument("--difficulty", type=int, default=1, choices=range(1, 6))
     parser.add_argument("--mode", default="practice", choices=("practice", "versus"))
     parser.add_argument("--stage")
+    parser.add_argument("--rounds-to-win", type=int, default=3, help="versus only: stop the session once a player has this many rounds")
     parser.add_argument("--offsets", default=str(DEFAULT_OFFSETS))
 
 

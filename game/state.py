@@ -153,8 +153,11 @@ def advantage(attacker, defender):
 
 
 class Tracker:
-    def __init__(self, session_id):
+    def __init__(self, session_id, timeouts=False, rounds_to_win=None):
         self.session_id = session_id
+        self.timeouts = timeouts
+        self.rounds_to_win = rounds_to_win
+        self.wins = Counter()
         self.round = 0
         self.prev = None
         self.rounds = []
@@ -176,7 +179,21 @@ class Tracker:
         ev.update({k: v for k, v in fields.items() if v is not None or k == "frame_advantage"})
         return ev
 
+    def _end_without_ko(self, prev, out):
+        healths = [p["health"] for p in prev["players"]]
+        if not self.timeouts or min(healths) <= 0:
+            self._end_round(prev["frame"], None, "counter_reset", out)
+            return
+        winner = None if healths[0] == healths[1] else healths.index(max(healths))
+        self._end_round(prev["frame"], winner, "time", out)
+
+    @property
+    def match_over(self):
+        return bool(self.rounds_to_win) and bool(self.wins) and max(self.wins.values()) >= self.rounds_to_win
+
     def _end_round(self, frame, winner, reason, out):
+        if winner is not None:
+            self.wins[winner] += 1
         self.rounds.append({"round": self.round, "winner": winner, "start_frame": self.round_start, "end_frame": frame})
         out.append(self.event("round_end", frame, detail={"reason": reason, "winner": winner}))
 
@@ -195,7 +212,7 @@ class Tracker:
             self._start_round(frame, "session_start", out)
         elif frame < prev["frame"]:
             if not self.ko:
-                self._end_round(prev["frame"], None, "counter_reset", out)
+                self._end_without_ko(prev, out)
             self._start_round(frame, "counter_reset", out)
             same = None
         state["round"] = self.round

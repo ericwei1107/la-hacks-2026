@@ -109,7 +109,8 @@ def run_session(reader, args, hooks=None):
     sid = st.session_id(started, args.player, human_char, bot_char)
     meta = session_meta(sid, started, args.player, human, human_char, bot_char, args.difficulty, args.mode, reader.game["version"], args.stage)
     recorder = Recorder(meta)
-    tracker = st.Tracker(sid)
+    versus = args.mode == "versus"
+    tracker = st.Tracker(sid, timeouts=versus, rounds_to_win=getattr(args, "rounds_to_win", None) if versus else None)
     hooks.start(snap, sid)
     print(f"recording {recorder.recording_path} (human P{human + 1} {human_char} vs {bot_char}); Ctrl+C to stop", flush=True)
 
@@ -128,6 +129,10 @@ def run_session(reader, args, hooks=None):
             if gs is None:
                 skipped_states += 1
                 continue
+            if tracker.match_over and tracker.prev is not None and gs["frame"] < tracker.prev["frame"]:
+                score = "-".join(str(tracker.wins[i]) for i in (human, 1 - human))
+                print(f"match over ({score} for the human): the counter reset into the post-match scene; stopping", flush=True)
+                break
             count += 1
             events = tracker.step(gs)
             extra = hooks.frame(gs, events)
