@@ -41,6 +41,12 @@ If the Sentry MCP tools are available (org `university-of-maryland-ma`, projects
 
 Never print DSNs or keys in the report.
 
+### Requests between teammates
+
+An entry with a `from` field is a request one teammate made of another. Its `doc` points to the instructions under `tools/status/requests/`. When the person running this skill is the recipient (match `git config user.name`/`user.email` against `aliases` in `milestones.json`), lead their block with these requests and offer to start on them. When they are the sender, report which of their requests are still open. `python3 tools/status/status.py --inbox` prints just the current person's view; a SessionStart hook in `.claude/settings.json` runs it at the start of every session.
+
+To make a request for someone, when asked: add an entry to that person's track in `checks.json` with `from`, `due`, `todo`, a `doc` file in `tools/status/requests/` holding the full instructions (no DSNs, keys or tokens, since the repo is public), and, when possible, a `grep` and `paths` that prove it's done so it closes itself. Then commit and push it (the `/handoff` skill does this). The tracker uses the most recently committed `checks.json` across all branches, so a request is visible to everyone as soon as it's pushed, even before it's merged to main.
+
 ## 4. Report
 
 Lead with what needs action. Keep it short enough to read aloud to the team.
