@@ -154,11 +154,11 @@ def main(argv=None):
         if ev["kind"] in CONNECT_KINDS:
             who = "human" if ev.get("actor") == human else "bot"
             tag = "  <- jab (1)" if jab is not None and ev.get("actor") == human and ev.get("move_id") == jab else ""
-            print(f"  r{ev['round']} f{ev['frame']} {who} {ev['kind']} mv 0x{ev['move_id']:04X} {ev.get('hit_level')} adv {ev['frame_advantage']:+d} dmg {ev.get('damage', 0)}{tag}")
+            print(f"  r{ev['round']} f{ev['frame']} {who} {ev['kind']} mv 0x{ev['move_id']:04X} {ev.get('hit_level')} adv {'string' if ev['frame_advantage'] is None else format(ev['frame_advantage'], '+d')} dmg {ev.get('damage', 0)}{tag}")
     if jab is not None:
         blocked = [ev for ev in events if ev["kind"] == "block" and ev.get("actor") == human and ev.get("move_id") == jab]
         if blocked:
-            advs = ", ".join(f"{ev['frame_advantage']:+d}" for ev in blocked)
+            advs = ", ".join("string" if ev["frame_advantage"] is None else f"{ev['frame_advantage']:+d}" for ev in blocked)
             print(f"blocked jab 0x{jab:X}: {advs} (tekkendocs: +1)")
         else:
             print(f"blocked jab 0x{jab:X}: none found in this recording")

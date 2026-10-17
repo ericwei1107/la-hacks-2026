@@ -126,6 +126,9 @@ class Reflex:
             self.handled = None
         if attacking and threat != self.handled and self.seq.active is None:
             self.handled = threat
+            for move in self.seq.discard(lambda m: m.tag.get("reflex") == "punish", frame):
+                out.append(self.record(state, "punish_cancel", frame, [move.notation, "none"], "none",
+                                       reason="opponent attacked first", move_id=opp["move_id"]))
             guard = "db" if opp["hit_level"] in LOW_LEVELS else "b"
             if guard == self.guard and self.pending_guard is None:
                 delay, at = 0, frame

@@ -22,6 +22,8 @@ ROUND_SECONDS = 60
 CONNECT_DELAY = 2
 WAKEUP_WINDOW = 30
 PUNISH_THRESHOLD = 10
+REPEAT_CONNECT_GAP = 3
+ACTIVE_SLACK = 2
 
 unknown_codes = Counter()
 
@@ -134,6 +136,11 @@ def build_state(raw_players, human_slot, frame, session_id):
     }
 
 
+def active(player):
+    first, last = player["first_active"], player["last_active"]
+    return first > 0 and first <= player["frame_in_move"] <= max(first, last) + ACTIVE_SLACK
+
+
 def advantage(attacker, defender):
     return (defender["move_total"] - defender["frame_in_move"]) - (attacker["move_total"] - attacker["frame_in_move"])
 
@@ -154,6 +161,7 @@ class Tracker:
         self.adv = None
         self.actions = [None, None]
         self.down_cleared = [None, None]
+        self.last_connect = [None, None]
 
     def event(self, kind, frame, round_=None, **fields):
         self.events[kind] += 1
@@ -206,8 +214,15 @@ class Tracker:
         for d in (0, 1):
             a = 1 - d
             att = state["players"][a]
-            code = state["players"][d]["hit_reaction"]
-            if code and not prev["players"][d]["hit_reaction"]:
+            dfn, old = state["players"][d], prev["players"][d]
+            code = dfn["hit_reaction"]
+            last = self.last_connect[d]
+            repeat = (code and old["hit_reaction"] and last is not None
+                      and dfn["move_id"] != old["move_id"] and dfn["frame_in_move"] == 1
+                      and att["move_id"] != last[1] and state["frame"] - last[0] >= REPEAT_CONNECT_GAP
+                      and att["hit_level"] != "none" and active(att))
+            if (code and not old["hit_reaction"]) or repeat:
+                self.last_connect[d] = (state["frame"], att["move_id"])
                 self.pending.append({
                     "attacker": a,
                     "frame": state["frame"],
@@ -229,8 +244,9 @@ class Tracker:
                 continue
             a, d = p["attacker"], 1 - p["attacker"]
             att, dfn = players[a], players[d]
-            adv = advantage(att, dfn)
-            self.adv = adv if a == human else -adv
+            continued = att["move_id"] != p["move_id"] and att["hit_level"] != "none"
+            adv = None if continued else advantage(att, dfn)
+            self.adv = None if adv is None else (adv if a == human else -adv)
             out.append(self.event(
                 REACTIONS.get(p["code"], "hit"),
                 p["frame"],
@@ -249,6 +265,7 @@ class Tracker:
                     "defender_move_id": dfn["move_id"],
                     "defender_total": dfn["move_total"],
                     "defender_frame": dfn["frame_in_move"],
+                    "string_continued": continued,
                 },
             ))
         self.pending = keep

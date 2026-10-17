@@ -264,6 +264,50 @@ class FrameAdvantageTest(Base):
         self.assertEqual(self.at(states, c + 2)["derived"]["situation"], "pressure")
 
 
+def string_frames(second_level_code=HIGH, second_level="high", second_active=15):
+    seq = []
+    for f in range(97, 150):
+        a, d = idle(0, f), idle(1, f)
+        if 100 <= f < 110:
+            a.update(move_id=0x644, frame_in_move=f - 99, move_total=27, free_movement=0, hit_level=HIGH,
+                     hit_level_name="high", first_active=10, last_active=10)
+        elif 110 <= f < 144:
+            a.update(move_id=0x605, frame_in_move=f - 109, move_total=34, free_movement=0, hit_level=second_level_code,
+                     hit_level_name=second_level, first_active=second_active, last_active=second_active)
+        if f == 109:
+            d.update(move_id=0x5C6, frame_in_move=8, move_total=22, hit_reaction=1)
+        elif 110 <= f < 125:
+            d.update(move_id=0x604, frame_in_move=f - 109, move_total=18, free_movement=0, hit_reaction=1)
+        elif 125 <= f < 143:
+            d.update(move_id=0x718, frame_in_move=f - 124, move_total=18, free_movement=0, hit_reaction=1)
+        seq.append((f, [a, d]))
+    return seq
+
+
+class StringTest(Base):
+    def test_continued_string_has_no_advantage_and_second_block_counts(self):
+        _, states, events = self.run_frames(string_frames())
+        blocks = [e for e in events if e["kind"] == "block"]
+        self.assertEqual([e["frame"] for e in blocks], [109, 125])
+        self.assertIsNone(blocks[0]["frame_advantage"])
+        self.assertTrue(blocks[0]["detail"]["string_continued"])
+        self.assertEqual(blocks[1]["move_id"], 0x605)
+        self.assertEqual(blocks[1]["frame_advantage"], -1)
+        self.assertFalse(blocks[1]["detail"]["string_continued"])
+        self.assertIsNone(self.at(states, 111)["derived"]["frame_advantage"])
+
+    def test_reaction_change_without_an_active_attack_is_not_a_hit(self):
+        _, _, events = self.run_frames(string_frames(NONE_CODE, "none", 0))
+        blocks = [e for e in events if e["kind"] == "block"]
+        self.assertEqual([e["frame"] for e in blocks], [109])
+        self.assertIsNotNone(blocks[0]["frame_advantage"])
+        self.assertFalse(blocks[0]["detail"]["string_continued"])
+
+    def test_reaction_change_outside_active_frames_is_not_a_hit(self):
+        _, _, events = self.run_frames(string_frames(second_active=5))
+        self.assertEqual([e["frame"] for e in events if e["kind"] == "block"], [109])
+
+
 class EventTest(Base):
     def test_round_start_first_frame(self):
         tracker, states, events = self.run_frames(idle_frames(range(100, 105)))

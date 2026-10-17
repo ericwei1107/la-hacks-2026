@@ -325,6 +325,21 @@ class PunishStandingTest(unittest.TestCase):
         self.assertEqual(rig.submitted, [])
 
 
+class PunishCancelTest(unittest.TestCase):
+    def test_queued_punish_dropped_when_opponent_attacks_first(self):
+        rig = Rig(exact(0))
+        state = blocked_state(until=16)
+        rig.reflex.step(state, [block_event(12)])
+        self.assertEqual(len(rig.seq.queue), 1)
+        attacker = state["players"][state["human_slot"]]
+        attacker.update(move_id=0x605, hit_level="high", free_movement=False)
+        state["frame"] += 1
+        recs = rig.reflex.step(state, [])
+        self.assertEqual([r["reflex"]["kind"] for r in recs], ["punish_cancel", "block"])
+        self.assertEqual(len(rig.seq.queue), 0)
+        self.assertTrue(rig.seq.finished[-1].cancelled)
+
+
 class PunishCrouchingTest(unittest.TestCase):
     def test_ws_tiers(self):
         for advantage, notation in ((16, "ws+2"), (13, "ws+1"), (15, "ws+1"), (20, "ws+2")):

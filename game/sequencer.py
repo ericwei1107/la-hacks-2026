@@ -91,6 +91,15 @@ class Sequencer:
         self.background = NEUTRAL
         self.pad.release_all()
 
+    def discard(self, predicate, frame=None):
+        dropped = [m for m in self.queue if predicate(m)]
+        for move in dropped:
+            move.cancelled = True
+            move.done_frame = frame
+            self.queue.remove(move)
+            self.finished.append(move)
+        return dropped
+
     def ready(self, move, frame, bot):
         if move.earliest is not None and frame < move.earliest:
             return False
