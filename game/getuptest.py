@@ -105,7 +105,7 @@ def probe(gs_iter, seq, bot, notation, delay, watch, face="any"):
         p = gs["players"][bot]
         dt = gs["frame"] - start_frame
         seq.on_frame(gs["frame"], p)
-        if p["health"] < health:
+        if p["health"] < health and act_at is None:
             disturbed = True
         health = p["health"]
         if not timeline or timeline[-1][1] != p["move_id"]:

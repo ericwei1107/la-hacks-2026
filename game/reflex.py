@@ -261,7 +261,7 @@ class Reflex:
             self.wake = {"stage": "waiting", "asked": frame, "delay": delay, "at": frame + self._press_offset(delay)}
         if self.wake is None or self.wake["stage"] != "waiting" or frame < self.wake["at"]:
             return []
-        face = FACES.get(bot["basic_state"], "face_up")
+        face = FACES.get(bot["basic_state"], f"basic_{bot['basic_state']}")
         options = self.wakeups.get(face) or self.wakeups.get("face_up") or []
         if not options:
             self.wake["stage"] = "done"

@@ -92,15 +92,26 @@ class WakeupTimingTest(unittest.TestCase):
         self.assertEqual(len(recs), 1)
         self.assertGreaterEqual(recs[0]["frame_asked"], 136)
 
-    def test_face_down_uses_face_up_table_unverified(self):
+    def test_face_down_uses_face_down_table(self):
         frames = knockdown()
         for _, pair, _ in frames:
             if pair[1]["move_id"] == 0x8007:
                 pair[1].update(move_id=0x800A, basic_state=13)
         rec = Rig(FixedDelay(0)).run(frames).wakeups()[0]
         self.assertEqual(rec["reflex"]["face"], "face_down")
+        self.assertTrue(rec["reflex"]["verified"])
+        self.assertEqual(rec["options"], [o["notation"] for o in WAKEUPS["face_down"]])
+        self.assertNotIn("3+4", rec["options"])
+
+    def test_unknown_face_falls_back_unverified(self):
+        frames = knockdown()
+        for _, pair, _ in frames:
+            if pair[1]["move_id"] == 0x8007:
+                pair[1].update(basic_state=99)
+        rec = Rig(FixedDelay(0)).run(frames).wakeups()[0]
+        self.assertEqual(rec["options"], [o["notation"] for o in WAKEUPS["face_up"]])
+        self.assertEqual(rec["reflex"]["face"], "basic_99")
         self.assertFalse(rec["reflex"]["verified"])
-        self.assertIn(rec["chosen"], [o["notation"] for o in WAKEUPS["face_up"]])
 
     def test_record_shape(self):
         rec = Rig(FixedDelay(0)).run(knockdown()).wakeups()[0]
