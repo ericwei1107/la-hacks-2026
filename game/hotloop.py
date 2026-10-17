@@ -6,6 +6,7 @@ from game.pacer import Pacer
 from game.recorder import Recorder, iso_utc, result_text, session_meta
 
 STALL_S = 2.0
+COUNTER_CAP = 0xFFFF
 
 
 def fmt_event(ev):
@@ -47,6 +48,9 @@ def wait_snapshot(reader, pacer, on_poll=None):
 def stall_message(rf):
     if rf is None:
         return "players not readable: waiting for a match or practice"
+    if rf == COUNTER_CAP:
+        return (f"round frame counter stuck at its cap {COUNTER_CAP} (about 18 minutes of practice since the last "
+                f"position reset). Reset the practice position to restart it; waiting")
     return (f"round frame counter stuck at {rf} for {STALL_S:.0f} s: Tekken is paused (pause menu, or it paused "
             f"because a controller was plugged in or unplugged). Unpause in the game; waiting")
 
