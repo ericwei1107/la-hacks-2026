@@ -16,6 +16,7 @@ BREAK_PRESS_FRAMES = 3
 BREAKS = {"press_1": "1", "press_2": "2", "press_12": "1+2"}
 CROUCH_REACTION = 2
 SKIP_SHARE = 0.5
+PUNISH_REACTION_SCALE = 0.5
 
 
 def parse_tiers(rows):
@@ -168,7 +169,7 @@ class Reflex:
             timing = replace(self.seq.timing, ws_crouch_frames=0) if stance == "crouching" else self.seq.timing
             tiers = [dict(t, lead=first_press(compile_notation(t["notation"], timing))) for t in self.punishers.get(stance) or []]
             actionable = frame + (0 if bot["free_movement"] else bot["frames_until_actionable"])
-            delay = self.difficulty.reaction(self.rng)
+            delay = round(self.difficulty.reaction(self.rng) * PUNISH_REACTION_SCALE)
             earliest = max(frame, ev["frame"] + self._press_offset(delay))
             for t in tiers:
                 t["lateness"] = max(0, earliest - (actionable - self.latency - t["lead"]))

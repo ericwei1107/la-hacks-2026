@@ -375,6 +375,12 @@ class PunishCrouchingTest(unittest.TestCase):
 
 
 class LatePunishTest(unittest.TestCase):
+    def test_punish_reaction_is_half_the_block_reaction(self):
+        rig = Rig(FixedDelay(30))
+        rec = rig.reflex.step(blocked_state(until=16), [block_event(12)])[0]
+        self.assertEqual(rec["reflex"]["delay"], 15)
+        self.assertEqual(rec["chosen"], "2")
+
     def check(self, rec, advantage, lead=0):
         r = rec["reflex"]
         tiers = PUNISHERS[r["stance"]]
@@ -394,7 +400,7 @@ class LatePunishTest(unittest.TestCase):
         late = 0
         for seed in range(30):
             frames, c, _ = punish_frames(12)
-            rig = Rig(exact(30), seed=seed).run(frames)
+            rig = Rig(exact(60), seed=seed).run(frames)
             rec = rig.kind("punish")[0]
             lateness = self.check(rec, 12)
             if lateness > 0:
@@ -406,7 +412,7 @@ class LatePunishTest(unittest.TestCase):
         outcomes = {}
         for seed in range(60):
             frames, c, _ = punish_frames(12)
-            rig = Rig(exact(19), seed=seed).run(frames)
+            rig = Rig(exact(38), seed=seed).run(frames)
             rec = rig.kind("punish")[0]
             lateness = self.check(rec, 12)
             outcomes.setdefault((rec["chosen"], lateness > 0), 0)
@@ -424,7 +430,7 @@ class LatePunishTest(unittest.TestCase):
         for delay, chosen, lateness in ((0, "2", 0), (18, "2", 0), (19, "1,1,2", 1), (20, "1,1,2", 2), (21, "none", None),
                                         (40, "none", None)):
             with self.subTest(delay=delay):
-                rig = Rig(FixedDelay(delay))
+                rig = Rig(FixedDelay(delay * 2))
                 rec = rig.reflex.step(blocked_state(until=16), [block_event(12)])[0]
                 self.assertEqual(rec["reflex"]["delay"], delay)
                 self.assertEqual(rec["chosen"], chosen)
