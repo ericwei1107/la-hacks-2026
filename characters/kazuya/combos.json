@@ -1,0 +1,115 @@
+{
+  "character": "kazuya",
+  "character_id": 8,
+  "game_version": "3.02.02",
+  "notation_note": "Routes are copied from the Wavu Wiki combo pages in Wavu notation. T! is tornado, CD is crouch dash, H. is heat, WS is while standing, MCR/JGR/SNK are stance prefixes. dmg is the first bracketed number on the wiki line (listed damage). Verify routes in practice mode before relying on them; spacing and character-size caveats are on the wiki.",
+  "source": "Wavu Wiki combo pages (Kazuya, King, Devil Jin, Shaheen)",
+  "bnb": {
+    "regular_launch": {
+      "route": "3,1,4 df+1,df+2 T! 3,1~df~3",
+      "dmg": null,
+      "note": "standard route after any ordinary launcher such as f,F+3"
+    }
+  },
+  "launchers": {
+    "f,n,d,df+2": {
+      "reliable": {
+        "route": "b+2,2 df+1,df+2 T! 3,1,df CD.3",
+        "dmg": 51,
+        "note": "after a clean EWGF"
+      },
+      "optimized": {
+        "route": "PEWGF EWGF b+2,2 df+1,df+2 T! 3,1,df CD.3",
+        "dmg": 74,
+        "note": "needs a frame-perfect first EWGF"
+      }
+    },
+    "ws2": {
+      "reliable": {
+        "route": "ws1+2 b+2,2 df+1,df+2 T! 3,1,df CD.3",
+        "dmg": 52
+      },
+      "optimized": null
+    },
+    "df+2": {
+      "reliable": {
+        "route": "EWGF b+2,2 df+1,df+2 T! 3,1,df CD.3",
+        "dmg": 51,
+        "note": "counter hit only; a micro sidestep is needed before the EWGF"
+      },
+      "optimized": {
+        "route": "PEWGF EWGF b+2,2 df+1,df+2 T! 3,1,df CD.3",
+        "dmg": 74
+      }
+    },
+    "f,F+3": {
+      "reliable": {
+        "route": "SSR.3 b+2,2 df+1,df+2 T! 3,1,df CD.3",
+        "dmg": 51
+      },
+      "optimized": null
+    },
+    "ws1,2": {
+      "reliable": {
+        "route": "ws1+2 b+2,2 b+2,2,1+2",
+        "dmg": 41
+      },
+      "optimized": null
+    },
+    "f,F+4": {
+      "reliable": {
+        "route": "df+3 df+1,df+2 T! 3,1,df CD.3",
+        "dmg": 37,
+        "note": "counter hit"
+      },
+      "optimized": {
+        "route": "df+3,2,1 T! 3,1,df CD.3",
+        "dmg": 38
+      }
+    }
+  },
+  "wall": [
+    {
+      "route": "df+3+4,1,2",
+      "dmg": 23,
+      "note": "regular carry"
+    },
+    {
+      "route": "df+1,4 1+2",
+      "dmg": 25,
+      "note": "regular carry"
+    },
+    {
+      "route": "df+1,4 f+2 df+1,4 1+2",
+      "dmg": 39,
+      "note": "regular carry"
+    },
+    {
+      "route": "df+1,4 df+1,df+2 df+3+4,1,2",
+      "dmg": 46,
+      "note": "regular carry"
+    },
+    {
+      "route": "f,f,F3",
+      "dmg": 8,
+      "note": "wall break without tornado"
+    }
+  ],
+  "heat": [
+    {
+      "route": "b+4 b+2,2 df+1,df+2 T! 3,1~df~3",
+      "dmg": 53,
+      "note": "while in heat, after EWGF"
+    },
+    {
+      "route": "ws1+2 b+2,2 df+1,df+2 T! 3,1~df~3",
+      "dmg": 56,
+      "note": "while in heat, after ws2"
+    },
+    {
+      "route": "iWS1+2 b+2,2 df+1,2,H.f 3,1~df~3",
+      "dmg": 47,
+      "note": "heat engager route"
+    }
+  ]
+}

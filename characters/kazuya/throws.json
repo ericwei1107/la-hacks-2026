@@ -1,0 +1,68 @@
+{
+  "character": "kazuya",
+  "character_id": 8,
+  "game_version": "3.02.02",
+  "break_note": "break is the button the defender presses; null means the source did not state it. The bot never needs this file to break a throw (the break button is readable from memory); the coach uses it to tell the player which break they missed.",
+  "throws": [
+    {
+      "command": "1+3",
+      "name": "Double High Sweep",
+      "startup": 12,
+      "break": "1/2",
+      "break_source": "wavu",
+      "on_block": 0,
+      "damage": "35",
+      "move_id": "0x814"
+    },
+    {
+      "command": "2+4",
+      "name": "Lightning Crash",
+      "startup": 12,
+      "break": "1/2",
+      "break_source": "wavu",
+      "on_block": 0,
+      "damage": "35",
+      "move_id": null
+    },
+    {
+      "command": "Back throw",
+      "name": "Reverse Neck Throw",
+      "startup": 12,
+      "break": null,
+      "break_source": null,
+      "on_block": null,
+      "damage": "50",
+      "move_id": null
+    },
+    {
+      "command": "Left throw",
+      "name": "Steel Pedal Drop",
+      "startup": 12,
+      "break": "1",
+      "break_source": "wavu",
+      "on_block": -3,
+      "damage": "40",
+      "move_id": null
+    },
+    {
+      "command": "Right throw",
+      "name": "Skull Smash",
+      "startup": 12,
+      "break": "2",
+      "break_source": "wavu",
+      "on_block": -3,
+      "damage": "40",
+      "move_id": null
+    },
+    {
+      "command": "uf+1+2",
+      "name": "Stonehead",
+      "startup": 12,
+      "break": "1+2",
+      "break_source": "wavu",
+      "on_block": 0,
+      "damage": "35",
+      "move_id": null
+    }
+  ]
+}

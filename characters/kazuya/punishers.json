@@ -2,7 +2,7 @@
   "character": "kazuya",
   "character_id": 8,
   "game_version": "3.02.02",
-  "usage": "tiers[N] lists moves with startup <= N frames, best first; use the tier equal to the opponent's frame disadvantage (clamped to 10..20). standing is for opponents who are standing, crouching drops high moves that whiff over a crouching opponent. whiff[N] is for punishing a whiffed move that leaves N frames of recovery before the opponent can act. Ranked launcher first, then single-hit damage; easy inputs always before hard ones, then startup. difficulty medium is a while-standing move from crouch and hard is a motion input.",
+  "usage": "tiers[N] lists moves with startup <= N frames, best first; use the tier equal to the opponent's frame disadvantage (clamped to 10..20). standing is for opponents who are standing, crouching drops high moves that whiff over a crouching opponent. whiff[N] is for punishing a whiffed move that leaves N frames of recovery before the opponent can act. Ranked by input difficulty (easy, medium for while-standing moves, hard for motion inputs), then launcher, then summed hit damage, then startup.",
   "min_tier": 10,
   "max_tier": 20,
   "tiers": {
