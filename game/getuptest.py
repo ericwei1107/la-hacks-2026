@@ -15,6 +15,8 @@ from game.sequencer import Sequencer
 INPUTS = ("wait", "u", "f", "b", "d", "1", "2", "3", "4", "1+2", "3+4", "U", "B")
 DELAY_FRAMES = 2
 READY_STABLE = 2
+FACES = {"up": 12, "down": 13}
+FACE_NAMES = {12: "face up", 13: "face down"}
 WATCH_FRAMES = 150
 
 
@@ -48,7 +50,11 @@ def wait_downed(gs_iter, bot):
             return gs
 
 
-def probe(gs_iter, seq, bot, notation, delay, watch):
+def face_ok(p, face):
+    return face == "any" or p["basic_state"] == FACES[face]
+
+
+def probe(gs_iter, seq, bot, notation, delay, watch, face="any"):
     down = wait_downed(gs_iter, bot)
     p = down["players"][bot]
     pre = [(0, p["move_id"])]
@@ -56,6 +62,7 @@ def probe(gs_iter, seq, bot, notation, delay, watch):
     disturbed = False
     health = p["health"]
     run = 0
+    wrong_face_noted = False
     ready_at = None
     start_geo = None
     for gs in gs_iter:
@@ -68,9 +75,17 @@ def probe(gs_iter, seq, bot, notation, delay, watch):
             run = 0
         seq.on_frame(gs["frame"], p)
         if ready_at is None and not p["status"] & st.DOWNED_BIT:
-            print(f"  got up at +{dt} before settling ({fmt_ids(pre)}); waiting for the next knockdown", flush=True)
-            return probe(gs_iter, seq, bot, notation, delay, watch)
-        run = run + 1 if st.lying(p) else 0
+            print(f"  left the ground at +{dt} before the input ({fmt_ids(pre)}): hit off the floor or got up; "
+                  f"waiting for him to land again", flush=True)
+            return probe(gs_iter, seq, bot, notation, delay, watch, face)
+        if st.lying(p) and not face_ok(p, face):
+            if not wrong_face_noted:
+                print(f"  lying {FACE_NAMES.get(p['basic_state'], 'basic ' + str(p['basic_state']))} (0x{p['move_id']:04X}); "
+                      f"waiting until he is {FACE_NAMES[FACES[face]]}. Flip him with another move, then let go", flush=True)
+                wrong_face_noted = True
+            run = 0
+        else:
+            run = run + 1 if st.lying(p) else 0
         if ready_at is None and run >= READY_STABLE:
             ready_at = dt
             info = {"basic_state": p["basic_state"], "down_move": p["move_id"], "facing": p["facing"], "side": p["side"]}
@@ -114,20 +129,22 @@ def fmt_ids(items):
                     for lvl in [rest[0] if rest else None])
 
 
-def run(reader, pad, inputs, delay, watch):
+def run(reader, pad, inputs, delay, watch, face="any"):
     config = load_config()
     seq = Sequencer(pad, config["input_latency_frames"], None, random.Random(0), Timing.from_config(config.get("timing")))
     it = frames(reader, Pacer(), pad.check_kill)
     gs_iter = states(it)
     first = next(gs_iter)
     bot = 1 - first["human_slot"]
-    print(f"bot P{bot + 1} {first['players'][bot]['character']}. For each input: knock Kazuya down (a throw is easiest), "
-          f"then let go of your stick. The bot performs the input {delay} frames after he settles into his lying loop "
+    wanted = "" if face == "any" else f" {FACE_NAMES[FACES[face]]}"
+    print(f"bot P{bot + 1} {first['players'][bot]['character']}. For each input: knock Kazuya down{wanted} (a throw is easiest"
+          f"{', then another move to flip him' if face == 'down' else ''}), "
+          f"then let go of your stick. The bot performs the input {delay} frames after he settles into his{wanted} lying loop "
           f"(downed, not thrown, a 0x80xx move longer than 1 frame); watching {watch} frames.", flush=True)
     rows = []
     for notation in inputs:
         print(f"\n[{notation}] waiting for a knockdown...", flush=True)
-        r = probe(gs_iter, seq, bot, notation, delay, watch)
+        r = probe(gs_iter, seq, bot, notation, delay, watch, face)
         rows.append((notation, r))
         flag = "  DISTURBED (bot lost health; redo this one)" if r["disturbed"] else ""
         free = f"free_movement at +{r['free_while_down']}" if r["free_while_down"] is not None else "never free"
@@ -151,6 +168,8 @@ def run(reader, pad, inputs, delay, watch):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Probe what each grounded input does after the bot is knocked down")
     parser.add_argument("--inputs", default=" ".join(INPUTS), help="inputs separated by spaces, e.g. \"u b 1+2\"")
+    parser.add_argument("--face", default="any", choices=("any", "up", "down"),
+                        help="only press once the bot is lying this way up (basic_state 12 face up, 13 face down)")
     parser.add_argument("--delay", type=int, default=DELAY_FRAMES, help="frames after the bot settles into its lying loop before the input")
     parser.add_argument("--watch", type=int, default=WATCH_FRAMES)
     parser.add_argument("--offsets", default=str(DEFAULT_OFFSETS))
@@ -172,7 +191,7 @@ def main(argv=None):
         if not run_gate(reader, args.offsets):
             return 1
         pad = connect_pad()
-        return run(reader, pad, inputs, args.delay, args.watch)
+        return run(reader, pad, inputs, args.delay, args.watch, args.face)
     except (KeyboardInterrupt, KillSwitch) as e:
         print(f"stopped: {e}" if str(e) else "stopped: Ctrl+C", flush=True)
         return 1
