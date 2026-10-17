@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-from datetime import datetime, timezone
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -11,7 +11,6 @@ sys.path.insert(0, str(CONTRACTS))
 from validate import load_schemas, validator
 
 SCHEMAS = load_schemas()
-CHARACTERS = {"djin": "devil_jin", "kaz": "kazuya", "king": "king", "shaheen": "shaheen"}
 
 
 def data_dir():
@@ -25,48 +24,20 @@ def check(name, obj, sub=None):
 
 def load_jsonl(path):
     records = []
-    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    raw = Path(path).read_text(encoding="utf-8")
+    lines = raw.splitlines()
     for i, line in enumerate(lines):
         if not line.strip():
             continue
         try:
             rec = json.loads(line)
-        except json.JSONDecodeError:
-            if i == len(lines) - 1:
+        except json.JSONDecodeError as exc:
+            if i == len(lines) - 1 and not raw.endswith("\n") and line.lstrip().startswith("{") and (exc.pos >= len(line.rstrip()) - 1 or exc.msg.startswith("Unterminated string")):
                 break
-            raise
+            raise ValueError(f"{path}:{i + 1}: invalid JSON: {exc.msg}") from exc
         if isinstance(rec, dict) and "t" in rec:
             records.append(rec)
     return records
-
-
-def parse_started(sid):
-    try:
-        return datetime.strptime(sid[:19], "%Y-%m-%dT%H-%M-%S").replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    except ValueError:
-        return "1970-01-01T00:00:00Z"
-
-
-def fallback_meta(sid, records, path):
-    states = [r for r in records if r["t"] == "state"]
-    parts = sid.split("_")
-    human_slot = states[0]["human_slot"] if states else 0
-    chars = [p["character"] for p in states[0]["players"]] if states else ["unknown", "unknown"]
-    rounds = sorted({r["round"] for r in records if "round" in r})
-    return {
-        "session_id": sid,
-        "started_at": parse_started(sid),
-        "ended_at": None,
-        "mode": "practice",
-        "player": parts[1] if len(parts) > 1 else "unknown",
-        "human_slot": human_slot,
-        "human_character": chars[human_slot],
-        "bot_character": chars[1 - human_slot],
-        "difficulty": 1,
-        "rounds": [{"round": r, "winner": None} for r in rounds],
-        "result": "",
-        "recording": str(path),
-    }
 
 
 class Session:
@@ -75,8 +46,23 @@ class Session:
         self.records = load_jsonl(self.path)
         self.id = next((r["session_id"] for r in self.records if r.get("session_id")), self.path.stem)
         meta_path = self.find_meta()
-        self.meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path else fallback_meta(self.id, self.records, self.path)
+        if meta_path is None:
+            raise ValueError(f"{self.path}: missing metadata; provide {self.path.stem}.session.json or DATA_DIR/sessions/{self.id}.json")
+        self.meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        errors = check("session", self.meta)
+        if errors or self.meta["session_id"] != self.id:
+            raise ValueError(f"{meta_path}: invalid session metadata: {errors or 'session_id does not match recording'}")
+        for record in self.records:
+            schema = {"state": "gamestate", "event": "event", "round_summary": "round_summary"}.get(record["t"])
+            if schema:
+                errors = check(schema, record)
+                if errors or record.get("session_id") != self.id:
+                    raise ValueError(f"{self.path}: invalid {record['t']} record: {errors or 'session_id mismatch'}")
         self.learning = self.load_learning()
+        for line in self.learning:
+            errors = check("metrics", line, "round")
+            if errors:
+                raise ValueError(f"{self.path}: invalid learning data: {errors}")
 
     def find_meta(self):
         for candidate in (self.path.with_name(f"{self.path.stem}.session.json"), data_dir() / "sessions" / f"{self.id}.json"):
@@ -105,21 +91,22 @@ class Store:
         self.refresh()
 
     def paths(self):
-        if self.explicit:
-            return self.explicit
-        found = sorted((ROOT / "data" / "samples").glob("*.jsonl"))
-        found += sorted((data_dir() / "recordings").glob("*.jsonl"))
-        return found
+        found = list(self.explicit or [])
+        if not self.explicit:
+            found.extend(sorted((ROOT / "data" / "samples").glob("*.jsonl")))
+            found.extend(sorted((data_dir() / "recordings").glob("*.jsonl")))
+        for meta_path in sorted((data_dir() / "sessions").glob("*.json")):
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            reference = meta.get("recording")
+            if reference:
+                path = Path(reference)
+                path = path if path.is_absolute() else ROOT / path
+                if path.is_file():
+                    found.append(path)
+        return list(dict.fromkeys(p.resolve() for p in found))
 
     def refresh(self):
-        sessions = {}
-        for path in self.paths():
-            try:
-                s = Session(path)
-            except (OSError, json.JSONDecodeError):
-                continue
-            sessions[s.id] = s
-        self.sessions = sessions
+        self.sessions = {s.id: s for s in (Session(path) for path in self.paths())}
 
     def get(self, sid):
         if sid not in self.sessions:
@@ -130,28 +117,28 @@ class Store:
         return sorted(self.sessions.values(), key=lambda s: s.meta.get("started_at", ""), reverse=True)
 
     def default(self):
-        synthetic = [s for s in self.newest() if s.meta.get("mode") == "synthetic"]
-        listed = synthetic or self.newest()
+        if self.explicit:
+            selected = self.explicit[0].resolve()
+            return next((s for s in self.sessions.values() if s.path.resolve() == selected), None)
+        listed = self.newest()
         return listed[0] if listed else None
 
     def profiles(self, player):
         found = []
-        for path in sorted((data_dir() / "profiles").glob(f"{player}_*.json")):
-            try:
-                found.append(json.loads(path.read_text(encoding="utf-8")))
-            except (OSError, json.JSONDecodeError):
-                continue
+        for path in sorted((data_dir() / "profiles").glob("*.json")):
+            obj = json.loads(path.read_text(encoding="utf-8"))
+            if obj.get("player") == player:
+                errors = check("profile", obj)
+                if errors:
+                    raise ValueError(f"{path}: invalid profile: {errors}")
+                found.append(obj)
         return found
 
 
 def git_sha():
-    head = ROOT / ".git" / "HEAD"
     try:
-        ref = head.read_text().strip()
-        if ref.startswith("ref: "):
-            return (ROOT / ".git" / ref[5:]).read_text().strip()[:7]
-        return ref[:7]
-    except OSError:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
         return "unknown"
 
 
@@ -161,10 +148,10 @@ def make_app(service):
 
     app = FastAPI(title=f"kumite-mock-{service}")
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-    version = f"mock-{git_sha()}"
+    version = git_sha()
 
     @app.get("/health")
     def health():
-        return {"ok": True, "service": service, "version": version, "mock": True}
+        return {"ok": True, "service": service, "version": version}
 
     return app

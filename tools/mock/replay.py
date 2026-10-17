@@ -17,7 +17,10 @@ def create(store):
 
     @app.post("/coach/round")
     async def coach_round(request: Request):
-        body = await request.json()
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "body must be valid JSON")
         errors = check("round_summary", body)
         if errors:
             return JSONResponse({"errors": errors}, status_code=422)
@@ -38,14 +41,23 @@ def create(store):
 
     @app.get("/reports/{sid}")
     def get_report(sid: str):
+        if store.get(sid) is None:
+            raise HTTPException(404, f"unknown session {sid}")
         path = data_dir() / "reports" / f"{sid}.json"
         if not path.exists():
             raise HTTPException(404, f"session {sid} not analyzed")
-        return json.loads(path.read_text(encoding="utf-8"))
+        report = json.loads(path.read_text(encoding="utf-8"))
+        errors = check("report", report)
+        if errors or report["session_id"] != sid:
+            raise HTTPException(500, "saved report does not match the session contract")
+        return report
 
     @app.post("/coach/chat")
     async def coach_chat(request: Request):
-        body = await request.json()
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(422, "body must be valid JSON")
         sid = body.get("session_id") if isinstance(body, dict) else None
         s = store.get(sid) if sid else None
         if s is None:

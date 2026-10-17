@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 
 import derive
-from store import make_app
+from store import check, make_app
 
 
 def create(store):
@@ -19,7 +19,11 @@ def create(store):
 
     @app.get("/learning/{sid}")
     def learning(sid: str):
-        return derive.learning(session_or_404(sid))
+        body = derive.learning(session_or_404(sid))
+        errors = check("metrics", body)
+        if errors:
+            raise HTTPException(500, {"errors": errors})
+        return body
 
     @app.get("/trends/{player}/{character}")
     def trends(player: str, character: str, stat: str | None = None):
@@ -30,7 +34,7 @@ def create(store):
                 continue
             values = {k: v for k, v in derive.stats(s)["totals"].items() if not isinstance(v, dict)}
             if stat:
-                values = {stat: values.get(stat)}
+                values = {stat: values[stat]} if stat in values else {}
             series.append({"session_id": s.id, "started_at": s.meta.get("started_at"), "values": values})
         return {"player": player, "character": character, "series": series}
 

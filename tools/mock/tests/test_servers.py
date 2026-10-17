@@ -4,6 +4,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -22,17 +23,23 @@ class ServersTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
+        cls.previous_data_dir = os.environ.get("DATA_DIR")
         os.environ["DATA_DIR"] = cls.tmp
         cls.store = Store([SAMPLE])
         cls.sid = next(iter(cls.store.sessions))
-        cls.brain = TestClient(brain.create(cls.store, rate=600))
+        cls.clients = ExitStack()
+        cls.brain = cls.clients.enter_context(TestClient(brain.create(cls.store, rate=600)))
         cls.replay = TestClient(replay.create(cls.store))
         cls.analytics = TestClient(analytics.create(cls.store))
 
     @classmethod
     def tearDownClass(cls):
+        cls.clients.close()
         shutil.rmtree(cls.tmp, ignore_errors=True)
-        os.environ.pop("DATA_DIR", None)
+        if cls.previous_data_dir is None:
+            os.environ.pop("DATA_DIR", None)
+        else:
+            os.environ["DATA_DIR"] = cls.previous_data_dir
 
     def ok(self, response, schema=None, sub=None):
         self.assertEqual(response.status_code, 200, response.text)
@@ -123,6 +130,7 @@ class ServersTest(unittest.TestCase):
         copy = Path(self.tmp) / "truncated.jsonl"
         lines = SAMPLE.read_text().splitlines()
         copy.write_text("\n".join(lines) + "\n" + lines[-1][: len(lines[-1]) // 2])
+        copy.with_suffix(".session.json").write_text(json.dumps(self.store.get(self.sid).meta))
         s = Store([copy])
         self.assertEqual(len(next(iter(s.sessions.values())).records), len([l for l in lines if l.strip()]))
 

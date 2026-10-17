@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 PUNISHABLE = -10
 PUNISH_WINDOW = 10
 CONNECT = ("hit", "counter_hit")
+DAMAGING = CONNECT + ("throw",)
 LOWS = ("low", "special_low")
 DETECT_N = 4
 DETECT_P = 0.6
@@ -19,7 +20,7 @@ def events(session, round_=None):
 
 
 def rounds(session):
-    found = sorted({r["round"] for r in session.records if "round" in r})
+    found = sorted({r["round"] for r in session.stream()})
     return found or [1]
 
 
@@ -34,7 +35,7 @@ def winner(session, round_):
 
 
 def damage_to(evs, slot):
-    return sum(e.get("damage", 0) for e in evs if e["kind"] in CONNECT and e.get("target") == slot)
+    return sum(e.get("damage", 0) for e in evs if e["kind"] in DAMAGING and e.get("target") == slot)
 
 
 def round_summary(session, round_):
@@ -51,7 +52,7 @@ def round_summary(session, round_):
             if k in e:
                 m[k] = e[k]
         moments.append(m)
-    end = max((e["frame"] for e in evs), default=0)
+    end = max((r["frame"] for r in session.stream() if r.get("round") == round_ and "frame" in r), default=0)
     return {
         "t": "round_summary",
         "session_id": session.id,
@@ -80,7 +81,7 @@ def stat_block(session, evs):
     h, b = human(session), 1 - human(session)
     by_situation = defaultdict(int)
     for e in evs:
-        if e["kind"] in CONNECT and e.get("target") == h:
+        if e["kind"] in DAMAGING and e.get("target") == h and e.get("damage"):
             by_situation[e.get("situation") or "neutral"] += e.get("damage", 0)
     opps = [e for e in evs if e["kind"] == "block" and e.get("actor") == b and e.get("target") == h and e.get("frame_advantage") is not None and e["frame_advantage"] <= PUNISHABLE]
     punished = 0
@@ -123,12 +124,12 @@ def learning(session):
 
 def coach_text(summary):
     if summary.get("newly_fixed"):
-        habit = summary["newly_fixed"][0].replace("_", " ")
+        habit = summary["newly_fixed"][0].replace("_", " ")[:40]
         return f"You've fixed your {habit}. Nice work. I'll test it again later, so keep it up.", "praise"
     if summary.get("top_habits"):
         top = summary["top_habits"][0]
         situation = top["situation"].replace("_", " ")
-        return f"In {situation} you chose {top['action']} {round(top['p'] * 100)}% of the time over {top['n']} tries. I'm going to keep testing that. Try a different answer next round.", "warn"
+        return f"Mock coach: in {situation[:40]} you repeated an option. Try a different answer next round.", "warn"
     taken = summary.get("human_damage_taken", 0)
     return f"Round {summary['round']}: you took {taken} damage. Watch what I do after my moves get blocked.", "info"
 

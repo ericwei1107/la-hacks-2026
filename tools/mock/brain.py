@@ -1,52 +1,85 @@
 import asyncio
-import bisect
 import copy
 import json
 import time
 
-from fastapi import HTTPException, Request, WebSocket, WebSocketDisconnect
+from anyio import CancelScope
+from fastapi import HTTPException, Request, WebSocket
+from contextlib import asynccontextmanager
 from fastapi.responses import FileResponse, JSONResponse
 
 import derive
 from store import CONTRACTS, check, make_app
 
-ROUND_GAP_S = 1.0
-
 
 class Timeline:
-    def __init__(self, session, rate):
+    def __init__(self, session, rate=60):
+        if rate <= 0:
+            raise ValueError("rate must be positive")
         self.session = session
         self.rate = rate
         self.items = []
-        self.round_ends = []
-        tick, prev = 0, None
-        for rec in session.stream():
-            if rec["t"] == "round_summary":
-                continue
-            if prev is not None:
-                if rec["round"] != prev["round"]:
-                    self.round_ends.append((tick, prev["round"]))
-                    tick += int(ROUND_GAP_S * rate)
-                else:
-                    tick += max(0, min(rec["frame"] - prev["frame"], rate))
-            self.items.append((tick, rec))
-            prev = rec
-        if prev is not None:
-            self.round_ends.append((tick, prev["round"]))
-        self.total = tick + int(ROUND_GAP_S * rate) + 1
-        self.ticks = [t for t, _ in self.items]
+        tick = 0
+        for round_ in derive.rounds(session):
+            records = [r for r in session.stream() if r["round"] == round_ and r["t"] != "round_summary"]
+            first = records[0]["frame"] if records else 0
+            last = first
+            for rec in records:
+                last = max(last, rec["frame"])
+                self.items.append((tick + last - first, "state", rec))
+            summary = derive.round_summary(session, round_)
+            errors = check("round_summary", summary)
+            if errors:
+                raise ValueError(f"invalid round summary: {errors}")
+            boundary = tick + max(last, summary.get("frame", last)) - first
+            text, severity = derive.coach_text(summary)
+            self.items.append((boundary, "coach", summary))
+            self.items.append((boundary, "coach", {"t": "coach", "session_id": session.id, "round": round_, "text": text, "severity": severity}))
+            tick = boundary + 1
+        self.total = max(tick, 1)
 
-    def between(self, lo, hi):
-        return self.items[bisect.bisect_right(self.ticks, lo):bisect.bisect_right(self.ticks, hi)]
+    async def play(self, publish, loop=True, monotonic=time.monotonic, sleep=asyncio.sleep):
+        start = monotonic()
+        cycle = 0
+        while True:
+            for tick, channel, record in self.items:
+                delay = start + (cycle * self.total + tick) / self.rate - monotonic()
+                if delay > 0:
+                    await sleep(delay)
+                publish(channel, record)
+            delay = start + ((cycle + 1) * self.total) / self.rate - monotonic()
+            if delay > 0:
+                await sleep(delay)
+            if not loop:
+                return
+            cycle += 1
 
 
-class Clock:
-    def __init__(self, rate):
-        self.rate = rate
-        self.start = time.monotonic()
+class Broadcast:
+    def __init__(self, capacity=256):
+        self.capacity = capacity
+        self.subscribers = {"state": set(), "coach": set()}
 
-    def now(self):
-        return int((time.monotonic() - self.start) * self.rate)
+    def subscribe(self, channel):
+        queue = asyncio.Queue(self.capacity)
+        self.subscribers[channel].add(queue)
+        return queue
+
+    def publish(self, channel, record):
+        for queue in tuple(self.subscribers[channel]):
+            if queue.full():
+                if record is not None and record.get("t") == "state":
+                    continue
+                self.subscribers[channel].discard(queue)
+                while not queue.empty():
+                    queue.get_nowait()
+                queue.put_nowait(None)
+            else:
+                queue.put_nowait(record)
+
+    def close(self):
+        for channel in self.subscribers:
+            self.publish(channel, None)
 
 
 def merge(base, patch):
@@ -58,9 +91,15 @@ def merge(base, patch):
 
 def create(store, rate=60, loop=True):
     app = make_app("brain")
-    clock = Clock(rate)
     timelines = {}
+    broadcasts = {}
+    tasks = {}
+    running = False
     config = {"value": json.loads((CONTRACTS / "examples" / "config.json").read_text())}
+
+    default = store.default()
+    if default:
+        config["value"].update(player=default.meta["player"], bot_character=default.meta["bot_character"])
 
     def session_or_404(sid):
         s = store.get(sid)
@@ -74,7 +113,30 @@ def create(store, rate=60, loop=True):
             return None
         if s.id not in timelines:
             timelines[s.id] = Timeline(s, rate)
+            broadcasts[s.id] = Broadcast()
+        if running and s.id not in tasks:
+            async def play():
+                try:
+                    await timelines[s.id].play(broadcasts[s.id].publish, loop=loop)
+                finally:
+                    broadcasts[s.id].close()
+            tasks[s.id] = asyncio.create_task(play())
         return timelines[s.id]
+
+    @asynccontextmanager
+    async def lifespan(app):
+        nonlocal running
+        running = True
+        timeline(None)
+        try:
+            yield
+        finally:
+            running = False
+            for task in tasks.values():
+                task.cancel()
+            await asyncio.gather(*tasks.values(), return_exceptions=True)
+
+    app.router.lifespan_context = lifespan
 
     @app.get("/sessions")
     def sessions():
@@ -91,11 +153,7 @@ def create(store, rate=60, loop=True):
 
     @app.get("/profiles/{player}")
     def profiles(player: str):
-        found = store.profiles(player)
-        if found:
-            return found
-        mine = [s for s in store.newest() if s.meta.get("player") == player]
-        return [derive.profile(mine[0], player)] if mine else []
+        return store.profiles(player)
 
     @app.get("/config")
     def get_config():
@@ -103,7 +161,10 @@ def create(store, rate=60, loop=True):
 
     @app.post("/config")
     async def post_config(request: Request):
-        patch = await request.json()
+        try:
+            patch = await request.json()
+        except ValueError:
+            raise HTTPException(422, "body must be valid JSON")
         if not isinstance(patch, dict):
             return JSONResponse({"errors": ["body must be a JSON object"]}, status_code=422)
         merged = merge(config["value"], patch)
@@ -113,51 +174,53 @@ def create(store, rate=60, loop=True):
         config["value"] = merged
         return merged
 
-    async def run(ws, sid, emit):
+    async def run(ws, sid, channel):
         await ws.accept()
         tl = timeline(sid)
         if tl is None or not tl.items:
-            await ws.close(code=1011)
+            await ws.close(code=1008)
             return
-        last = clock.now()
-        try:
+        if tasks.get(tl.session.id) is not None and tasks[tl.session.id].done():
+            await ws.close(code=1000)
+            return
+        broadcaster = broadcasts[tl.session.id]
+        queue = broadcaster.subscribe(channel)
+
+        async def send():
             while True:
-                await asyncio.sleep(1 / rate)
-                now = clock.now()
-                if not loop and now >= tl.total:
-                    await ws.close()
+                record = await queue.get()
+                if record is None:
+                    await ws.close(code=1013 if loop else 1000)
                     return
-                for lo, hi in spans(last % tl.total, now % tl.total, now - last >= tl.total):
-                    await emit(ws, tl, lo, hi)
-                last = now
-        except (WebSocketDisconnect, RuntimeError):
-            return
+                await asyncio.wait_for(ws.send_text(json.dumps(record)), timeout=2)
 
-    def spans(a, b, full):
-        if full:
-            return [(0, 10 ** 12)]
-        return [(a, b)] if b >= a else [(a, 10 ** 12), (-1, b)]
+        async def receive():
+            while True:
+                await ws.receive_text()
 
-    async def emit_state(ws, tl, lo, hi):
-        for _, rec in tl.between(lo, hi):
-            await ws.send_text(json.dumps(rec))
-
-    async def emit_coach(ws, tl, lo, hi):
-        for tick, round_ in tl.round_ends:
-            if lo < tick <= hi:
-                summary = derive.round_summary(tl.session, round_)
-                text, severity = derive.coach_text(summary)
-                await ws.send_text(json.dumps(summary))
-                await ws.send_text(json.dumps({"t": "coach", "session_id": tl.session.id, "round": round_, "text": text, "severity": severity}))
+        sender = asyncio.create_task(send())
+        receiver = asyncio.create_task(receive())
+        try:
+            done, _ = await asyncio.wait((sender, receiver), return_when=asyncio.FIRST_COMPLETED)
+            if sender in done and isinstance(sender.exception(), asyncio.TimeoutError):
+                await ws.close(code=1013)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            broadcaster.subscribers[channel].discard(queue)
+            sender.cancel()
+            receiver.cancel()
+            with CancelScope(shield=True):
+                await asyncio.gather(sender, receiver, return_exceptions=True)
 
     @app.websocket("/ws/state")
     async def ws_state(ws: WebSocket, session: str | None = None):
-        await run(ws, session, emit_state)
+        await run(ws, session, "state")
 
     @app.websocket("/ws/coach")
     async def ws_coach(ws: WebSocket, session: str | None = None):
-        await run(ws, session, emit_coach)
+        await run(ws, session, "coach")
 
     app.state.timeline = timeline
-    app.state.clock = clock
+    app.state.broadcasts = broadcasts
     return app

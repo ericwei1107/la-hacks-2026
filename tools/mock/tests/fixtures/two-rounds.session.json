@@ -1,0 +1,29 @@
+{
+  "session_id": "fixture-two-rounds",
+  "started_at": "2026-10-17T13:05:00Z",
+  "ended_at": null,
+  "game_version": "3.02.02",
+  "mode": "versus",
+  "stage": "infinite",
+  "player": "fixture",
+  "human_slot": 0,
+  "human_character": "devil_jin",
+  "bot_character": "kazuya",
+  "difficulty": 3,
+  "rounds": [
+    {
+      "round": 1,
+      "winner": null,
+      "start_frame": 100,
+      "end_frame": 102
+    },
+    {
+      "round": 2,
+      "winner": 0,
+      "start_frame": 0,
+      "end_frame": 2
+    }
+  ],
+  "result": "",
+  "recording": "tools/mock/tests/fixtures/two-rounds.jsonl"
+}
