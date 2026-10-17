@@ -78,6 +78,7 @@ def probe(gs_iter, seq, bot, notation, delay, watch):
             start_geo = geometry(gs, bot)
             start_frame = gs["frame"]
             break
+    health = gs["players"][bot]["health"]
     if notation != "wait":
         seq.submit(notation, force=True, frame=start_frame, error=False)
     timeline = []
@@ -140,7 +141,9 @@ def run(reader, pad, inputs, delay, watch):
     print("\nsummary (input: up at, actionable at, attack, away mm, sideways mm):", flush=True)
     for notation, r in rows:
         attack = f"0x{r['attack'][1]:04X} {r['attack'][2]}" if r["attack"] else "-"
-        print(f"  {notation:>5}: up +{r['up_at']}, act +{r['act_at']}, attack {attack}, away {r['away']:+d}, sideways {r['lateral']:+d}"
+        face = {12: "face up", 13: "face down"}.get(r["basic_state"], f"basic {r['basic_state']}")
+        print(f"  {notation:>5} ({face}, lying 0x{r['down_move']:04X}): up +{r['up_at']}, act +{r['act_at']}, attack {attack}, "
+              f"away {r['away']:+d}, sideways {r['lateral']:+d}"
               + (" DISTURBED" if r["disturbed"] else ""), flush=True)
     return 0
 

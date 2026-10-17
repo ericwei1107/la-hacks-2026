@@ -7,7 +7,7 @@ from game.difficulty import Difficulty
 from game.hotloop import fmt_record
 from game.notation import Timing
 from game.pad import Controls, load_config
-from game.reflex import Reflex, load_punishers
+from game.reflex import Reflex, load_punishers, load_wakeups
 from game.sequencer import Sequencer
 from game.state import Tracker
 from game.summarize import load_jsonl
@@ -45,8 +45,8 @@ def replay(states, difficulty, seed=None, config=None, character=None):
         evs = tracker.step(state)
         bot_slot = 1 - state["human_slot"]
         if reflex is None:
-            punishers, _ = load_punishers(character or state["players"][bot_slot]["character"])
-            reflex = Reflex(seq, difficulty, latency, punishers, rng)
+            name = character or state["players"][bot_slot]["character"]
+            reflex = Reflex(seq, difficulty, latency, load_punishers(name)[0], rng, load_wakeups(name)[0])
         recs = reflex.step(state, evs)
         mask = seq.on_frame(state["frame"], state["players"][bot_slot], reflex.live(state))
         if seq.applied and (not applied or applied[-1] != (state["round"],) + seq.applied[-1]):

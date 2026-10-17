@@ -9,7 +9,7 @@ from game.pad import KillSwitch, connect_pad, load_config
 from game.reader import Reader
 from game.readout import run_gate
 from game.record import add_session_args
-from game.reflex import Reflex, load_punishers
+from game.reflex import Reflex, load_punishers, load_wakeups
 from game.sequencer import Sequencer
 
 
@@ -29,12 +29,13 @@ class BotHooks(Hooks):
         timing = Timing.from_config(self.config.get("timing"))
         self.seq = Sequencer(self.pad, latency, self.difficulty, self.rng, timing)
         punishers, source = load_punishers(character)
-        self.reflex = Reflex(self.seq, self.difficulty, latency, punishers, self.rng)
+        wakeups, wake_source = load_wakeups(character)
+        self.reflex = Reflex(self.seq, self.difficulty, latency, punishers, self.rng, wakeups)
         tiers = ", ".join(f"{s}: " + " ".join(f"{t['notation']}(i{t['startup']})" for t in punishers[s]) for s in ("standing", "crouching"))
         print(f"bot P{bot + 1} {character} at difficulty {self.difficulty.level} "
               f"(reaction {self.difficulty.reaction_delay_frames}f, frame-perfect {self.difficulty.frame_perfect_chance:.0%}, "
               f"accuracy {self.difficulty.punish_accuracy:.0%}, execution error {self.difficulty.execution_error:.0%}), "
-              f"latency {latency}f; punishers from {source}: {tiers}. Kill key {self.config['kill_key']}.", flush=True)
+              f"latency {latency}f; punishers from {source}: {tiers}; wakeups from {wake_source}. Kill key {self.config['kill_key']}.", flush=True)
 
     def poll(self):
         self.pad.check_kill()

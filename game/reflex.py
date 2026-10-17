@@ -1,11 +1,12 @@
 import json
+import math
 import random
 from dataclasses import replace
 from pathlib import Path
 
 from game.notation import compile_notation
 from game.sequencer import first_press
-from game.state import DOWNED_BIT, JUGGLED_BIT, PUNISH_THRESHOLD
+from game.state import DOWNED_BIT, JUGGLED_BIT, PUNISH_THRESHOLD, active, lying
 
 ROOT = Path(__file__).resolve().parent.parent
 FALLBACK_PATH = Path(__file__).resolve().parent / "punishers_fallback.json"
@@ -17,6 +18,22 @@ BREAKS = {"press_1": "1", "press_2": "2", "press_12": "1+2"}
 CROUCH_REACTION = 2
 SKIP_SHARE = 0.5
 PUNISH_REACTION_SCALE = 0.5
+WAKEUP_PATH = Path(__file__).resolve().parent / "wakeup_fallback.json"
+LYING_STABLE = 2
+CLOSE_MM = 1600
+MID_MM = 2500
+RECOVERING_FRAMES = 15
+FACES = {12: "face_up", 13: "face_down"}
+WAKEUP_LOGITS = {
+    "far": {"stand": 2.0, "forward_roll": 0.8, "back_roll": 0.3, "side_roll": 0.0, "spring_kick": -0.5,
+            "rising_low": -2.0, "rising_mid": -2.0},
+    "recovering_close": {"rising_mid": 2.0, "rising_low": 1.5, "stand": 0.5, "back_roll": -0.5, "spring_kick": -1.0,
+                         "forward_roll": -1.0, "side_roll": -1.0},
+    "recovering_mid": {"spring_kick": 1.8, "stand": 1.0, "forward_roll": 0.5, "back_roll": 0.0, "side_roll": -0.5,
+                       "rising_mid": -1.0, "rising_low": -1.0},
+    "pressure": {"back_roll": 1.6, "side_roll": 1.4, "rising_low": 0.3, "stand": 0.2, "rising_mid": -0.5,
+                 "spring_kick": -1.0, "forward_roll": -2.0},
+}
 
 
 def parse_tiers(rows):
@@ -53,13 +70,42 @@ def load_punishers(character, root=ROOT, fallback=FALLBACK_PATH):
     return {"standing": parse_tiers(entry["standing"]), "crouching": parse_tiers(entry["crouching"])}, "game/punishers_fallback.json"
 
 
+def load_wakeups(character, path=WAKEUP_PATH):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if character in data:
+        return data[character], f"game/{Path(path).name} ({character})"
+    return data["kazuya"], f"game/{Path(path).name} (kazuya table, unverified for {character})"
+
+
+def wakeup_situation(state, bot, opp):
+    distance = state["derived"]["distance_mm"]
+    recovering = not opp["free_movement"] and opp["frames_until_actionable"] >= RECOVERING_FRAMES and not active(opp)
+    if recovering and distance < CLOSE_MM:
+        return "recovering_close"
+    if recovering and distance < MID_MM:
+        return "recovering_mid"
+    if distance >= MID_MM:
+        return "far"
+    return "pressure"
+
+
+def softmax(logits, temperature):
+    top = max(logits.values())
+    weights = {k: math.exp((v - top) / temperature) for k, v in logits.items()}
+    total = sum(weights.values())
+    return {k: w / total for k, w in weights.items()}
+
+
 class Reflex:
-    def __init__(self, sequencer, difficulty, latency, punishers, rng=None):
+    def __init__(self, sequencer, difficulty, latency, punishers, rng=None, wakeups=None):
         self.seq = sequencer
         self.difficulty = difficulty
         self.latency = latency
         self.punishers = punishers
+        self.wakeups = wakeups or {}
         self.rng = rng or random.Random()
+        self.lying_run = 0
+        self.wake = None
         self.handled = None
         self.prev_thrown = "none"
         self.guard = "n"
@@ -88,6 +134,8 @@ class Reflex:
         return state["derived"]["situation"] != "round_over" and all(p["health"] > 0 for p in state["players"])
 
     def reset(self):
+        self.lying_run = 0
+        self.wake = None
         self.handled = None
         self.prev_thrown = "none"
         self.guard = "n"
@@ -105,6 +153,7 @@ class Reflex:
         bot, opp = state["players"][bot_slot], state["players"][human]
         out = []
         out += self._throw_break(state, bot)
+        out += self._wakeup(state, bot, opp)
         out += self._punish(state, events, bot, bot_slot)
         out += self._block(state, bot, opp)
         self.prev_thrown = bot["being_thrown"]
@@ -196,6 +245,47 @@ class Reflex:
                                    best=best["notation"] if best else None, rolled_miss=miss,
                                    blocked_move_id=ev.get("move_id")))
         return out
+
+    def _wakeup(self, state, bot, opp):
+        frame = state["frame"]
+        if not bot["status"] & DOWNED_BIT:
+            self.lying_run = 0
+            self.wake = None
+            return []
+        ready = lying(bot)
+        self.lying_run = self.lying_run + 1 if ready else 0
+        if self.wake is not None and self.wake["stage"] == "waiting" and not ready:
+            self.wake = None
+        if self.wake is None and self.lying_run >= LYING_STABLE:
+            delay = self.difficulty.reaction(self.rng)
+            self.wake = {"stage": "waiting", "asked": frame, "delay": delay, "at": frame + self._press_offset(delay)}
+        if self.wake is None or self.wake["stage"] != "waiting" or frame < self.wake["at"]:
+            return []
+        face = FACES.get(bot["basic_state"], "face_up")
+        options = self.wakeups.get(face) or self.wakeups.get("face_up") or []
+        if not options:
+            self.wake["stage"] = "done"
+            return []
+        situation = wakeup_situation(state, bot, opp)
+        logits = WAKEUP_LOGITS[situation]
+        probs = softmax({o["notation"]: logits.get(o["kind"], -2.0) for o in options}, self.difficulty.mixup_temperature)
+        pick = self.rng.random()
+        chosen = options[-1]
+        for o in options:
+            pick -= probs[o["notation"]]
+            if pick <= 0:
+                chosen = o
+                break
+        self.seq.cancel(frame)
+        self._set_guard("n")
+        self.seq.submit(chosen["notation"], force=True, frame=frame, reflex="wakeup")
+        self.wake["stage"] = "sent"
+        rec = self.record(state, "wakeup", self.wake["asked"], [o["notation"] for o in options], chosen["notation"],
+                          option=chosen["kind"], situation=situation, delay=self.wake["delay"], face=face,
+                          verified=face in self.wakeups, distance=round(state["derived"]["distance_mm"]),
+                          opp_move_id=opp["move_id"], opp_actionable_in=opp["frames_until_actionable"])
+        rec["probabilities"] = {k: round(v, 4) for k, v in probs.items()}
+        return [rec]
 
     def _throw_break(self, state, bot):
         code = bot["being_thrown"]
