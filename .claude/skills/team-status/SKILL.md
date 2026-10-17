@@ -29,12 +29,24 @@ Check integration seams specifically:
 - Is there a real recording in `data/samples/` yet (M1), and do the other tracks' services read it without errors?
 - Do the mock servers in `tools/mock/` still match the contracts?
 
-## 3. Report
+## 3. Standing checks
+
+`tools/status/checks.json` lists per-person items that stay on the report until done, each with the hour window it is due (`due`). The script marks each one `on_main`, `on_branch (<branch>)`, `pending` (not found in code anywhere), or `manual` (no code signal; judge it yourself). Report every `pending` item whose window has started or passed under its owner, and every `on_branch` item as "done but not merged". Mention items not yet due only if the asker wants the full list. To add a new standing item for anyone, add it to `checks.json`.
+
+If the Sentry MCP tools are available (org `university-of-maryland-ma`, projects `kumite-analytics`, `kumite-brain`, `kumite-replay`, `kumite-app`), also check live Sentry state and attribute it to the project's owner:
+- Which projects have received any event in the last 24 hours. A project whose `sentry-init` check is done but which has no events means the DSN is missing or wrong in that service's environment.
+- New unresolved issues in the last few hours per project: title and link, under the owner's name.
+- From hour 14 onward, the `environment` tag on recent events. Events from the demo laptop tagged `development` mean `SENTRY_ENVIRONMENT=demo` was not set there; tell Sahil.
+- For `kumite-app`, whether recent stack frames are minified (one-letter function names, bundled paths). If so, source maps are not uploaded; tell Chloe to run the `sentry-fix-stack-traces` skill.
+
+Never print DSNs or keys in the report.
+
+## 4. Report
 
 Lead with what needs action. Keep it short enough to read aloud to the team.
 
 1. **Blockers and violations.** Every BLOCK flag (contract edits, data outside `data/samples/`, secrets), every merge conflict between branches, and anyone waiting on someone else. Name the person and the fix.
-2. **One line per track:** owner, milestone reached vs. where the plan says they should be at this hour, last push time. Flag anyone who hasn't pushed in over two hours, since unpushed work is invisible to everyone else.
+2. **One block per person:** owner, milestone reached vs. where the plan says they should be at this hour, last push time, then their open standing checks and any Sentry findings as a short to-do list. Flag anyone who hasn't pushed in over two hours, since unpushed work is invisible to everyone else.
 3. **Ready to integrate:** which branches can merge to main now without conflicts or failing validation, in the order to merge them.
 4. **Next integration step:** the single most useful thing the team can do next to reduce friction.
 

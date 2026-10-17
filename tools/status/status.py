@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MILESTONES = json.loads((Path(__file__).parent / "milestones.json").read_text())
+CHECKS = json.loads((Path(__file__).parent / "checks.json").read_text())
 BASE = "origin/main"
 
 
@@ -142,6 +143,21 @@ def track_progress(refs):
     return report
 
 
+def standing_checks(refs):
+    res = {}
+    for key, checks in CHECKS.items():
+        items = []
+        for c in checks:
+            if key == "runtime" or not c.get("grep"):
+                items.append({**c, "state": "manual", "where": []})
+                continue
+            where = [r for r in [BASE] + refs if git("grep", "-q", "-E", c["grep"], r, "--", *c["paths"]).returncode == 0]
+            state = "on_main" if BASE in where else "on_branch" if where else "pending"
+            items.append({**c, "state": state, "where": where})
+        res[key] = items
+    return res
+
+
 def health():
     res = {}
     for key, t in MILESTONES["tracks"].items():
@@ -205,6 +221,14 @@ def to_markdown(s):
         for m in t["milestones"]:
             lines.append(f"- [{m['signal_state']}] h{m['hours']}: {m['goal']}")
         lines.append("")
+    lines += ["## Standing checks", ""]
+    for k, items in s["checks"].items():
+        who = MILESTONES["tracks"][k]["owner"] if k in MILESTONES["tracks"] else "team"
+        lines.append(f"### {k} · {who}")
+        for c in items:
+            where = f" ({', '.join(c['where'])})" if c["where"] and c["state"] != "on_main" else ""
+            lines.append(f"- [{c['state']}{where}] h{c['due']} {c['id']}: {c['todo']}")
+        lines.append("")
     lines += ["## Services", ""]
     for n, h in s["health"].items():
         lines.append(f"- {n} {h['url']}: {'UP ' + json.dumps(h['body']) if h['up'] else 'down (' + h['error'] + ')'}")
@@ -226,6 +250,7 @@ def main():
         "branches": [branch_info(b) for b in refs],
         "conflicts": conflicts(refs),
         "tracks": track_progress(refs),
+        "checks": standing_checks(refs),
         "health": health(),
         "validation": validate(refs),
     }
