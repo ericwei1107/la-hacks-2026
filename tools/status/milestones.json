@@ -1,0 +1,61 @@
+{
+  "tracks": {
+    "A": {
+      "owner": "Sahil",
+      "folders": ["game"],
+      "service": {"name": "brain", "port": 8765, "env": "KUMITE_BRAIN_URL"},
+      "milestones": [
+        {"hours": "0-1", "goal": "Contracts committed; reader generated from the TOML; startup gate passes against the live game", "signals": ["game/**/*.py"]},
+        {"hours": "1-3", "goal": "M1: state model, recorder, live state readout, first real recording in data/samples/", "signals": ["data/samples/*.jsonl"]},
+        {"hours": "3-6", "goal": "M2: sequencer + virtual pad; reflex layer blocks and punishes", "signals": []},
+        {"hours": "6-10", "goal": "M3: tactical decider on Laya; habit estimates; bot plays neutral", "signals": []},
+        {"hours": "10-14", "goal": "Predictor, mastery tracker, bandit, re-tests; plan thread; round summaries POSTed to /coach/round; data/learning written", "signals": []},
+        {"hours": "14-16", "goal": "M4: full loop with spoken between-round coaching and a fixed-habit announcement", "signals": []},
+        {"hours": "16-19", "goal": "Demo sets at L1, L3, L5; one set fixing a habit", "signals": []}
+      ]
+    },
+    "B": {
+      "owner": "Chloe",
+      "folders": ["app"],
+      "service": null,
+      "milestones": [
+        {"hours": "0-1", "goal": "Electron scaffold, design tokens, window layout", "signals": ["app/package.json"]},
+        {"hours": "1-3", "goal": "Overlay HUD and sessions list against the mock", "signals": []},
+        {"hours": "3-6", "goal": "Coach screen, between-round card; ElevenLabs TTS", "signals": []},
+        {"hours": "6-10", "goal": "Learning panel and stats views; voice push-to-talk", "signals": []},
+        {"hours": "10-14", "goal": "Replay analysis screen; polish pass for Paper", "signals": []},
+        {"hours": "14-16", "goal": "Integration: app against the live brain", "signals": []},
+        {"hours": "16-19", "goal": "Demo mode, booth profile, landing page", "signals": []}
+      ]
+    },
+    "C": {
+      "owner": "Garrett",
+      "folders": ["replay", "characters"],
+      "service": {"name": "replay", "port": 8766, "env": "KUMITE_REPLAY_URL"},
+      "milestones": [
+        {"hours": "0-1", "goal": "Character modules from prep/ids.md; decision-point definitions", "signals": ["characters/*/moves.json", "characters/*/punishers.json", "characters/*/options.json"]},
+        {"hours": "1-3", "goal": "Extractor over the synthetic recording; situation-to-words", "signals": ["replay/**/*.py"]},
+        {"hours": "3-6", "goal": "Jev scoring at each decision point; first report from a real recording", "signals": []},
+        {"hours": "6-10", "goal": "Coach agent with tools; POST /coach/round under 8 s", "signals": []},
+        {"hours": "10-14", "goal": "Report polish; Step 5 clip commentary if ahead", "signals": []},
+        {"hours": "14-16", "goal": "Integration: live round summaries", "signals": []},
+        {"hours": "16-19", "goal": "Final reports for the demo sets", "signals": []}
+      ]
+    },
+    "D": {
+      "owner": "Eric",
+      "folders": ["analytics", "tools/mock"],
+      "service": {"name": "analytics", "port": 8767, "env": "KUMITE_ANALYTICS_URL"},
+      "milestones": [
+        {"hours": "0-1", "goal": "Synthetic recording + mock servers for all three APIs", "signals": ["tools/mock/synth.py", "tools/mock/*.py"]},
+        {"hours": "1-3", "goal": "Stats pipeline over the synthetic recording; Sentry project", "signals": ["analytics/**/*.py"]},
+        {"hours": "3-6", "goal": "Learning metrics endpoints; Tiger Data schema and batched writes", "signals": []},
+        {"hours": "6-10", "goal": "Veri fine-tune job prepared; eval harness for before/after accuracy", "signals": []},
+        {"hours": "10-14", "goal": "Fine-tune on Sahil's recordings; Sentry traces across all services", "signals": []},
+        {"hours": "14-16", "goal": "Integration: live metrics; fine-tuned checkpoint swapped in if it wins", "signals": []},
+        {"hours": "16-19", "goal": "Learning curve for the video", "signals": []}
+      ]
+    }
+  },
+  "shared": ["contracts", "data/samples", "tools/status", ".claude", "CLAUDE.md", "README.md", ".gitignore"]
+}
