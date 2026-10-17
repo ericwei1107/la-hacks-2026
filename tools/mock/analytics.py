@@ -32,7 +32,7 @@ def create(store):
         for s in sorted(store.sessions.values(), key=lambda s: s.meta.get("started_at", "")):
             if s.meta.get("player") != player or s.meta.get("human_character") != character:
                 continue
-            values = {k: v for k, v in derive.stats(s)["totals"].items() if not isinstance(v, dict)}
+            values = {k: v for k, v in derive.stats(s)["totals"].items() if v is None or isinstance(v, (int, float))}
             if stat:
                 values = {stat: values[stat]} if stat in values else {}
             series.append({"session_id": s.id, "started_at": s.meta.get("started_at"), "values": values})

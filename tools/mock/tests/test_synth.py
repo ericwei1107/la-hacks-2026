@@ -88,6 +88,7 @@ class SynthTest(unittest.TestCase):
         stats = client.get(f"/stats/{self.sid}").json()
         self.assertEqual(stats["rounds"][0]["low_block_rate"], 0.2)
         self.assertEqual(stats["rounds"][2]["low_block_rate"], 1.0)
+        self.assertEqual([r["throw_break_rate"] for r in stats["rounds"]], [0.5, None, 1.0])
 
 
 if __name__ == "__main__":

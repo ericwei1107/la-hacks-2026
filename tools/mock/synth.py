@@ -129,11 +129,11 @@ class Round:
         c = f + m["first"]
         broken = outcome == "broken"
         self.thrown[HUMAN].append((c, c + (12 if broken else 28)))
+        self.event(c, "throw", actor=BOT, target=HUMAN, move_id=m["id"], hit_level="throw", damage=0 if broken else m["damage"], situation="throw_break", action="break_1" if broken else "none", detail={"break": "press_1"})
         if broken:
-            self.event(c + 8, "throw_break", actor=HUMAN, target=BOT, move_id=m["id"], hit_level="throw", situation="throw_break", action="break_1", detail={"break": "press_1"})
+            self.event(c + 8, "throw_break", actor=HUMAN, target=BOT, move_id=m["id"], situation="throw_break", action="break_1", detail={"input": "press_1"})
             self.escaped[HUMAN].append((c + 8, c + 30))
         else:
-            self.event(c, "throw", actor=BOT, target=HUMAN, move_id=m["id"], hit_level="throw", damage=m["damage"], situation="throw_break", action="none", detail={"break": "press_1"})
             self.damage.append((c, HUMAN, m["damage"]))
             self.event(c + 28, "knockdown", actor=BOT, target=HUMAN, detail={"cause": "throw"})
             self.downed[HUMAN].append((c + 28, c + 78))

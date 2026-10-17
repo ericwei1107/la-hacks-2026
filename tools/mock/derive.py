@@ -1,11 +1,15 @@
-from collections import defaultdict
 from datetime import datetime, timezone
 
-PUNISHABLE = -10
-PUNISH_WINDOW = 10
+import importlib.util
+
+from store import ROOT
+
+_spec = importlib.util.spec_from_file_location("kumite_analytics_stats", ROOT / "analytics" / "stats.py")
+analytics_stats = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(analytics_stats)
+
 CONNECT = ("hit", "counter_hit")
 DAMAGING = CONNECT + ("throw",)
-LOWS = ("low", "special_low")
 DETECT_N = 4
 DETECT_P = 0.6
 OPTIONS = [("block_low", "d/b", 0.55), ("press", "1", 0.25), ("sidestep", "u", 0.20)]
@@ -73,40 +77,8 @@ def round_summary(session, round_):
     }
 
 
-def rate(num, den):
-    return round(num / den, 3) if den else None
-
-
-def stat_block(session, evs):
-    h, b = human(session), 1 - human(session)
-    by_situation = defaultdict(int)
-    for e in evs:
-        if e["kind"] in DAMAGING and e.get("target") == h and e.get("damage"):
-            by_situation[e.get("situation") or "neutral"] += e.get("damage", 0)
-    opps = [e for e in evs if e["kind"] == "block" and e.get("actor") == b and e.get("target") == h and e.get("frame_advantage") is not None and e["frame_advantage"] <= PUNISHABLE]
-    punished = 0
-    for o in opps:
-        window = abs(o["frame_advantage"]) + PUNISH_WINDOW
-        if any(e["kind"] in CONNECT and e.get("actor") == h and e["round"] == o["round"] and 0 < e["frame"] - o["frame"] <= window for e in evs):
-            punished += 1
-    throws = sum(1 for e in evs if e["kind"] == "throw" and e.get("actor") == b and e.get("target") == h)
-    breaks = sum(1 for e in evs if e["kind"] == "throw_break" and h in (e.get("actor"), e.get("target")))
-    lows = [e for e in evs if e.get("actor") == b and e.get("target") == h and e.get("hit_level") in LOWS and e["kind"] in ("block",) + CONNECT]
-    blocked_adv = [-e["frame_advantage"] for e in evs if e["kind"] == "block" and e.get("target") == h and e.get("frame_advantage") is not None]
-    return {
-        "damage_taken_by_situation": dict(by_situation),
-        "punish_rate": rate(punished, len(opps)),
-        "throw_break_rate": rate(breaks, throws + breaks),
-        "low_block_rate": rate(sum(1 for e in lows if e["kind"] == "block"), len(lows)),
-        "counter_hits_taken": sum(1 for e in evs if e["kind"] == "counter_hit" and e.get("target") == h),
-        "counter_hits_given": sum(1 for e in evs if e["kind"] == "counter_hit" and e.get("actor") == h),
-        "avg_adv_after_block": round(sum(blocked_adv) / len(blocked_adv), 2) if blocked_adv else None,
-    }
-
-
 def stats(session):
-    per_round = [{"round": r, **stat_block(session, events(session, r))} for r in rounds(session)]
-    return {"session_id": session.id, "rounds": per_round, "totals": stat_block(session, events(session))}
+    return analytics_stats.compute(session.id, session.meta, session.records)
 
 
 def learning(session):

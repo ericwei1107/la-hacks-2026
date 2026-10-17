@@ -2,3 +2,4 @@ fastapi
 uvicorn[standard]
 sentry-sdk[fastapi]>=2.35
 jsonschema
+httpx

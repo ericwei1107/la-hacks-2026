@@ -32,13 +32,56 @@ sentry_sdk.init(
     enable_logs=True,
 )
 
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-app = FastAPI(title="kumite-analytics", version=VERSION)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+from analytics.repository import DataError, FileRepository
+
+logger = logging.getLogger(__name__)
 
 
-@app.get("/health")
-def health():
-    return {"ok": True, "service": "analytics", "version": VERSION}
+def create_app(data_dir=None):
+    app = FastAPI(title="kumite-analytics", version=VERSION)
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    root = data_dir if data_dir is not None else DATA_DIR
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        from analytics.tigerdata.repository import TigerRepository
+        app.state.repository = TigerRepository(root, url)
+    else:
+        app.state.repository = FileRepository(root)
+
+    @app.exception_handler(DataError)
+    async def unavailable(request, exc):
+        logger.error("Analytics data unavailable: %s", exc)
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+    @app.get("/health")
+    def health():
+        return {"ok": True, "service": "analytics", "version": VERSION}
+
+    @app.get("/stats/{session_id}")
+    def stats(session_id: str):
+        result = app.state.repository.stats(session_id)
+        if result is None:
+            raise HTTPException(404, "Unknown session")
+        return result
+
+    @app.get("/learning/{session_id}")
+    def learning(session_id: str):
+        result = app.state.repository.learning(session_id)
+        if result is None:
+            raise HTTPException(404, "Unknown session")
+        return result
+
+    @app.get("/trends/{player}/{character}")
+    def trends(player: str, character: str, stat: str | None = None):
+        return app.state.repository.trends(player, character, stat)
+
+    return app
+
+
+app = create_app()
