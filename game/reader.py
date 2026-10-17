@@ -332,6 +332,8 @@ class Reader:
         self.block_size = max(
             max(d["offset"] + TYPE_SIZES[d["type"]], d.get("key", 0) + 8) for d in self.fields.values()
         )
+        self.move_record = self.spec.get("move_record", {})
+        self.move_record_size = max((d["offset"] + TYPE_SIZES[d["type"]] for d in self.move_record.values()), default=0)
         self.hit_levels = {code: name for name, code in self.spec["hit_level_codes"].items()}
         self.characters = {cid: name for name, cid in self.spec["character_ids"].items()}
         self.info_chain = parse_chain(self.patterns["player_info"]["chain"])
@@ -344,6 +346,7 @@ class Reader:
         self.human_name = None
         self.last_health = {}
         self.discarded_health = 0
+        self.torn_rereads = 0
 
     def attach(self):
         pid = find_pid()
@@ -438,11 +441,19 @@ class Reader:
         raw = self.proc.read(block, self.block_size)
         return None if raw is None else self.parse_block(raw)
 
+    def read_move_record(self, address):
+        raw = self.proc.read(address, self.move_record_size) if address and self.move_record_size else None
+        out = {}
+        for name, desc in self.move_record.items():
+            out[name] = 0 if raw is None else struct.unpack_from(TYPE_FORMATS[desc["type"]], raw, desc["offset"])[0]
+        return out
+
     def read_player(self, index):
         block = self.blocks[index]
         state = self.read_block(block) if block else None
         if state is None:
             return None
+        state.update(self.read_move_record(state.get("move_record")))
         for name in HEALTH_FIELDS:
             cache_key = (block, name)
             if state[name] is None:
@@ -467,6 +478,10 @@ class Reader:
         players = [self.read_player(0), self.read_player(1)]
         if self.human_slot is None or any(p is None for p in players):
             return None
+        other = 1 - self.human_slot
+        if players[other]["round_frame"] != players[self.human_slot]["round_frame"]:
+            self.torn_rereads += 1
+            players[other] = self.read_player(other) or players[other]
         return Snapshot(players[self.human_slot]["round_frame"], self.human_slot, players)
 
     def gate(self, log=None):

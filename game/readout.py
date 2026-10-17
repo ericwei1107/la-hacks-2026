@@ -1,11 +1,9 @@
 import argparse
 import sys
-import time
 
+from game.pacer import Pacer
 from game.reader import DEFAULT_OFFSETS, Reader
 
-POLL_HZ = 1000
-SPIN_MARGIN = 0.0006
 SIDES = {0: "L", 1: "R"}
 
 
@@ -30,21 +28,24 @@ def fmt_line(snap):
     return " | ".join([head] + [fmt_player(i, p, snap.human_slot) for i, p in enumerate(snap.players)])
 
 
+def run_gate(reader, label):
+    print(f"gate ({label})", flush=True)
+    result = reader.gate(log=lambda c: print(fmt_check(c), flush=True))
+    print("GATE PASSED" if result.ok else "GATE FAILED: refusing to run", flush=True)
+    return result.ok
+
+
 def run(reader, every):
-    period = 1.0 / POLL_HZ
-    polls = 0
+    pacer = Pacer()
     frames = 0
     gaps = 0
     resets = 0
     prev = None
     last_print = None
     waiting = False
-    start = time.perf_counter()
-    deadline = start
     try:
         while True:
             rf = reader.poll_round_frame()
-            polls += 1
             if rf is None:
                 reader.resolve_blocks()
                 reader.resolve_human()
@@ -65,18 +66,12 @@ def run(reader, every):
                     if snap is not None:
                         print(fmt_line(snap), flush=True)
                         last_print = rf
-            deadline += period
-            delay = deadline - time.perf_counter()
-            if delay <= -period:
-                deadline = time.perf_counter()
-            while delay > 0:
-                time.sleep(delay - SPIN_MARGIN if delay > SPIN_MARGIN else 0)
-                delay = deadline - time.perf_counter()
+            pacer.wait()
     except KeyboardInterrupt:
-        elapsed = time.perf_counter() - start
+        elapsed, rate = pacer.rate()
         print(
             f"stopped: {frames} frame changes, {gaps} skipped frames, {resets} counter resets, "
-            f"{polls / elapsed:.0f} polls/s over {elapsed:.1f} s, {reader.discarded_health} health reads discarded",
+            f"{rate:.0f} polls/s over {elapsed:.1f} s, {reader.discarded_health} health reads discarded",
             flush=True,
         )
 
@@ -88,13 +83,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     reader = Reader(args.offsets)
-    print(f"gate ({args.offsets})", flush=True)
     try:
-        result = reader.gate(log=lambda c: print(fmt_check(c), flush=True))
-        if not result.ok:
-            print("GATE FAILED: refusing to run", flush=True)
+        if not run_gate(reader, args.offsets):
             return 1
-        print("GATE PASSED", flush=True)
         run(reader, args.every)
         return 0
     finally:
