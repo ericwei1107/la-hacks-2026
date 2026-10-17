@@ -8,7 +8,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 from game.reader import decode_health, rotl64
 from game.recorder import Recorder, result_text, session_meta
-from game.state import Tracker, advantage, build_player, build_state, derive, session_id
+from game.state import Tracker, advantage, build_player, build_state, derive, lying, session_id
 
 CONTRACTS = Path(__file__).resolve().parents[2] / "contracts"
 SID = "2026-10-17T13-05-00_sahil_djin_vs_kaz"
@@ -282,6 +282,21 @@ def string_frames(second_level_code=HIGH, second_level="high", second_active=15)
             d.update(move_id=0x718, frame_in_move=f - 124, move_total=18, free_movement=0, hit_reaction=1)
         seq.append((f, [a, d]))
     return seq
+
+
+class LyingTest(unittest.TestCase):
+    def player(self, **overrides):
+        return build_player(1, dict(idle(1, 0), **overrides))
+
+    def test_lying_loop_is_ready(self):
+        self.assertTrue(lying(self.player(status=0x6084, move_id=0x8007, move_total=60)))
+        self.assertTrue(lying(self.player(status=0x6A84, move_id=0x800A, move_total=60)))
+
+    def test_landing_throw_and_standing_are_not(self):
+        self.assertFalse(lying(self.player(status=0x6084, move_id=0x8006, move_total=1)))
+        self.assertFalse(lying(self.player(status=0x6084, move_id=0x7E0, move_total=60, being_thrown=0xE000001F)))
+        self.assertFalse(lying(self.player(move_id=0x8001, move_total=88)))
+        self.assertFalse(lying(self.player(status=0x6084, move_id=0x0092, move_total=5)))
 
 
 class StringTest(Base):

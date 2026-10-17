@@ -24,6 +24,8 @@ WAKEUP_WINDOW = 30
 PUNISH_THRESHOLD = 10
 REPEAT_CONNECT_GAP = 3
 ACTIVE_SLACK = 2
+GENERIC_MASK = 0xFF00
+GENERIC_BASE = 0x8000
 
 unknown_codes = Counter()
 
@@ -134,6 +136,11 @@ def build_state(raw_players, human_slot, frame, session_id):
         "players": players,
         "derived": derive(players, human_slot, frame),
     }
+
+
+def lying(player):
+    return (bool(player["status"] & DOWNED_BIT) and player["being_thrown"] == "none"
+            and player["move_id"] & GENERIC_MASK == GENERIC_BASE and player["move_total"] > 1)
 
 
 def active(player):
