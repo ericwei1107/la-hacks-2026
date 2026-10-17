@@ -1,8 +1,11 @@
+import time
 from datetime import datetime, timezone
 
 from game import state as st
 from game.pacer import Pacer
 from game.recorder import Recorder, iso_utc, result_text, session_meta
+
+STALL_S = 2.0
 
 
 def fmt_event(ev):
@@ -40,8 +43,17 @@ def wait_snapshot(reader, pacer, on_poll=None):
         pacer.wait()
 
 
-def frames(reader, pacer, on_poll=None):
+def stall_message(rf):
+    if rf is None:
+        return "players not readable: waiting for a match or practice"
+    return (f"round frame counter stuck at {rf} for {STALL_S:.0f} s: Tekken is paused (pause menu, or it paused "
+            f"because a controller was plugged in or unplugged). Unpause in the game; waiting")
+
+
+def frames(reader, pacer, on_poll=None, log=print):
     prev = None
+    last_change = time.monotonic()
+    stalled = False
     while True:
         rf = reader.poll_round_frame()
         if rf is not None and rf != prev:
@@ -49,10 +61,17 @@ def frames(reader, pacer, on_poll=None):
             if snap is not None and snap.round_frame != prev:
                 gap = 0 if prev is None or snap.round_frame < prev else snap.round_frame - prev - 1
                 prev = snap.round_frame
+                last_change = time.monotonic()
+                if stalled:
+                    log(f"round frame counter moving again at {prev}")
+                    stalled = False
                 yield snap, gap
         elif rf is None:
             reader.resolve_blocks()
             reader.resolve_human()
+        if not stalled and time.monotonic() - last_change >= STALL_S:
+            log(stall_message(rf))
+            stalled = True
         if on_poll:
             on_poll()
         pacer.wait()

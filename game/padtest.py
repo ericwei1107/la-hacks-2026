@@ -1,10 +1,12 @@
 import argparse
 import sys
+import threading
 import time
 
 from game.hotloop import frames
 from game.pacer import Pacer
-from game.pad import KillSwitch, Pad
+from game.pad import KillSwitch, connect_pad
+from game.padserver import MENU_HELP, press_menu
 from game.reader import DEFAULT_OFFSETS, Reader
 from game.readout import run_gate
 
@@ -20,7 +22,6 @@ EXPECTED = {
     "devil_jin": {"1": 0x643, "2": 0x60E, "3": 0x613, "4": 0x653, "f": 0x59F, "b": 0x5A3, "d": 0x5BC, "db": 0x5BD},
     "king": {"1": 0x652, "2": 0x61E, "3": 0x622, "4": 0x62C, "f": 0x5A7, "b": 0x5AB, "df": 0x5C2},
 }
-MENU_HOLD_S = 0.1
 
 
 def split(label):
@@ -63,11 +64,12 @@ def run_live(reader, pad):
     bot = 1 - snap.human_slot
     character = snap.players[bot]["character"]
     expected = EXPECTED.get(character, {})
-    print(f"human P{snap.human_slot + 1} (local info block), bot P{bot + 1} {character}; "
-          f"virtual pad connected, waiting {CONNECT_FRAMES} frames for Tekken to see it. Don't touch your stick.", flush=True)
-    for i, _ in enumerate(it):
-        if i >= CONNECT_FRAMES:
-            break
+    print(f"human P{snap.human_slot + 1} (local info block), bot P{bot + 1} {character}. Don't touch your stick.", flush=True)
+    if not pad.remote:
+        print(f"waiting {CONNECT_FRAMES} frames for Tekken to see the new pad", flush=True)
+        for i, _ in enumerate(it):
+            if i >= CONNECT_FRAMES:
+                break
     failures = []
     drove_bot = True
     for label in LABELS:
@@ -108,21 +110,14 @@ def run_blind(pad):
 
 
 def run_menu(pad):
-    print("menu mode: type keys separated by spaces (u d l r a b x y start back lb rb), Enter to send, q to quit", flush=True)
+    print(MENU_HELP, flush=True)
+    lock = threading.Lock()
     for line in sys.stdin:
-        keys = line.split()
-        if keys == ["q"]:
+        if line.strip() == "q":
             break
-        for key in keys:
-            try:
-                pad.menu(key.split("+"))
-            except KeyError:
-                print(f"unknown key {key!r}", flush=True)
-                continue
-            time.sleep(MENU_HOLD_S)
-            pad.release_all()
-            time.sleep(MENU_HOLD_S)
-        print("sent " + " ".join(keys), flush=True)
+        keys = press_menu(pad, lock, line)
+        if keys:
+            print("sent " + " ".join(keys), flush=True)
     return 0
 
 
@@ -134,11 +129,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.menu or args.no_read:
-        pad = Pad()
+        pad = connect_pad()
         try:
             return run_menu(pad) if args.menu else run_blind(pad)
         except (KeyboardInterrupt, KillSwitch) as e:
-            print(f"stopped: {e or 'Ctrl+C'}", flush=True)
+            print(f"stopped: {e}" if str(e) else "stopped: Ctrl+C", flush=True)
             return 1
         finally:
             pad.release_all()
@@ -148,10 +143,10 @@ def main(argv=None):
     try:
         if not run_gate(reader, args.offsets):
             return 1
-        pad = Pad()
+        pad = connect_pad()
         return run_live(reader, pad)
     except (KeyboardInterrupt, KillSwitch) as e:
-        print(f"stopped: {e or 'Ctrl+C'}", flush=True)
+        print(f"stopped: {e}" if str(e) else "stopped: Ctrl+C", flush=True)
         return 1
     finally:
         if pad is not None:

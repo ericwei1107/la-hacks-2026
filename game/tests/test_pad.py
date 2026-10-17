@@ -1,8 +1,12 @@
 import random
+import socket
+import threading
+import time
 import unittest
 
 from game.difficulty import PRESETS, Difficulty
-from game.pad import Pad, absolute, load_config
+from game.pad import Pad, RemotePad, absolute, load_config
+from game.padserver import Server
 
 
 class FakeDevice:
@@ -91,6 +95,52 @@ class PadTest(unittest.TestCase):
         pad, device = fake_pad()
         pad.menu(["r", "a"])
         self.assertEqual(device.pressed, {"DPAD_RIGHT", "A"})
+
+
+class PadServerTest(unittest.TestCase):
+    def setUp(self):
+        self.pad, self.device = fake_pad()
+        self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.server_sock.bind(("127.0.0.1", 0))
+        config = dict(self.pad.config, server={"host": "127.0.0.1", "port": self.server_sock.getsockname()[1]})
+        self.server = Server(self.pad, self.server_sock)
+        self.stop = threading.Event()
+        self.thread = threading.Thread(target=self.server.serve, args=(self.stop,), daemon=True)
+        self.thread.start()
+        self.client = RemotePad(config, kill_key=False)
+
+    def tearDown(self):
+        self.stop.set()
+        self.thread.join(1)
+        self.server_sock.close()
+        self.client.sock.close()
+
+    def wait_for(self, predicate):
+        deadline = time.monotonic() + 1.0
+        while time.monotonic() < deadline:
+            if predicate():
+                return True
+            time.sleep(0.005)
+        return False
+
+    def test_hello_set_release(self):
+        self.assertTrue(self.client.hello())
+        self.client.apply("df", ("2",), side=1)
+        self.assertTrue(self.wait_for(lambda: self.device.pressed == {"DPAD_DOWN", "DPAD_LEFT", "Y"}))
+        self.client.release_all()
+        self.assertTrue(self.wait_for(lambda: self.device.pressed == set()))
+
+    def test_watchdog_releases_silent_client(self):
+        self.client.apply("b")
+        self.assertTrue(self.wait_for(lambda: self.device.pressed == {"DPAD_LEFT"}))
+        self.server.last_message -= 10
+        self.assertTrue(self.wait_for(lambda: self.device.pressed == set()))
+
+    def test_hello_fails_without_server(self):
+        self.stop.set()
+        self.thread.join(1)
+        self.server_sock.close()
+        self.assertFalse(self.client.hello(timeout=0.1))
 
 
 class DifficultyTest(unittest.TestCase):

@@ -22,5 +22,9 @@
     "rb": "RIGHT_SHOULDER"
   },
   "kill_key": "PAUSE",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8768
+  },
   "input_latency_frames": 2
 }
