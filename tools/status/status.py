@@ -12,12 +12,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MILESTONES = json.loads((Path(__file__).parent / "milestones.json").read_text())
-CHECKS = json.loads((Path(__file__).parent / "checks.json").read_text())
+CHECKS_PATH = "tools/status/checks.json"
 BASE = "origin/main"
+ENV = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_SSH_COMMAND": "ssh -o BatchMode=yes -o ConnectTimeout=8"}
 
 
-def git(*args, check=False):
-    r = subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True)
+def git(*args, check=False, timeout=60):
+    try:
+        r = subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True, env=ENV, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        r = subprocess.CompletedProcess(args, 124, "", "timed out")
     if check and r.returncode != 0:
         raise RuntimeError(r.stderr.strip())
     return r
@@ -27,10 +31,55 @@ def out(*args):
     return git(*args).stdout.strip()
 
 
+def https_url(url):
+    if url.startswith("git@github.com:"):
+        return "https://github.com/" + url.split(":", 1)[1]
+    if url.startswith("ssh://git@github.com/"):
+        return "https://github.com/" + url.split("github.com/", 1)[1]
+    return url
+
+
 def fetch():
-    r = git("fetch", "--all", "--prune")
-    errs = [l for l in r.stderr.strip().splitlines() if l.strip()]
-    return r.returncode == 0, errs[:1] if r.returncode else []
+    r = git("fetch", "--prune", "origin", timeout=30)
+    if r.returncode == 0:
+        return True, []
+    url = https_url(out("remote", "get-url", "origin"))
+    r2 = git("fetch", "--prune", url, "+refs/heads/*:refs/remotes/origin/*", timeout=30)
+    if r2.returncode == 0:
+        return True, ["via HTTPS"]
+    errs = [l for l in (r.stderr + r2.stderr).strip().splitlines() if l.strip()]
+    return False, errs[:1]
+
+
+def load_checks(refs):
+    local = ROOT / CHECKS_PATH
+    edited = local.exists() and (
+        git("diff", "--quiet", "HEAD", "--", CHECKS_PATH).returncode != 0
+        or git("ls-files", "--error-unmatch", CHECKS_PATH).returncode != 0
+    )
+    text, src = (local.read_text(), "working tree") if edited else (None, None)
+    if text is None:
+        best = None
+        for ref in [BASE] + refs:
+            if git("cat-file", "-e", f"{ref}:{CHECKS_PATH}").returncode != 0:
+                continue
+            ts = int(out("log", "-1", "--format=%ct", ref, "--", CHECKS_PATH) or 0)
+            if best is None or ts > best[0]:
+                best = (ts, ref)
+        if best:
+            text, src = out("show", f"{best[1]}:{CHECKS_PATH}"), best[1]
+        elif local.exists():
+            text, src = local.read_text(), "working tree"
+    data = json.loads(text) if text else {}
+    return {k: [{**c, "source": src} for c in v] for k, v in data.items()}
+
+
+def whoami():
+    ids = {out("config", "user.name").lower(), out("config", "user.email").lower()} - {""}
+    for key, t in MILESTONES["tracks"].items():
+        if ids & {a.lower() for a in t.get("aliases", []) + [t["owner"]]}:
+            return key
+    return None
 
 
 def branches():
@@ -107,8 +156,6 @@ def conflicts(names):
     result = []
     refs = [BASE] + names
     for a, b in combinations(refs, 2):
-        if a == BASE:
-            continue
         r = git("merge-tree", "--write-tree", "--name-only", "--no-messages", a, b)
         if r.returncode == 1:
             files = [l for l in r.stdout.splitlines()[1:] if l]
@@ -143,9 +190,9 @@ def track_progress(refs):
     return report
 
 
-def standing_checks(refs):
+def standing_checks(refs, checks_by_track):
     res = {}
-    for key, checks in CHECKS.items():
+    for key, checks in checks_by_track.items():
         items = []
         for c in checks:
             if key == "runtime" or not c.get("grep"):
@@ -227,7 +274,9 @@ def to_markdown(s):
         lines.append(f"### {k} · {who}")
         for c in items:
             where = f" ({', '.join(c['where'])})" if c["where"] and c["state"] != "on_main" else ""
-            lines.append(f"- [{c['state']}{where}] h{c['due']} {c['id']}: {c['todo']}")
+            frm = f" (from {c['from']})" if c.get("from") else ""
+            doc = f" → {c['doc']}" if c.get("doc") else ""
+            lines.append(f"- [{c['state']}{where}] h{c['due']} {c['id']}{frm}: {c['todo']}{doc}")
         lines.append("")
     lines += ["## Services", ""]
     for n, h in s["health"].items():
@@ -236,13 +285,60 @@ def to_markdown(s):
     return "\n".join(lines)
 
 
+def doc_location(path, refs):
+    if not path or (ROOT / path).exists():
+        return path
+    for ref in [BASE] + refs:
+        if git("cat-file", "-e", f"{ref}:{path}").returncode == 0:
+            return f"`git show {ref}:{path}`"
+    return path
+
+
+def inbox(me, refs, checks):
+    owner = MILESTONES["tracks"][me]["owner"] if me else None
+    open_states = ("pending", "manual")
+    lines = [f"# Kumite inbox for {owner or 'unknown teammate'} · {datetime.now().astimezone().strftime('%H:%M')}", ""]
+    if not me:
+        name, email = out("config", "user.name"), out("config", "user.email")
+        lines.append(f"Couldn't match git identity '{name} <{email}>' to a track. Add it to `aliases` in tools/status/milestones.json.")
+        return "\n".join(lines)
+    mine = [c for c in checks.get(me, []) if c["state"] in open_states or c["state"].startswith("on_branch")]
+    asks = [c for c in mine if c.get("from") and c["from"] != owner]
+    own = [c for c in mine if not c.get("from") or c["from"] == owner]
+    sent = []
+    for key, items in checks.items():
+        if key in MILESTONES["tracks"] and key != me:
+            for c in items:
+                if c.get("from") == owner and c["state"] in open_states:
+                    sent.append((MILESTONES["tracks"][key]["owner"], c))
+    def row(c):
+        state = c["state"] if c["state"] != "on_branch" else f"done on {', '.join(c['where'])}, not merged"
+        frm = f" (from {c['from']})" if c.get("from") else ""
+        doc = f" → instructions: {doc_location(c.get('doc'), refs)}" if c.get("doc") else ""
+        return f"- [{state}] due h{c['due']} · {c['todo']}{frm}{doc}"
+    lines.append(f"## Requests for you ({len(asks)} open)")
+    lines += [row(c) for c in asks] or ["none"]
+    lines += ["", f"## Your own open items ({len(own)})"]
+    lines += [row(c) for c in own] or ["none"]
+    lines += ["", f"## Your requests to others still open ({len(sent)})"]
+    lines += [f"- {who}: {c['todo']} [{c['state']}]" for who, c in sent] or ["none"]
+    if asks:
+        lines += ["", "Agent: at the start of your first reply in this session, tell the user in one or two lines which requests are open for them and who asked, then offer to work on them. Each request's instructions are in the linked file. Run /team-status for the full picture."]
+    return "\n".join(lines)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--inbox", action="store_true")
     a = ap.parse_args()
     ok, err = (True, []) if a.no_fetch else fetch()
     refs = branches()
+    checks = standing_checks(refs, load_checks(refs))
+    if a.inbox:
+        print(inbox(whoami(), refs, checks))
+        return
     s = {
         "generated_at": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
         "fetch": {"ok": ok, "error": err},
@@ -250,7 +346,7 @@ def main():
         "branches": [branch_info(b) for b in refs],
         "conflicts": conflicts(refs),
         "tracks": track_progress(refs),
-        "checks": standing_checks(refs),
+        "checks": checks,
         "health": health(),
         "validation": validate(refs),
     }
