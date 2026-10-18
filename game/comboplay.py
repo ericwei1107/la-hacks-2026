@@ -4,12 +4,16 @@ from pathlib import Path
 
 from game.combos import (CAPTURED_DIR, COUNTER_HIT_REACTIONS, OPENER_HIT_WINDOW, ROUTES_PATH, ComboRunner, connect_signal,
                          distance, load_routes)
-from game.state import REACTIONS
+from game.notation import compile_notation
+from game.state import JUGGLED_BIT, REACTIONS
 
 FULL_SHARE = {"short": 0.0, "short_plus_optimal": 0.5, "optimal": 1.0}
 NONE = "none"
+NO_LAUNCH = "no_launch"
 ROUND_OVER = "round over"
 LAUNCHER_WINDOW = 60
+LAUNCH_WINDOW = 30
+FULL_SOURCES = ("punish", "combo")
 
 
 def hex_id(value):
@@ -26,6 +30,35 @@ def full_ids(route):
     ids = {hex_id(route.get("launcher_move_id"))} | ({hex_id(hits[0][2])} if hits else set())
     ids |= {r["move_id"] for r in route.get("frames") or [] if 0 <= r.get("offset", -1) <= OPENER_HIT_WINDOW}
     return ids - {None}
+
+
+def press_signature(frames):
+    out = []
+    for i, (direction, buttons) in enumerate(frames):
+        if buttons and (i == 0 or tuple(frames[i - 1]) != (direction, tuple(buttons))):
+            out.append((direction, tuple(sorted(buttons))))
+    return out
+
+
+def launcher_signature(route):
+    if route.get("captured"):
+        events = sorted(route.get("launcher_inputs") or [], key=lambda e: e[0])
+        return [(direction, tuple(sorted(buttons))) for _, direction, buttons, _ in events if buttons]
+    return press_signature(compile_notation(route["launcher"]))
+
+
+def move_source(move):
+    if move.tag.get("combo"):
+        return "combo"
+    if move.tag.get("reflex"):
+        return move.tag["reflex"]
+    if move.tag.get("tactical"):
+        return f"tactical:{move.tag['tactical']}"
+    return "other"
+
+
+def launched(route, target, counter_hit):
+    return counter_hit if needs_counter_hit(route) else bool(target["status"] & JUGGLED_BIT)
 
 
 def needs_counter_hit(route):
@@ -77,7 +110,10 @@ class ComboPlay:
         self.short, self.full = routes if routes is not None else ({}, {})
         self.short_ids = {name: short_ids(r) for name, r in self.short.items()}
         self.full_ids = {name: full_ids(r) for name, r in self.full.items()}
+        self.short_sig = {name: launcher_signature(r) for name, r in self.short.items()}
+        self.full_sig = {name: launcher_signature(r) for name, r in self.full.items()}
         self.runner = None
+        self.pending = None
         self.attempt = None
         self.prev = None
         self.last_move = None
@@ -85,14 +121,20 @@ class ComboPlay:
         self.decisions = []
 
     def busy(self):
-        return self.runner is not None
+        return self.runner is not None or self.pending is not None
 
     def share(self):
         return FULL_SHARE.get(self.difficulty.combo_set, 0.0)
 
-    def candidates(self, move_id, counter_hit, heat):
-        short = [n for n, r in self.short.items() if fits(r, self.short_ids[n], move_id, counter_hit, heat)]
-        full = [n for n, r in self.full.items() if fits(r, self.full_ids[n], move_id, counter_hit, heat)]
+    def candidates(self, move_id, counter_hit, heat, move):
+        if move is None:
+            return [], []
+        signature = press_signature(move.frames)
+        short = [n for n, r in self.short.items()
+                 if fits(r, self.short_ids[n], move_id, counter_hit, heat) and signature == self.short_sig[n]]
+        full = [n for n, r in self.full.items()
+                if fits(r, self.full_ids[n], move_id, counter_hit, heat) and signature == self.full_sig[n]
+                and move_source(move) in FULL_SOURCES]
         short.sort(key=lambda n: -self.short[n].get("listed_damage", 0))
         full.sort(key=lambda n: -self.full[n].get("damage", 0))
         return short, full
@@ -126,8 +168,10 @@ class ComboPlay:
             self.last_move = None
             self.handled = None
         active = self.seq.active
-        if active is not None and not active.tag.get("combo"):
+        if active is not None and self.runner is None and self.pending is None:
             self.last_move = active
+        if self.pending is not None:
+            return self.arm(state, live, bot_slot)
         if self.runner is not None:
             return self.advance(state, live, bot_slot)
         if not live or prev is None or not (self.short or self.full):
@@ -140,31 +184,31 @@ class ComboPlay:
             return []
         return self.start(state, prev, bot_slot, key)
 
-    def launcher(self, frame, route):
+    def launcher(self, frame):
         move = self.last_move
         if move is None or move.start_frame is None or frame - move.start_frame > LAUNCHER_WINDOW:
-            return route["launcher"], frame, "unknown"
-        if move.tag.get("reflex"):
-            trigger = move.tag["reflex"]
-        elif move.tag.get("tactical"):
-            trigger = f"tactical:{move.tag['tactical']}"
-        else:
-            trigger = "other"
-        return move.notation, move.start_frame, trigger
+            return None
+        return move
+
+    def deadline(self, route):
+        if not route.get("captured"):
+            return LAUNCH_WINDOW
+        return max(0, min(e[0] for e in route["inputs"]) - self.seq.latency)
 
     def start(self, state, prev, bot_slot, key):
         frame = state["frame"]
         bot, target = state["players"][bot_slot], state["players"][1 - bot_slot]
         counter_hit = target["hit_reaction"] in COUNTER_HIT_REACTIONS
         heat = bool(bot.get("heat_active"))
-        short, full = self.candidates(bot["move_id"], counter_hit, heat)
+        move = self.launcher(frame)
+        short, full = self.candidates(bot["move_id"], counter_hit, heat, move)
         if not short and not full:
             return []
         self.handled = key
         chosen, probs = self.choose(short, full)
         best = (full + short)[0]
         route = self.full.get(chosen) or self.short.get(chosen) or self.full.get(best) or self.short[best]
-        notation, start_frame, trigger = self.launcher(frame, route)
+        notation, start_frame, trigger = move.notation, move.start_frame, move_source(move)
         self.attempt = {
             "route": chosen,
             "route_set": "full" if chosen in self.full else "short" if chosen in self.short else None,
@@ -181,15 +225,45 @@ class ComboPlay:
             "connect_distance": route.get("connect_distance"),
         }
         if chosen == NONE:
-            rec = self.record(state, None, reason=f"no short route for this launcher at combo_set {self.difficulty.combo_set}")
+            rec = self.record(state, None, NONE, f"no short route for this launcher at combo_set {self.difficulty.combo_set}")
             self.attempt = None
             return [rec]
         self.seq.discard(lambda m: not m.tag.get("combo"), frame)
-        runner = ComboRunner(route, self.seq, bot_slot, self.difficulty, name=chosen, cut=False)
-        runner.follow(prev, notation, start_frame)
-        self.runner = runner
-        runner.on_state(state)
-        return self.settle(state)
+        self.pending = {"route": route, "prev": prev, "states": [], "deadline": frame + self.deadline(route),
+                        "counter_hit": counter_hit}
+        return self.arm(state, True, bot_slot)
+
+    def arm(self, state, live, bot_slot):
+        p = self.pending
+        frame = state["frame"]
+        target = state["players"][1 - bot_slot]
+        if p["states"] and frame < p["states"][-1]["frame"]:
+            live = False
+        p["states"].append(state)
+        if live and launched(p["route"], target, p["counter_hit"]):
+            self.pending = None
+            self.attempt["launch_frame"] = frame
+            runner = ComboRunner(p["route"], self.seq, bot_slot, self.difficulty, name=self.attempt["route"], cut=False)
+            runner.follow(p["prev"], self.attempt["launcher"], self.attempt["launcher_frame"])
+            self.runner = runner
+            for buffered in p["states"]:
+                runner.on_state(buffered)
+                if runner.finished:
+                    break
+            return self.settle(state)
+        lost = not target["hit_reaction"] or target["free_movement"]
+        if live and not lost and frame < p["deadline"]:
+            return []
+        self.pending = None
+        if not live:
+            why = ROUND_OVER
+        elif lost:
+            why = "hit reaction lost"
+        else:
+            why = f"no launch by +{p['deadline'] - self.attempt['start_frame']}"
+        rec = self.record(state, None, NO_LAUNCH, f"{why} before the first follow-up input")
+        self.attempt = None
+        return [rec]
 
     def advance(self, state, live, bot_slot):
         runner = self.runner
@@ -211,11 +285,11 @@ class ComboPlay:
         self.attempt = None
         return [rec]
 
-    def record(self, state, runner, reason=None):
+    def record(self, state, runner, status=None, reason=None):
         a = self.attempt
         detail = {"kind": "combo", **{k: v for k, v in a.items() if k not in ("options", "probabilities")}}
         if runner is None:
-            detail.update(links_completed=0, links_planned=0, dropped=False, status=NONE, reason=reason, damage=0)
+            detail.update(links_completed=0, links_planned=0, dropped=False, status=status, reason=reason, damage=0)
         else:
             done, planned = progress(runner)
             detail.update(links_completed=done, links_planned=planned, hits=len(runner.hits),
@@ -229,7 +303,7 @@ class ComboPlay:
             "frame": state["frame"],
             "frame_asked": a["start_frame"],
             "options": a["options"],
-            "chosen": a["route"],
+            "chosen": a["route"] if runner is not None else NONE,
             "probabilities": a["probabilities"],
             "source": "reflex",
             "reflex": detail,
