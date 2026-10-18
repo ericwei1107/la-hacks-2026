@@ -12,6 +12,8 @@ CAPTURED_DIR = Path(__file__).resolve().parent / "combos_captured"
 SHORT_MAX_LEVEL = 2
 SHORT_HITS = 2
 FINISHED = ("done", "dropped", "interrupted", "aborted")
+KI_CHARGE = ("1", "2", "3", "4")
+COUNTER_HIT_REACTIONS = (10, 11)
 FIRST_DIRECTION = re.compile(r"^([udfb]{1,2})(?=\+)")
 
 
@@ -111,6 +113,10 @@ def captured_frames(inputs, cut=None):
     return frames, start
 
 
+def ki_charging(player):
+    return set(KI_CHARGE) <= set(player.get("buttons_held", [])) | set(player.get("buttons_pressed", []))
+
+
 def connect_signal(prev_target, target):
     return target["health"] < prev_target["health"] or bool(target["hit_reaction"] and not prev_target["hit_reaction"])
 
@@ -141,6 +147,7 @@ class ComboRunner:
             self.replay = None
             self.attack_index = 0
             self.pending_attack = False
+            self.charged = False
         else:
             self.links = plan(route, hit_limit(self.difficulty))
         self.listed_damage = listed_damage(self.links)
@@ -275,7 +282,13 @@ class ComboRunner:
 
     def _captured_step(self, frame, bot, target, prev):
         if self.move is None:
-            if not self._ready(bot) or frame < self.captured.get("start_round_frame", 0):
+            if self.captured.get("trigger") == "ki_charge":
+                self.charged = self.charged or ki_charging(target)
+                if not self.charged:
+                    return None
+            elif frame < self.captured.get("start_round_frame", 0):
+                return None
+            if not self._ready(bot):
                 return None
             return self._submit_opener(frame) if self.captured.get("launcher_inputs_replay") else self._submit(frame)
         if prev is None:

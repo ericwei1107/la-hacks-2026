@@ -6,11 +6,13 @@ from collections import Counter
 from pathlib import Path
 
 from game.combocapture import (BUTTONS, attack_starts, dump_route, fmt_events, input_events, make_row, move_changes, move_names,
-                               replay, states)
-from game.combos import CAPTURED_DIR, load_captured
+                               states)
+from game import combotest
+from game.combos import CAPTURED_DIR, COUNTER_HIT_REACTIONS, load_captured
+from game.difficulty import Difficulty
 from game.hotloop import frames
 from game.pacer import Pacer
-from game.pad import KillSwitch
+from game.pad import KillSwitch, connect_pad
 from game.reader import DEFAULT_OFFSETS, Reader
 from game.readout import run_gate
 
@@ -109,6 +111,8 @@ def build_demo_route(name, rows, slot, names=None):
         "subject_slot": slot,
         "captured_at": time.strftime("%Y-%m-%dT%H-%M-%S"),
         "input_latency_frames": 2,
+        "counter_hit": connect_row["target_reaction"] in COUNTER_HIT_REACTIONS,
+        "trigger": "ki_charge" if connect_row["target_reaction"] in COUNTER_HIT_REACTIONS else "round_frame",
         "start_round_frame": start["frame"],
         "start_distance": start["distance"],
         "connect_distance": connect_row["distance"],
@@ -195,6 +199,34 @@ def capture(reader, args, log=print):
     return 1
 
 
+def replay_route(route, counter_hit=False):
+    route = dict(route)
+    if counter_hit or route.get("counter_hit"):
+        route["counter_hit"] = True
+        route["trigger"] = "ki_charge"
+    return route
+
+
+def replay_demo(reader, args):
+    route = replay_route(load_captured(args.name, args.dir), args.counter_hit)
+    print(f"{route['guide']}; the demo opener started at round frame {route.get('start_round_frame', 0)} from "
+          f"{route['start_distance']} distance", flush=True)
+    if args.wait_reset:
+        print("NOTHING STARTS UNTIL YOU RESET: press the practice position reset to start attempt 1, and reset again "
+              "after every attempt (use --no-wait-reset to start without resets)", flush=True)
+    if route.get("trigger") == "ki_charge":
+        print("COUNTER HIT ROUTE: after each reset, stand still for half a second, then Ki charge (press 1+2+3+4 "
+              "together); the opener fires the moment the charge is read", flush=True)
+    else:
+        print("the opener waits for the same round frame as the demo", flush=True)
+    pad = connect_pad()
+    try:
+        return combotest.run(reader, pad, route, args.name, args.attempts, Difficulty.preset(args.difficulty),
+                             args.wait_reset)
+    finally:
+        pad.release_all()
+
+
 def main(argv=None):
     sys.stdout.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(description="Capture a combo from the in-game move-list or combo demo and replay it")
@@ -207,6 +239,9 @@ def main(argv=None):
     parser.add_argument("--wait-reset", dest="wait_reset", action="store_true", default=True, help=argparse.SUPPRESS)
     parser.add_argument("--no-wait-reset", dest="wait_reset", action="store_false",
                         help="start attempts without waiting for a practice position reset (the opener needs the demo spacing)")
+    parser.add_argument("--counter-hit", action="store_true",
+                        help="fire the opener when you Ki charge (1+2+3+4) so it counter hits; on by default for routes "
+                             "whose demo opener counter hit")
     parser.add_argument("--dir", default=str(CAPTURED_DIR))
     parser.add_argument("--offsets", default=str(DEFAULT_OFFSETS))
     args = parser.parse_args(argv)
@@ -214,15 +249,7 @@ def main(argv=None):
     try:
         if not run_gate(reader, args.offsets):
             return 1
-        if args.replay:
-            route = load_captured(args.name, args.dir)
-            print(f"{route['guide']}; the demo opener started at round frame {route.get('start_round_frame', 0)} from "
-                  f"{route['start_distance']} distance, and replay holds the opener until the same frame", flush=True)
-            if args.wait_reset:
-                print("NOTHING STARTS UNTIL YOU RESET: press the practice position reset to start attempt 1, and reset "
-                      "again after every attempt (use --no-wait-reset to start without resets)", flush=True)
-            return replay(reader, args)
-        return capture(reader, args)
+        return replay_demo(reader, args) if args.replay else capture(reader, args)
     except (KeyboardInterrupt, KillSwitch) as e:
         print(f"stopped: {e}" if str(e) else "stopped: Ctrl+C", flush=True)
         return 1

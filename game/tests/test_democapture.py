@@ -2,7 +2,7 @@ import random
 import unittest
 
 from game.combos import ComboRunner, captured_frames
-from game.democapture import build_demo_route, consensus, loops, signature, widen
+from game.democapture import build_demo_route, consensus, loops, replay_route, signature, widen
 from game.sequencer import Sequencer
 from game.tests.test_combocapture import player
 from game.tests.test_pad import fake_pad
@@ -122,6 +122,28 @@ class DemoReplayTest(unittest.TestCase):
         for f in range(30, 43):
             self.assertIsNone(runner.on_state({"frame": f, "players": [target, bot]}))
         self.assertEqual(runner.on_state({"frame": 43, "players": [target, bot]}), "ws1,2")
+
+    def test_counter_hit_route_waits_for_ki_charge(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = replay_route(build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"}), counter_hit=True)
+        runner = ComboRunner(route, Sequencer(fake_pad()[0], 2), 1, name="ws12")
+        bot, target = player(side=1), player()
+        for f in range(40, 200):
+            self.assertIsNone(runner.on_state({"frame": f, "players": [target, bot]}))
+        charging = player(buttons_pressed=["1", "2", "3", "4"], buttons_held=["1", "2", "3", "4"])
+        self.assertEqual(runner.on_state({"frame": 200, "players": [charging, bot]}), "ws1,2")
+
+    def test_counter_hit_opener_marks_route(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        for r in rows:
+            if r["frame"] >= 77:
+                r["target_reaction"] = 10
+        route = build_demo_route("ch", rows, SUBJECT)
+        self.assertTrue(route["counter_hit"])
+        self.assertEqual(route["trigger"], "ki_charge")
+        plain = build_demo_route("x", next(loops(iter(demo_states(1)), SUBJECT)), SUBJECT)
+        self.assertEqual((plain["counter_hit"], plain["trigger"]), (False, "round_frame"))
+        self.assertEqual(replay_route(plain)["trigger"], "round_frame")
 
 
 if __name__ == "__main__":
