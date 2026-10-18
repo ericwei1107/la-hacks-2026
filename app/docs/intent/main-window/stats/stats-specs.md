@@ -18,6 +18,7 @@ Design: `stats-design.md`
 - [ ] **MAIN-STATS-010**: The Stats screen shall show one bar per situation in the set's damage taken by situation, largest first, each bar's length proportional to the largest, with the total labelled "<total> total".
 - [ ] **MAIN-STATS-011**: The Stats screen shall draw a situation's bar in `--color-bot` with a bold label when that situation appears in the `exploited` list of the set's last round summary.
 - [ ] **MAIN-STATS-012**: When an exploited situation took damage, the Stats screen shall show "Fix the <situation> habit and you cut <share> of the damage you take." for the exploited situation with the most damage.
+- [ ] **MAIN-STATS-013**: The label of a situation the bot is targeting shall carry, for assistive technology, ", the habit the bot is attacking right now", so its rust bar is not the only signal.
 
 ## Across sessions
 

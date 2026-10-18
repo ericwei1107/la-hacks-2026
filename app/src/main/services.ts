@@ -93,3 +93,8 @@ export function overlayMode(fileValues: EnvValues): 'always' | 'demo' | 'off' {
   if (raw === '0' || raw === 'off') return 'off'
   return 'demo'
 }
+
+export function insightsEnabled(fileValues: EnvValues): boolean {
+  const raw = (process.env.KUMITE_INSIGHTS?.trim() || fileValues.KUMITE_INSIGHTS?.trim() || '').toLowerCase()
+  return raw === '1' || raw === 'on'
+}

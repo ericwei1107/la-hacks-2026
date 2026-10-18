@@ -1,4 +1,4 @@
-import type { LearningMetrics, SessionStats, Trends } from './contracts'
+import type { InsightsV1, LearningMetrics, SessionStats, Trends } from './contracts'
 import { requestJson, TIMEOUTS } from './http'
 
 export function getStats(sessionId: string): Promise<SessionStats> {
@@ -27,6 +27,19 @@ export function getLearning(sessionId: string): Promise<LearningMetrics> {
     service: 'analytics',
     call: 'getLearning',
     path: ['learning', sessionId],
+    timeoutMs: TIMEOUTS.standard,
+    expect: 'object'
+  })
+}
+
+export const INSIGHT_MOMENTS = 3
+
+export function getInsights(sessionId: string): Promise<InsightsV1> {
+  return requestJson({
+    service: 'analytics',
+    call: 'getInsights',
+    path: ['insights', sessionId],
+    query: { limit: String(INSIGHT_MOMENTS) },
     timeoutMs: TIMEOUTS.standard,
     expect: 'object'
   })
