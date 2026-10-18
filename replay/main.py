@@ -1,5 +1,6 @@
 import json
 import asyncio
+import os
 from typing import Annotated
 
 from fastapi import Body, FastAPI, HTTPException
@@ -9,6 +10,7 @@ from jsonschema import Draft202012Validator
 from replay.coach import CoachTip, OpenAIProvider, RoundCoach
 from replay.config import ROOT, Settings
 from replay.reports import REPORT_SCHEMA, ReportService
+from replay.chat import ChatReply, ChatRequest, ChatService, OpenAIChatProvider
 
 SCHEMA = json.loads((ROOT / "contracts/round_summary.schema.json").read_text())
 VALIDATOR = Draft202012Validator(SCHEMA)
@@ -30,6 +32,9 @@ def create_app() -> FastAPI:
         provider = OpenAIProvider(settings.api_key, settings.model)
     app.state.coach = RoundCoach(provider)
     app.state.reports = ReportService(settings.data_dir)
+    chat_provider = OpenAIChatProvider(settings.api_key, os.getenv("OPENAI_CHAT_MODEL", settings.model)) if provider else None
+    app.state.chat = ChatService(app.state.reports, chat_provider,
+                                 os.getenv("KUMITE_ANALYTICS_URL", "http://127.0.0.1:8767"))
 
     @app.get("/health")
     async def health():
@@ -67,6 +72,15 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail="Session has not been analyzed")
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid session ID or saved report")
+
+    @app.post("/coach/chat", response_model=ChatReply)
+    async def coach_chat(request: ChatRequest):
+        try:
+            return await app.state.chat.reply(request)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="No extracted recording found for this session")
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid session recording or evidence")
 
     return app
 
