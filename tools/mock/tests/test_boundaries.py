@@ -16,7 +16,7 @@ from starlette.websockets import WebSocketDisconnect
 
 import analytics_mock as analytics
 import brain
-import replay
+import replay_mock
 from store import ROOT, Session, Store, check, load_jsonl
 
 FIXTURE = Path(__file__).parent / "fixtures" / "two-rounds.jsonl"
@@ -80,7 +80,7 @@ class BoundariesTest(unittest.TestCase):
             self.assertEqual(set(client.get('/health').json()), {'ok', 'service', 'version'})
 
     def test_saved_report_checks_loaded_session(self):
-        with TestClient(replay.create(self.store)) as client:
+        with TestClient(replay_mock.create(self.store)) as client:
             self.assertEqual(client.get(f'/reports/{self.sid}').status_code, 404)
             report = client.post(f'/analyze/{self.sid}').json()
             self.assertEqual(check('report', report), [])
@@ -90,7 +90,7 @@ class BoundariesTest(unittest.TestCase):
             self.assertEqual(client.get('/reports/unknown').status_code, 404)
             self.assertEqual(client.post('/analyze/unknown').status_code, 404)
             self.assertEqual(client.post('/coach/round', content='{').status_code, 422)
-        with TestClient(replay.create(self.store)) as client:
+        with TestClient(replay_mock.create(self.store)) as client:
             self.assertEqual(client.get(f'/reports/{self.sid}').json(), report)
 
     def test_learning_and_filtered_trends(self):
@@ -106,7 +106,7 @@ class BoundariesTest(unittest.TestCase):
     def test_long_habit_coach_is_under_40_words(self):
         summary = json.loads((ROOT/'contracts/examples/round_summary.json').read_text())
         summary['top_habits'][0]['situation'] = 'word ' * 100
-        with TestClient(replay.create(self.store)) as client:
+        with TestClient(replay_mock.create(self.store)) as client:
             response = client.post('/coach/round', json=summary)
             self.assertLess(len(response.json()['text'].split()), 40)
             summary['newly_fixed'] = ['word ' * 100]

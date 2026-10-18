@@ -9,7 +9,7 @@ import uvicorn
 
 import analytics_mock
 import brain
-import replay
+import replay_mock
 from store import Store
 
 PORTS = {"brain": 8765, "replay": 8766, "analytics": 8767}
@@ -65,7 +65,7 @@ async def main(argv=None):
         raise ValueError("No recordings loaded; pass --recording PATH with companion session metadata")
     apps = {
         "brain": lambda: brain.create(store, rate=a.rate, loop=not a.no_loop),
-        "replay": lambda: replay.create(store),
+        "replay": lambda: replay_mock.create(store),
         "analytics": lambda: analytics_mock.create(store),
     }
     sockets, servers, tasks = [], [], []

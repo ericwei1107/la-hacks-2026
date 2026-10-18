@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 import analytics_mock as analytics
 import brain
-import replay
+import replay_mock
 from store import ROOT, Store, check
 
 SAMPLE = ROOT / "data" / "samples" / "practice_djin_vs_kaz.jsonl"
@@ -29,7 +29,7 @@ class ServersTest(unittest.TestCase):
         cls.sid = next(iter(cls.store.sessions))
         cls.clients = ExitStack()
         cls.brain = cls.clients.enter_context(TestClient(brain.create(cls.store, rate=600)))
-        cls.replay = TestClient(replay.create(cls.store))
+        cls.replay = TestClient(replay_mock.create(cls.store))
         cls.analytics = TestClient(analytics.create(cls.store))
 
     @classmethod
