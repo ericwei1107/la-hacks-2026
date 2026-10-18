@@ -55,6 +55,9 @@ class Timeline:
             cycle += 1
 
 
+DROP = {"t": "drop"}
+
+
 class Broadcast:
     def __init__(self, capacity=256):
         self.capacity = capacity
@@ -89,7 +92,7 @@ def merge(base, patch):
     return out
 
 
-def create(store, rate=60, loop=True):
+def create(store, rate=60, loop=True, observer=None, duplicate_summaries=False, drop_after_coach=False):
     app = make_app("brain")
     timelines = {}
     broadcasts = {}
@@ -115,9 +118,21 @@ def create(store, rate=60, loop=True):
             timelines[s.id] = Timeline(s, rate)
             broadcasts[s.id] = Broadcast()
         if running and s.id not in tasks:
+            publish = broadcasts[s.id].publish
+
+            def emit(channel, record):
+                if observer is not None and observer.session_id == s.id:
+                    observer.record(channel, record)
+                publish(channel, record)
+                if channel == "coach" and record.get("t") == "round_summary" and duplicate_summaries:
+                    publish(channel, record)
+                if channel == "coach" and record.get("t") == "coach" and drop_after_coach:
+                    publish("state", DROP)
+                    publish("coach", DROP)
+
             async def play():
                 try:
-                    await timelines[s.id].play(broadcasts[s.id].publish, loop=loop)
+                    await timelines[s.id].play(emit, loop=loop)
                 finally:
                     broadcasts[s.id].close()
             tasks[s.id] = asyncio.create_task(play())
@@ -194,6 +209,9 @@ def create(store, rate=60, loop=True):
                 record = await queue.get()
                 if record is None:
                     await ws.close(code=1013 if loop else 1000)
+                    return
+                if record is DROP:
+                    await ws.close(code=1013)
                     return
                 await asyncio.wait_for(ws.send_text(json.dumps(record)), timeout=2)
 

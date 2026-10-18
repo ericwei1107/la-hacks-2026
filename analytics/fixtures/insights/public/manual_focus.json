@@ -1,0 +1,283 @@
+{
+  "focus": {
+    "action": "Review these throws and practice the appropriate break against the recorded throw.",
+    "action_reviewed": true,
+    "metric": "throw_defense",
+    "min_opportunities": 5,
+    "mode": "manual",
+    "reason": "0/3 successful observed opportunities; 3 failures",
+    "state": "early_signal"
+  },
+  "format_version": 1,
+  "freshness": {
+    "latest_completed_round": 1,
+    "latest_learning_round": 1,
+    "latest_recording_round": 1,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "habits": {},
+  "metrics": {
+    "low_defense": {
+      "estimated": false,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1,
+            "line": 1,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 2,
+            "line": 2,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 3,
+            "line": 3,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 6,
+      "failures": 6,
+      "label": "Low defense",
+      "opportunities": 6,
+      "state": "observed",
+      "successes": 0,
+      "value": 0.0
+    },
+    "punish_conversion": {
+      "estimated": true,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Estimated punish conversion",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    },
+    "throw_defense": {
+      "estimated": false,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "kind": "throw",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 20,
+            "line": 7,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "kind": "throw",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 21,
+            "line": 8,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "kind": "throw",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 22,
+            "line": 9,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 3,
+      "failures": 3,
+      "label": "Throw defense",
+      "opportunities": 3,
+      "state": "early_signal",
+      "successes": 0,
+      "value": 0.0
+    }
+  },
+  "moments": [
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 1,
+        "line": 1,
+        "round": 1
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 2,
+        "line": 2,
+        "round": 1
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 3,
+        "line": 3,
+        "round": 1
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 4,
+        "line": 4,
+        "round": 1
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 5,
+        "line": 5,
+        "round": 1
+      },
+      "response": null
+    }
+  ],
+  "moments_total": 9,
+  "quality": "observed",
+  "recording_sha256": "8e2524178957b7cad0d3b8eec9c77f0e0416d7cbb5b37511e9cf37a738704391",
+  "session_id": "insight-example",
+  "snapshot_id": "699431f3f40d9b4710b527e4a03fa0964dbe8acc12a70397783d193f22be6c22",
+  "synthetic": true
+}

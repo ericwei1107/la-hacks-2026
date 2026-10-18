@@ -1,0 +1,302 @@
+{
+  "calculation_version": 4,
+  "focus": {
+    "action": null,
+    "metric": null,
+    "min_opportunities": 5,
+    "mode": "automatic",
+    "reason": "More observations needed",
+    "rule_version": 1
+  },
+  "format_version": 1,
+  "freshness": {
+    "completed_rounds": [
+      1
+    ],
+    "latest_learning_round": 1,
+    "latest_recording_round": 1,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "learning": {
+    "bandit_estimates": {},
+    "finetune": {
+      "after": null,
+      "before": null
+    },
+    "habits": {},
+    "prediction_accuracy": [
+      {
+        "eligible_count": null,
+        "player_changed": false,
+        "round": 1,
+        "value": null
+      }
+    ]
+  },
+  "metrics": {
+    "low_defense": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "frame_advantage": -12,
+            "hit_level": "low",
+            "kind": "block",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1,
+            "line": 1,
+            "round": 1,
+            "session_id": "insight-example",
+            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "source": "recording"
+          },
+          "outcome": "success",
+          "response": {
+            "frame": 1,
+            "line": 1,
+            "round": 1,
+            "session_id": "insight-example",
+            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "source": "recording"
+          }
+        }
+      ],
+      "evidence_total": 1,
+      "failures": 0,
+      "label": "Low defense",
+      "opportunities": 1,
+      "state": "early_signal",
+      "successes": 1,
+      "value": 1.0
+    },
+    "punish_conversion": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": true,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "frame_advantage": -12,
+            "hit_level": "low",
+            "kind": "block",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1,
+            "line": 1,
+            "round": 1,
+            "session_id": "insight-example",
+            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 1,
+      "failures": 1,
+      "label": "Estimated punish conversion",
+      "opportunities": 1,
+      "state": "early_signal",
+      "successes": 0,
+      "value": 0.0
+    },
+    "throw_defense": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Throw defense",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    }
+  },
+  "moments": [
+    {
+      "event": {
+        "actor": 1,
+        "frame_advantage": -12,
+        "hit_level": "low",
+        "kind": "block",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "success",
+          "response": {
+            "frame": 1,
+            "line": 1,
+            "round": 1,
+            "session_id": "insight-example",
+            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "source": "recording"
+          }
+        },
+        "punish_conversion": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense",
+        "punish_conversion"
+      ],
+      "outcome": "mixed",
+      "reference": {
+        "frame": 1,
+        "line": 1,
+        "round": 1,
+        "session_id": "insight-example",
+        "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+        "source": "recording"
+      },
+      "response": null
+    }
+  ],
+  "moments_total": 1,
+  "population": "completed_rounds",
+  "quality": {
+    "deliberate_retests": "unavailable",
+    "invalid_line_positions": [],
+    "skipped_recording_lines": 0,
+    "state": "observed",
+    "unsupported_records": 0
+  },
+  "report": {
+    "status": "unavailable",
+    "used_for_recommendation": false
+  },
+  "rounds": [
+    {
+      "metrics": {
+        "low_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 1,
+                "line": 1,
+                "round": 1,
+                "session_id": "insight-example",
+                "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 1,
+                "line": 1,
+                "round": 1,
+                "session_id": "insight-example",
+                "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+                "source": "recording"
+              }
+            }
+          ],
+          "evidence_total": 1,
+          "failures": 0,
+          "label": "Low defense",
+          "opportunities": 1,
+          "state": "early_signal",
+          "successes": 1,
+          "value": 1.0
+        },
+        "punish_conversion": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": true,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 1,
+                "line": 1,
+                "round": 1,
+                "session_id": "insight-example",
+                "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            }
+          ],
+          "evidence_total": 1,
+          "failures": 1,
+          "label": "Estimated punish conversion",
+          "opportunities": 1,
+          "state": "early_signal",
+          "successes": 0,
+          "value": 0.0
+        },
+        "throw_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [],
+          "evidence_total": 0,
+          "failures": 0,
+          "label": "Throw defense",
+          "opportunities": 0,
+          "state": "no_opportunities",
+          "successes": 0,
+          "value": null
+        }
+      },
+      "round": 1
+    }
+  ],
+  "rounds_total": 1,
+  "rule_version": 1,
+  "session_id": "insight-example",
+  "snapshot_id": "3338b8ee2b377b38c44ab65f6086f4b2caf51ab8738e96f7d03e7e9ad655ede1",
+  "sources": {
+    "evaluation": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    },
+    "learning": {
+      "available": true,
+      "consumed_bytes": 112,
+      "pending_tail": false,
+      "sha256": "70aeeafbe217390beae6cd126b226066a70c764765879b95df1d9cdd04bc2c0b"
+    },
+    "metadata": {
+      "available": true,
+      "consumed_bytes": 230,
+      "pending_tail": false,
+      "sha256": "06a1c10e3096f88701daebe93bb1825a6dc5ea66dd6ff448e37f36c06ada8ea5"
+    },
+    "recording": {
+      "available": true,
+      "consumed_bytes": 303,
+      "pending_tail": false,
+      "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57"
+    },
+    "report": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    }
+  },
+  "synthetic": true,
+  "tactical": {
+    "chosen_counts": {},
+    "habit_driven_decisions": 0,
+    "interpretation": "Recorded choices, not hit rates or calibrated probabilities",
+    "reflex_records": 0
+  }
+}

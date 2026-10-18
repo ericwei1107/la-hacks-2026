@@ -1,0 +1,371 @@
+{
+  "focus": {
+    "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
+    "action_reviewed": true,
+    "metric": "low_defense",
+    "min_opportunities": 5,
+    "mode": "automatic",
+    "reason": "0/16 successful observed opportunities; 16 failures",
+    "state": "observed"
+  },
+  "format_version": 1,
+  "freshness": {
+    "latest_completed_round": 4,
+    "latest_learning_round": 4,
+    "latest_recording_round": 4,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "habits": {
+    "after_block:any": {
+      "current_round": 4,
+      "first_detected_round": 2,
+      "first_fixed_round": 2,
+      "fixed": false,
+      "last_regressed_round": 3,
+      "regressed": false
+    },
+    "after_block:bot_minus": {
+      "current_round": 4,
+      "first_detected_round": 2,
+      "first_fixed_round": null,
+      "fixed": false,
+      "last_regressed_round": null,
+      "regressed": false
+    },
+    "after_block:bot_plus": {
+      "current_round": 4,
+      "first_detected_round": null,
+      "first_fixed_round": null,
+      "fixed": false,
+      "last_regressed_round": null,
+      "regressed": false
+    },
+    "low_defense": {
+      "current_round": 4,
+      "first_detected_round": 3,
+      "first_fixed_round": null,
+      "fixed": false,
+      "last_regressed_round": null,
+      "regressed": false
+    },
+    "sidestep_dir": {
+      "current_round": 4,
+      "first_detected_round": 1,
+      "first_fixed_round": null,
+      "fixed": false,
+      "last_regressed_round": null,
+      "regressed": false
+    },
+    "throw_break": {
+      "current_round": 4,
+      "first_detected_round": 3,
+      "first_fixed_round": null,
+      "fixed": false,
+      "last_regressed_round": null,
+      "regressed": false
+    }
+  },
+  "metrics": {
+    "low_defense": {
+      "estimated": false,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "damage": 12,
+            "frame_advantage": -6,
+            "hit_level": "low",
+            "kind": "counter_hit",
+            "move_id": 1754,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 460,
+            "line": 2777,
+            "round": 2
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 8,
+            "frame_advantage": 7,
+            "hit_level": "low",
+            "kind": "hit",
+            "move_id": 192,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1223,
+            "line": 3589,
+            "round": 2
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 12,
+            "frame_advantage": -6,
+            "hit_level": "low",
+            "kind": "counter_hit",
+            "move_id": 251,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1268,
+            "line": 3638,
+            "round": 2
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 16,
+      "failures": 16,
+      "label": "Low defense",
+      "opportunities": 16,
+      "state": "observed",
+      "successes": 0,
+      "value": 0.0
+    },
+    "punish_conversion": {
+      "estimated": true,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "damage": 0,
+            "frame_advantage": -10,
+            "hit_level": "high",
+            "kind": "block",
+            "move_id": 1794,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 864,
+            "line": 698,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 0,
+            "frame_advantage": -12,
+            "hit_level": "mid",
+            "kind": "block",
+            "move_id": 1711,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1492,
+            "line": 1361,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 0,
+            "frame_advantage": -12,
+            "hit_level": "mid",
+            "kind": "block",
+            "move_id": 1711,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 544,
+            "line": 2866,
+            "round": 2
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 6,
+      "failures": 6,
+      "label": "Estimated punish conversion",
+      "opportunities": 6,
+      "state": "observed",
+      "successes": 0,
+      "value": 0.0
+    },
+    "throw_defense": {
+      "estimated": false,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "hit_level": "throw",
+            "kind": "throw",
+            "move_id": 2068,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 667,
+            "line": 492,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "hit_level": "throw",
+            "kind": "throw",
+            "move_id": 2068,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1815,
+            "line": 1708,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "hit_level": "throw",
+            "kind": "throw",
+            "move_id": 2068,
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1531,
+            "line": 3923,
+            "round": 2
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 4,
+      "failures": 3,
+      "label": "Throw defense",
+      "opportunities": 4,
+      "state": "early_signal",
+      "successes": 1,
+      "value": 0.25
+    }
+  },
+  "moments": [
+    {
+      "event": {
+        "actor": 1,
+        "damage": 27,
+        "frame_advantage": 13,
+        "hit_level": "mid",
+        "kind": "counter_hit",
+        "move_id": 1627,
+        "target": 0
+      },
+      "metric_outcomes": {},
+      "metrics": [],
+      "outcome": "damage",
+      "reference": {
+        "frame": 733,
+        "line": 3068,
+        "round": 2
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 33,
+        "frame_advantage": 25,
+        "hit_level": "mid",
+        "kind": "hit",
+        "move_id": 1809,
+        "target": 0
+      },
+      "metric_outcomes": {},
+      "metrics": [],
+      "outcome": "damage",
+      "reference": {
+        "frame": 858,
+        "line": 3202,
+        "round": 2
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 27,
+        "frame_advantage": 13,
+        "hit_level": "mid",
+        "kind": "counter_hit",
+        "move_id": 1627,
+        "target": 0
+      },
+      "metric_outcomes": {},
+      "metrics": [],
+      "outcome": "damage",
+      "reference": {
+        "frame": 968,
+        "line": 6054,
+        "round": 3
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 30,
+        "frame_advantage": 57,
+        "hit_level": "none",
+        "kind": "counter_hit",
+        "move_id": 1689,
+        "target": 0
+      },
+      "metric_outcomes": {},
+      "metrics": [],
+      "outcome": "damage",
+      "reference": {
+        "frame": 436,
+        "line": 9031,
+        "round": 4
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 30,
+        "frame_advantage": 57,
+        "hit_level": "mid",
+        "kind": "counter_hit",
+        "move_id": 1688,
+        "target": 0
+      },
+      "metric_outcomes": {},
+      "metrics": [],
+      "outcome": "damage",
+      "reference": {
+        "frame": 1681,
+        "line": 10359,
+        "round": 4
+      },
+      "response": null
+    }
+  ],
+  "moments_total": 54,
+  "quality": "observed",
+  "recording_sha256": "d80b76b456a7655f32539d24981d7c552458858d198f562426a75065c71857be",
+  "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
+  "snapshot_id": "a897f7d89c57a3be2c9363d1fea9655a48b85fa620680e31cbad9d23e70198ca",
+  "synthetic": false
+}
