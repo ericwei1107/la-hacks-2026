@@ -724,7 +724,21 @@ class Learning:
         scale = 1.0 if r is None else max(MIN_SCALE, min(1.0, r / TARGET_RATE))
         return 1.0 + GAIN * self.difficulty.exploit_weight * scale
 
-    def boosts(self, state, weights=None):
+    def estimate(self, key, prior=None, weight=0.0):
+        dist = (prior or {}).get(family(key))
+        if not dist:
+            return self.habits.active(key)
+        if self.habits.seen[key] < ACTIVE_N:
+            return None
+        row = self.habits.counts.get(key, {})
+        actions = list(row) + [a for a in dist if a not in row]
+        scored = {a: (1.0 - weight) * self.habits.p(key, a) + weight * dist.get(a, 0.0) for a in actions}
+        action = max(actions, key=lambda a: scored[a])
+        if scored[action] < ACTIVE_P:
+            return None
+        return action, scored[action]
+
+    def boosts(self, state, weights=None, prior=None, prior_weight=0.0):
         out = {}
         round_ = state["round"]
         covered = set()
@@ -738,7 +752,7 @@ class Learning:
                 continue
             if retest:
                 retests.add(key)
-            active = self.habits.active(key)
+            active = self.estimate(key, prior, prior_weight)
             if active is None:
                 continue
             action, p = active
@@ -754,6 +768,8 @@ class Learning:
                 if current is None or factor > current["factor"]:
                     out[cls] = {"factor": round(factor, 3), "situation": key, "action": action, "p": round(p, 3),
                                 "n": self.habits.seen[key], "retest": retest or (key == ANY_KEY and PLUS_KEY in retests)}
+                    if (prior or {}).get(family(key)):
+                        out[cls]["laya_p"] = round(prior[family(key)].get(action, 0.0), 3)
         return out
 
     def pick(self, cls, entries, boost, difficulty, rng=None):

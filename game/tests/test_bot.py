@@ -130,6 +130,11 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(snap.round_frame, 8)
         self.assertEqual(len(polls), 6)
 
+    def test_wait_for_match_fresh_starts_at_the_first_live_frame(self):
+        snaps = [pair(161, free=0), pair(162), pair(163)]
+        snap = wait_for_match(ScriptedReader(snaps), NoPacer(), log=lambda line: None, fresh=True)
+        self.assertEqual(snap.round_frame, 162)
+
     def test_wait_for_match_never_starts_without_a_new_scene(self):
         snaps = [pair(f, 0, 64) for f in range(300, 310)] + [pair(f) for f in range(310, 320)]
         with self.assertRaises(KeyboardInterrupt):
@@ -145,6 +150,44 @@ class LoopTest(unittest.TestCase):
         snap = wait_for_match(ScriptedReader(snaps), NoPacer(), log=lambda line: None)
         self.assertEqual(snap.round_frame, 162)
         self.assertEqual([hex(p["move_id"]) for p in snap.players], ["0x85a", "0x874"])
+
+
+class GateWaitTest(unittest.TestCase):
+    def gate_reader(self, results):
+        script = iter(results)
+        calls = []
+
+        def gate(log=None):
+            checks = next(script)
+            result = SimpleNamespace(ok=all(ok for _, ok in checks),
+                                     checks=[SimpleNamespace(name=name, ok=ok, detail="") for name, ok in checks])
+            calls.append(result.ok)
+            return result
+
+        return SimpleNamespace(gate=gate, close=lambda: None), calls
+
+    def test_gate_waits_while_only_the_slot_check_fails(self):
+        no_match = [("python", True), ("process", True), ("slot_bytes", False)]
+        in_match = [("python", True), ("process", True), ("slot_bytes", True), ("health_check", True)]
+        reader, calls = self.gate_reader([no_match, no_match, no_match, in_match])
+        logs, sleeps = [], []
+        with mock.patch.object(bot, "run_gate", side_effect=lambda reader, label: reader.gate().ok):
+            ok = bot.gate_until_match(reader, "offsets", log=lambda line, **kw: logs.append(line), sleep=sleeps.append)
+        self.assertTrue(ok)
+        self.assertEqual((len(calls), len(sleeps)), (4, 2))
+        self.assertEqual(sum("no match on screen" in line for line in logs), 1)
+        self.assertTrue(any(line.startswith("GATE PASSED") for line in logs))
+
+    def test_gate_gives_up_on_any_other_failure(self):
+        no_match = [("python", True), ("slot_bytes", False)]
+        broken = [("python", True), ("pe_timestamp", False)]
+        reader, calls = self.gate_reader([no_match, no_match, broken])
+        logs = []
+        with mock.patch.object(bot, "run_gate", side_effect=lambda reader, label: reader.gate().ok):
+            ok = bot.gate_until_match(reader, "offsets", log=lambda line, **kw: logs.append(line), sleep=lambda s: None)
+        self.assertFalse(ok)
+        self.assertEqual(len(calls), 3)
+        self.assertTrue(any(line.startswith("GATE FAILED") for line in logs))
 
 
 class LayaStartupTest(unittest.TestCase):
@@ -168,6 +211,10 @@ class LayaStartupTest(unittest.TestCase):
             code = bot.main(["--bot", "kazuya", "--no-api", *extra])
         return code, start.call_count, wait.call_count, sessions
 
+    def test_wait_for_match_flag_waits_before_the_first_session(self):
+        code, _, waits, sessions = self.run_main("--wait-for-match", reasons=(INTERRUPTED,))
+        self.assertEqual((code, waits, len(sessions)), (0, 1, 1))
+
     def test_flag_defaults_off(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertFalse(bot.parse_args(["--bot", "kazuya"], root=Path(tmp)).no_laya)
@@ -185,6 +232,66 @@ class LayaStartupTest(unittest.TestCase):
     def test_without_loop_one_session_and_one_load(self):
         code, starts, waits, sessions = self.run_main(reasons=(MATCH_OVER,))
         self.assertEqual((code, starts, waits, len(sessions)), (0, 1, 0, 1))
+
+    def test_laya_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = bot.parse_args(["--bot", "kazuya"], root=Path(tmp))
+            self.assertEqual((args.laya, args.laya_weight), (False, 0.3))
+            args = bot.parse_args(["--bot", "kazuya", "--laya", "--laya-weight", "0.5"], root=Path(tmp))
+            self.assertEqual((args.laya, args.laya_weight), (True, 0.5))
+            with mock.patch("sys.stderr"):
+                with self.assertRaises(SystemExit):
+                    bot.parse_args(["--bot", "kazuya", "--laya", "--no-laya"], root=Path(tmp))
+                with self.assertRaises(SystemExit):
+                    bot.parse_args(["--bot", "kazuya", "--laya", "--laya-weight", "1.5"], root=Path(tmp))
+
+    def test_laya_off_gives_the_hooks_no_oracle(self):
+        hooks = []
+        with mock.patch.object(bot, "BotHooks", side_effect=lambda *a, **k: hooks.append(k) or SimpleNamespace(player=k["player"], fresh=k["fresh"])):
+            self.run_main("--loop")
+        self.assertEqual([k["oracle"] for k in hooks], [None, None])
+
+    def test_loop_with_laya_parks_checks_for_new_weights_while_waiting_and_resumes(self):
+        calls = []
+
+        class SpyReloader:
+            def __init__(self, oracle):
+                self.oracle = oracle
+
+            def park(self):
+                calls.append("park")
+
+            def check(self):
+                calls.append("check")
+
+            def resume(self):
+                calls.append("resume")
+
+        hooks = []
+        polls = []
+        real_poll = bot.waiting_poll
+
+        def capture(pad, reloader=None):
+            polls.append(real_poll(pad, reloader))
+            calls.append("wait")
+            return polls[-1]
+
+        with mock.patch.object(bot.laya, "Reloader", SpyReloader), mock.patch.object(bot, "waiting_poll", side_effect=capture), \
+                mock.patch.object(bot, "BotHooks", side_effect=lambda *a, **k: hooks.append(k) or SimpleNamespace(player=k["player"], fresh=k["fresh"])):
+            code, starts, waits, sessions = self.run_main("--loop", "--laya")
+        self.assertEqual((code, waits, len(sessions)), (0, 1, 2))
+        self.assertEqual(calls, ["park", "wait", "resume"])
+        polls[0]()
+        polls[0]()
+        self.assertEqual(calls[3:], ["check", "check"])
+        self.assertIsInstance(hooks[0]["oracle"], bot.laya.Oracle)
+        self.assertIs(hooks[0]["oracle"], hooks[1]["oracle"])
+        self.assertEqual(hooks[0]["laya_weight"], 0.3)
+
+    def test_laya_without_loop_has_no_reloader(self):
+        with mock.patch.object(bot.laya, "Reloader") as reloader:
+            code, starts, waits, sessions = self.run_main("--laya", reasons=(MATCH_OVER,))
+        self.assertEqual((code, starts, reloader.call_count), (0, 1, 0))
 
     def test_background_load_failure_does_not_raise(self):
         logs = []

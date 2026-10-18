@@ -5,6 +5,8 @@ import {
   SERVICES_CHANNEL,
   SPEAK_CHANNEL,
   SPEAK_CHUNK_CHANNEL,
+  TALK_CHANNEL,
+  TALK_KEY_CHANNEL,
   TRANSCRIBE_CHANNEL,
   type KumiteApi,
   type SpeakResult
@@ -45,7 +47,15 @@ const api: KumiteApi = {
   overlay: ipcRenderer.sendSync(OVERLAY_CHANNEL),
   insights: ipcRenderer.sendSync(INSIGHTS_CHANNEL),
   speak,
-  transcribe: (recording, mimeType) => ipcRenderer.invoke(TRANSCRIBE_CHANNEL, recording, mimeType)
+  transcribe: (recording, mimeType) => ipcRenderer.invoke(TRANSCRIBE_CHANNEL, recording, mimeType),
+  talkKey: ipcRenderer.sendSync(TALK_KEY_CHANNEL),
+  onTalk: (listener) => {
+    const handler = (): void => listener()
+    ipcRenderer.on(TALK_CHANNEL, handler)
+    return () => {
+      ipcRenderer.removeListener(TALK_CHANNEL, handler)
+    }
+  }
 }
 
 contextBridge.exposeInMainWorld('kumite', api)

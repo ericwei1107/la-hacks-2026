@@ -51,8 +51,13 @@ def fmt_record(rec):
         p = rec.get("probabilities", {}).get(rec.get("chosen"))
         extra = " ".join(f"{k}={v}" for k, v in detail.items()
                          if k in ("situation", "distance_bucket", "frame_advantage", "direction", "hit_level") and v is not None)
-        return (f"r{rec['round']} f{rec['frame']:>6} {rec.get('source'):<12} {rec.get('chosen')} -> {detail.get('move')} "
+        line = (f"r{rec['round']} f{rec['frame']:>6} {rec.get('source'):<12} {rec.get('chosen')} -> {detail.get('move')} "
                 f"p={p} {extra}")
+        ask = detail.get("laya") or {}
+        if ask.get("ready"):
+            preds = " ".join(f"{fam}={row['action']}:{row['p']:.2f}" for fam, row in ask.get("prediction", {}).items())
+            line += f" | laya {'base' if ask.get('version') is None else 'v' + str(ask['version'])} {preds}" + (" changed target" if ask.get("changed") else "")
+        return line
     detail = rec.get("reflex") or {}
     extra = " ".join(f"{k}=0x{v:04X}" if k.endswith("move_id") and isinstance(v, int) else f"{k}={v}"
                      for k, v in detail.items() if k != "kind" and v is not None)
@@ -114,10 +119,9 @@ def round_live(players):
     return all(p["health"] >= p["max_health"] and p["free_movement"] for p in players)
 
 
-def wait_for_match(reader, pacer, on_poll=None, log=print):
+def wait_for_match(reader, pacer, on_poll=None, log=print, fresh=False):
     prev = None
     gap = False
-    fresh = False
     while True:
         snap = reader.snapshot()
         if snap is None:

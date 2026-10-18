@@ -1,8 +1,8 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { INSIGHTS_CHANNEL, OVERLAY_CHANNEL, SERVICES_CHANNEL } from '../shared/bridge'
-import { insightsEnabled, overlayMode, readAppEnv, resolveServiceAddresses } from './services'
+import { INSIGHTS_CHANNEL, OVERLAY_CHANNEL, SERVICES_CHANNEL, TALK_CHANNEL, TALK_KEY_CHANNEL } from '../shared/bridge'
+import { insightsEnabled, overlayMode, readAppEnv, resolveServiceAddresses, talkKey } from './services'
 import { handleMicrophone, handleVoice, readVoiceSettings } from './voice'
 
 const OVERLAY_DESIGN_WIDTH = 1920
@@ -96,11 +96,30 @@ app.whenReady().then(() => {
   })
   handleVoice(readVoiceSettings(fileValues))
   handleMicrophone(isAppPage)
+  const wanted = talkKey(fileValues)
+  let talk: string | null = null
+  if (wanted !== null) {
+    let registered = false
+    try {
+      registered = globalShortcut.register(wanted, () => mainWindow?.webContents.send(TALK_CHANNEL))
+    } catch (error) {
+      console.warn(`[kumite] talk key ${wanted} is not a valid accelerator (${(error as Error).message})`)
+    }
+    if (registered) talk = wanted
+    else console.warn(`[kumite] could not register the talk key ${wanted}; talking to the coach from the game is off`)
+  }
+  ipcMain.on(TALK_KEY_CHANNEL, (event) => {
+    event.returnValue = talk
+  })
   mainWindow = createMainWindow()
   if (overlay !== 'off') createOverlayWindow()
   app.on('activate', () => {
     if (mainWindow === null) mainWindow = createMainWindow()
   })
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
 
 app.on('window-all-closed', () => {

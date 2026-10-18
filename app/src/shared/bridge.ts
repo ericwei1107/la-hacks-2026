@@ -31,6 +31,8 @@ export interface KumiteApi {
   insights: boolean
   speak: (text: string, onChunk: (chunk: Uint8Array) => void) => Promise<SpeakResult>
   transcribe: (recording: Uint8Array<ArrayBuffer>, mimeType: string) => Promise<TranscribeResult>
+  talkKey: string | null
+  onTalk: (listener: () => void) => () => void
 }
 
 export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
@@ -50,3 +52,7 @@ export const SPEAK_CHANNEL = 'kumite:speak'
 export const SPEAK_CHUNK_CHANNEL = 'kumite:speak-chunk'
 
 export const TRANSCRIBE_CHANNEL = 'kumite:transcribe'
+
+export const TALK_KEY_CHANNEL = 'kumite:talk-key'
+
+export const TALK_CHANNEL = 'kumite:talk'

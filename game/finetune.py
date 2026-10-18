@@ -54,6 +54,8 @@ FT_BATCH = 32
 FT_MICRO = 16
 FT_LAYERS = 8
 TRAIN_META = "kumite_finetune.json"
+MODEL_META = "meta.json"
+PRIOR_FAMILIES = ("after_block", "low_defense", "sidestep_dir")
 SPLITS = ("train", "val", "test")
 OPTIONS = {
     "after_block": ("press", "throw", "block_high", "block_low", "duck", "ss_left", "ss_right", "backdash", "none"),
@@ -355,6 +357,49 @@ def pick_action(fam, answers, prior):
     return top_share(counts)[0] if counts else OPTIONS[fam][0]
 
 
+def action_distribution(fam, answers):
+    groups = {}
+    for action in OPTIONS[fam]:
+        want = labels(situation_key(fam), action)
+        ps = [(answers.get(q) or {}).get("p") for q in want]
+        if not want or any(p is None for p in ps):
+            return None
+        key = tuple(sorted(want.items()))
+        if key not in groups:
+            groups[key] = [math.exp(sum(math.log(max(p if v else 1.0 - p, 1e-6)) for p, v in zip(ps, want.values()))), []]
+        groups[key][1].append(action)
+    total = sum(w for w, _ in groups.values())
+    if total <= 0:
+        return None
+    out = {}
+    for weight, actions in groups.values():
+        for action in actions:
+            out[action] = weight / total / len(actions)
+    return out
+
+
+def laya_prior(answers):
+    out = {}
+    for fam in PRIOR_FAMILIES:
+        dist = action_distribution(fam, answers)
+        if dist:
+            out[fam] = dist
+    return out
+
+
+def model_meta(path):
+    path = Path(path) / MODEL_META
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def model_version(path):
+    version = model_meta(path).get("version")
+    return version if isinstance(version, int) else 0
+
+
 def score_predictions(lines, preds):
     by_class = {}
     for line, pred in zip(lines, preds):
@@ -462,6 +507,7 @@ def train_laya(train_path, val_path, out_dir, base=None, epochs=FT_EPOCHS, batch
     if not train_lines or not val_lines:
         raise SystemExit(f"need both {train_path} and {val_path}; run python -m game.finetune export first")
     base_dir = base_checkpoint(base)
+    version = model_version(out_dir) + 1
     dev = trainer.resolve_device(device)
     started = time.perf_counter()
     model, tok, cfg = trainer.load_checkpoint(str(base_dir))
@@ -508,6 +554,8 @@ def train_laya(train_path, val_path, out_dir, base=None, epochs=FT_EPOCHS, batch
             "micro_batch": micro, "train_layers": train_layers, "device": str(dev), "seed": seed,
             "trained_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "seconds": round(time.perf_counter() - started, 1)}
     (out_dir / TRAIN_META).write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    write_atomic(out_dir / MODEL_META, {"version": version, "kind": "train", "base": base, "trained_at": meta["trained_at"]})
+    meta["version"] = version
     return meta
 
 
@@ -968,7 +1016,12 @@ def cmd_baseline(args):
     return 0
 
 
-COMMANDS = ("build", "export", "baseline", "eval", "bench", "train")
+def cmd_watch(args):
+    from game.ftwatch import watch
+    return watch(args)
+
+
+COMMANDS = ("build", "export", "baseline", "eval", "bench", "train", "watch")
 
 
 def main(argv=None):
@@ -1012,8 +1065,13 @@ def main(argv=None):
     t.add_argument("--micro-batch", type=int, default=FT_MICRO, help="lower this (batch stays the same via accumulation) if CUDA runs out of memory")
     t.add_argument("--train-layers", type=int, default=FT_LAYERS, help="train only the top N encoder layers plus the head; 0 trains all")
     t.add_argument("--seed", type=int, default=SEED)
+    w = sub.add_parser("watch", help="long-running: after every finished match in DATA_DIR/sessions, fine-tune laya-ft on that session for 1 epoch")
+    w.add_argument("--device", default="cuda")
+    w.add_argument("--spark", help="user@host:path; each incremental jsonl is also copied there with scp (in the background, failures logged)")
+    w.add_argument("--backfill", action="store_true", help="also train on sessions that were already over when watch started")
     args = parser.parse_args(argv)
-    return {"build": cmd_build, "export": cmd_export, "baseline": cmd_baseline, "eval": cmd_eval, "bench": cmd_bench, "train": cmd_train}[args.command](args)
+    return {"build": cmd_build, "export": cmd_export, "baseline": cmd_baseline, "eval": cmd_eval, "bench": cmd_bench, "train": cmd_train,
+            "watch": cmd_watch}[args.command](args)
 
 
 if __name__ == "__main__":

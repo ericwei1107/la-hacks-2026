@@ -31,14 +31,28 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type"],
     )
     app.state.settings = settings
-    provider = None
-    if settings.mode == "auto" and settings.api_key:
+    provider = chat_provider = None
+    round_timeout = chat_timeout = None
+    if settings.llm == "anthropic":
+        from replay.claude_provider import CHAT_TIMEOUT, ROUND_TIMEOUT, ClaudeChatProvider, ClaudeRoundProvider
+
+        provider = ClaudeRoundProvider(settings.anthropic_round_model)
+        chat_provider = ClaudeChatProvider(settings.anthropic_chat_model)
+        round_timeout, chat_timeout = ROUND_TIMEOUT, CHAT_TIMEOUT
+        workspace = os.getenv("ANTHROPIC_WORKSPACE_ID", "").strip()
+        print(f"coach model: Claude ({settings.anthropic_round_model} between rounds, {settings.anthropic_chat_model} in chat)"
+              + (f", workspace {workspace}" if workspace else ", no ANTHROPIC_WORKSPACE_ID (needed for an organization key)"), flush=True)
+    elif settings.llm == "openai":
         provider = OpenAIProvider(settings.api_key, settings.model)
-    app.state.coach = RoundCoach(provider)
+        chat_provider = OpenAIChatProvider(settings.api_key, os.getenv("OPENAI_CHAT_MODEL", settings.model))
+        print(f"coach model: OpenAI ({settings.model})", flush=True)
+    else:
+        print("coach model: none (local tips); set ANTHROPIC_API_KEY or OPENAI_API_KEY in the root .env to enable one", flush=True)
+    app.state.coach = RoundCoach(provider, data_dir=settings.data_dir, **({"timeout": round_timeout} if round_timeout else {}))
     app.state.reports = ReportService(settings.data_dir)
-    chat_provider = OpenAIChatProvider(settings.api_key, os.getenv("OPENAI_CHAT_MODEL", settings.model)) if provider else None
     app.state.chat = ChatService(app.state.reports, chat_provider,
-                                 os.getenv("KUMITE_ANALYTICS_URL", "http://127.0.0.1:8767"))
+                                 os.getenv("KUMITE_ANALYTICS_URL", "http://127.0.0.1:8767"),
+                                 **({"timeout": chat_timeout} if chat_timeout else {}))
 
     @app.get("/health")
     async def health():

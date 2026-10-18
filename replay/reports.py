@@ -11,8 +11,10 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
+from replay import coachvoice
 from replay.config import ROOT
 from replay.evidence import decision_fingerprint
+from replay.evidence_pack import set_pack
 from replay.inspection import build_inspection
 from replay.learning import latest_mastery
 from replay.reader import read_recording
@@ -192,12 +194,25 @@ class ReportService:
             point["why"] = (f"Jev preferred {chosen['name']} among the supplied candidates. "
                             f"Candidate description: {chosen['description']} "
                             "Timing, outcome and counterfactual damage are not established.")
+        pack = None
+        try:
+            pack = await asyncio.to_thread(set_pack, recording.records, [point["evidence"][0]["record"] for point in points])
+        except Exception:
+            limitations.append("Evidence pack could not be built; coaching text is generic")
+        candidates = coachvoice.ranked(pack)
+        for point in points:
+            detail = point["evidence"][0]["record"].get("detail") or {}
+            if isinstance(detail.get("correct"), bool):
+                point["good"] = detail["correct"]
+            cost = coachvoice.point_cost(pack, point["round"], point["frame"], point["situation"], point["recorded_action"], detail)
+            if type(cost) is int and cost > 0:
+                point["cost"] = cost
         counts = Counter((point["situation"], point["actual"]) for point in points
                          if point["situation"] != "unknown" and point["recorded_action"] is not None)
         totals = Counter(point["situation"] for point in points if point["recorded_action"] is not None)
         habits = [{"situation": situation, "action": action, "count": count,
                    "p": count / totals[situation], "p_source": "observed action frequency within this situation",
-                   "min_change": "Review these recorded decisions; a change that would flip an exchange is not established.",
+                   "min_change": coachvoice.habit_fix(pack, situation, action, candidates),
                    "moments": [point["frame"] for point in points if (point["situation"], point["actual"]) == (situation, action)],
                    "evidence": [{"round": point["round"], "frame": point["frame"], "line": point["evidence"][0]["line"]}
                                 for point in points if (point["situation"], point["actual"]) == (situation, action)]}
@@ -216,17 +231,21 @@ class ReportService:
                                         "round": estimate["round"], "line": estimate["line"]}
         if not points:
             limitations.append("No attributable human decision-point events are available")
-        highlights = []
-        for kind in ("human_throw_break", "human_block", "human_landed_hit"):
-            moment = next((value for value in inspection["moments"] if value["kind"] == kind), None)
-            if moment:
-                highlights.append(f"{moment['description']} Evidence: round {moment['round']}, frame {moment['frame']}, JSONL line {moment['evidence'][0]['line']}.")
+        highlights = [text for text, _ in coachvoice.positives(pack)]
+        if not highlights:
+            for kind in ("human_throw_break", "human_block", "human_landed_hit"):
+                moment = next((value for value in inspection["moments"] if value["kind"] == kind), None)
+                if moment:
+                    highlights.append(f"{moment['description']} Evidence: round {moment['round']}, frame {moment['frame']}, JSONL line {moment['evidence'][0]['line']}.")
+        drills = [f"{candidate.text} {coachvoice.DRILLS.get(candidate.topic, '')}".strip() for candidate in candidates[:3]]
+        if not drills:
+            drills = [f"Review {habit['situation']} at round {habit['evidence'][0]['round']}, frame {habit['evidence'][0]['frame']}; compare the recorded {habit['action']} with the available candidates in practice."
+                      for habit in habits]
         report = {
             "session_id": session_id, "generated_at": datetime.now(timezone.utc).isoformat(),
             "result": metadata.get("result") or "unknown", "habits": habits, "decision_points": points,
             "went_well": highlights,
-            "drills": [f"Review {habit['situation']} at round {habit['evidence'][0]['round']}, frame {habit['evidence'][0]['frame']}; compare the recorded {habit['action']} with the available candidates in practice."
-                       for habit in habits],
+            "drills": drills,
             "synthetic": synthetic, "limitations": limitations,
             "source": {"recording": str(path.relative_to(self.data_dir)), "record_counts": dict(recording.counts),
                        "tactical_sources": inspection["tactical_sources"]},

@@ -4,8 +4,8 @@ Track C service: `GET /health`, `POST /coach/round`, `POST /coach/chat`,
 `POST /analyze/{session_id}` and `GET /reports/{session_id}` on port 8766.
 The request is validated directly against the frozen round-summary JSON schema.
 Responses contain only `text` and `severity`, with 1–3 sentences and at most
-20 words to fit the between-round voice window. This is stricter than the frozen
-contract's under-40-word limit. Post-set reports use Jev to rank character-generated candidates when
+30 words to fit the between-round voice window; templated tips stay under 20.
+This is stricter than the frozen contract's under-40-word limit. Post-set reports use Jev to rank character-generated candidates when
 available. Post-set chat returns evidence-grounded explanations and round/frame citations.
 
 ## Windows setup
@@ -39,7 +39,41 @@ variables. Secrets are never included in responses. Configuration:
 | `OPENAI_COACH_MODEL` | `OPENAI_MODEL`, then `gpt-4.1-mini` | Model used for the between-round call |
 | `KUMITE_VERSION` | current Git commit SHA | Health response version; set when deploying without `.git` |
 
-The model makes one structured selection among grounded tips prepared from the
+## Evidence-grounded round tips
+
+When `/coach/round` receives a round summary, the coach also opens
+`DATA_DIR/recordings/<session_id>.jsonl` (the brain flushes it every second; a
+truncated last line is ignored and re-read on the next round) and builds a
+per-round evidence pack for the human (`replay/evidence_pack.py`): damage taken
+by situation, the opponent moves that hit most (name, hit level, on-block
+frames, distance bucket, count, damage), throws with their break input and
+whether they were broken, whiffed moves and what punished them, presses after
+block and the opponent's follow-up, blocked moves at or beyond Devil Jin's
+fastest punisher that went unpunished, and the habit estimates from the
+summary. Move names and frames come from `characters/` through the existing
+loaders and matchup notes; nothing is named that the data cannot resolve.
+
+`replay/tips.py` turns the pack into ranked candidate tips: low defense, throw
+breaks, pressing after block, sidestep direction, neutral (the move that hit
+most with the punisher from `punishers.json` or the matchup table), whiff
+punishing and missed punishes. Candidates rank by damage this round times habit
+strength, need at least 3 observations, never repeat the previous round's topic
+unless it caused the most damage again, and praise only on `newly_fixed`. Each
+candidate carries the move names and numbers it used. Without a readable
+recording the summary-only tips below are used unchanged.
+
+Replay the recorded round summaries of the last three sessions through the
+endpoint offline and check that at least four topics appear:
+
+```powershell
+python -m replay.replay_coach --last 3 --candidates
+```
+
+The model, when enabled, composes one tip of at most 30 words from the chosen
+candidate's facts (structured output: the text plus the move names it used).
+Every move name, command and number in the text must appear in those facts,
+otherwise the templated candidate text is spoken. Without a recording the
+model makes one structured selection among grounded tips prepared from the
 summary. It cannot introduce moves, invented counts, or unverified frame-data
 advice. This intentionally avoids depending on character files while Claude
 finishes them. The SDK's structured parsing follows the
@@ -304,8 +338,9 @@ the matchup notes produce a named guarding reminder. Other after-block tips
 name the bot move while preserving the uncertainty about punish range and
 timing; they do not invent a punish. Verified throws can name the recorded
 character-data break input. Missing data retains generic templates. The
-provider can select only a prepared grounded sentence, so it cannot introduce
-a move name or change the guidance. Round responses are capped at 20 words;
+provider can select only a prepared grounded sentence or compose from one
+candidate's facts, so it cannot introduce a move name, a count or a frame
+number. Round responses are capped at 30 words;
 optional model selection has a one-second deadline and a 0.9-second HTTP timeout.
 The frozen under-eight-second, under-40-word contract is unchanged. These are
 server-side budgets, not a guarantee about venue network or TTS latency.
@@ -403,7 +438,7 @@ Inputs allow a 4,000-character question and up to 100 history entries of 4,000
 characters; the model sees only the last eight entries, each limited to 2,000
 characters. Replies contain at most three complete evidence facts and 2,400
 characters; oversized facts are replaced with a clarification rather than cut
-mid-claim. This post-set budget is separate from the 20-word/one-second round-tip
+mid-claim. This post-set budget is separate from the 30-word/one-second round-tip
 budget. No new packages are required, and existing round/report routes remain
 unchanged.
 
@@ -443,13 +478,37 @@ return the appropriate latest estimates with no invented frame citations or
 claims of improvement.
 
 Questions such as `What should I do to improve?` or `What should I practice?`
-now lead with up to two practice priorities, the recorded reason and a concrete
-drill, with citations to actual decisions. Repeated low hits can support a
-low-blocking drill; repeated recorded non-breaks can support throw-break
-practice. Each requires at least four matching actions and a frequency of at
-least 60% among the relevant labeled decisions with unambiguous exact state
-context. This is a practice suggestion, not proof of avoidable damage or a
+now lead with the top three weaknesses from the whole set, ranked by damage:
+the recorded reason, the opponent move with its counts, the Devil Jin answer
+from the evidence pack, and a concrete drill, with citations to actual
+decisions. Repeated low hits can support a low-blocking drill; repeated
+recorded non-breaks can support throw-break practice; pressing after block,
+sidestep timing, the move that hit most, whiffing and missed punishes come from
+the same evidence pack the round coach uses. Each requires at least three
+matching actions and a frequency of at least 60% among the relevant labeled
+decisions with unambiguous exact state context. This is a practice suggestion, not proof of avoidable damage or a
 guaranteed different outcome. Sparse or uncertain evidence stays explicit.
+
+The model runs only when `OPENAI_API_KEY` is set in the process environment or
+the repository root `.env` (never committed) and `KUMITE_COACH_MODE` is `auto`;
+without a key every answer is the local coach-voice text, and the replay window
+prints nothing about it. Check `/health` is up and the key is present before a
+demo that should sound natural. The coach never searches the web: every move,
+number and route comes from the recording and `characters/`, which includes
+the Wavu combo routes.
+
+When the model is enabled, the selector also writes the reply itself: a
+coach's answer of at most 140 words composed from the selected facts
+(structured output: fact ids, text, moves). Every move name, command and
+number in that text must appear in the selected facts, otherwise the verified
+facts are spoken verbatim. Without a key the local facts are already written
+in a coach's voice: what you did in each spot, the opponent move that cost you,
+the Devil Jin answer and a drill. `combo` questions add the reliable routes
+from `characters/<human>/combos.json`; "how do I beat" questions get the
+practice priorities; progress questions get a round-by-round story of lows,
+throws, presses and sidesteps from the evidence pack when the set has more
+than one round. The analysis report's `min_change`, `cost`, `went_well` and
+`drills` come from the same evidence pack (`replay/coachvoice.py`).
 
 `Have I improved?` remains a learning-data question. Explicit move/frame
 questions retain their verified lookups. The optional model cannot replace an
