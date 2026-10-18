@@ -164,7 +164,10 @@ class BotArgsTest(unittest.TestCase):
         self.assertEqual(self.args().player, "sahil")
         Path(self.tmp.name, "config.json").write_text(json.dumps({"player": "chloe"}), encoding="utf-8")
         a = self.args()
-        self.assertEqual((a.player, a.demo, a.no_api), ("chloe", False, False))
+        self.assertEqual((a.player, a.demo, a.no_api, a.host), ("chloe", False, False, "127.0.0.1"))
+
+    def test_host_flag(self):
+        self.assertEqual(self.args("--host", "100.111.247.58").host, "100.111.247.58")
 
 
 if __name__ == "__main__":

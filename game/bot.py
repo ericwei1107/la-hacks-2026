@@ -108,6 +108,7 @@ def parse_args(argv=None, root=None):
     add_session_args(parser, player_required=False)
     parser.add_argument("--demo", action="store_true", help="start from a fresh profile (player guest unless --player is given)")
     parser.add_argument("--no-api", action="store_true", help="do not serve the brain API on :8765")
+    parser.add_argument("--host", default=api.HOST, help="address the brain API listens on, e.g. this laptop's Tailscale IP for remote clients")
     parser.add_argument("--seed", type=int)
     args = parser.parse_args(argv)
     args.player = resolve_player(args, root)
@@ -118,10 +119,10 @@ def main(argv=None):
     args = parse_args(argv)
     outlet = None
     if not args.no_api:
-        if api.start() is None:
-            print(f"warning: brain API not started (port {api.PORT} in use?); playing without it", flush=True)
+        if api.start(host=args.host) is None:
+            print(f"warning: brain API not started on {args.host}:{api.PORT} (port in use or address not on this machine?); playing without it", flush=True)
         else:
-            print(f"brain API on http://{api.HOST}:{api.PORT} (DATA_DIR {data_dir().resolve()}); coach at {replay_url()}/coach/round", flush=True)
+            print(f"brain API on http://{args.host}:{api.PORT} (DATA_DIR {data_dir().resolve()}); coach at {replay_url()}/coach/round", flush=True)
             outlet = Outlet(api.publish)
 
     reader = Reader(args.offsets)
