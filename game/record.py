@@ -7,8 +7,8 @@ from game.reader import DEFAULT_OFFSETS, Reader
 from game.readout import run_gate
 
 
-def add_session_args(parser):
-    parser.add_argument("--player", required=True)
+def add_session_args(parser, player_required=True):
+    parser.add_argument("--player", required=player_required)
     parser.add_argument("--bot", required=True, choices=st.CHARACTERS)
     parser.add_argument("--difficulty", type=int, default=1, choices=range(1, 6))
     parser.add_argument("--mode", default="practice", choices=("practice", "versus"))
