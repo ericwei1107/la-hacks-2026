@@ -23,6 +23,10 @@ CORRECT_PUNISH = ("press", "throw")
 CORRECT_SAFE = ("block_high", "backdash", "ss_left", "ss_right")
 
 
+def self_moved(player):
+    return player["hit_reaction"] == 0 and player["being_thrown"] == "none" and not player["status"] & DOWNED_BIT
+
+
 def lateral_and_forward(start_subject, start_opp, now_subject):
     fx, fz = start_opp["x"] - start_subject["x"], start_opp["z"] - start_subject["z"]
     norm = math.hypot(fx, fz) or 1.0
@@ -110,9 +114,15 @@ class Detector:
         self.pending.remove(obs)
         return self._event(obs, state, action, correct, **detail)
 
+    def _drop_unopened(self):
+        for obs in [o for o in self.pending if o["kind"] == "after_block" and o["free_frame"] is None]:
+            self.pending.remove(obs)
+
     def _on_event(self, ev, state, subj, opp, prev):
         out = []
         kind = ev["kind"]
+        if kind in ("block", "hit", "counter_hit", "throw") and ev.get("target") == self.subject:
+            self._drop_unopened()
         if kind == "block" and ev.get("actor") == self.opp and ev.get("target") == self.subject and ev.get("frame_advantage") is not None:
             human_adv = -ev["frame_advantage"]
             self._open(state, f"after_block:{self._name(ev['move_id'])}", ev["move_id"], ev["frame"], kind="after_block", adv=human_adv,
@@ -162,7 +172,7 @@ class Detector:
         base = "u" if held in ("u", "uf", "ub") else "d" if held == "d" else "b" if held == "b" else None
         tap = obs.get("tap")
         if tap is not None and base != tap["dir"]:
-            if tap["frames"] <= TAP_MAX:
+            if tap["frames"] <= TAP_MAX and held == "n":
                 obs["taps"].append(tap)
             obs["tap"] = tap = None
         if base:
@@ -195,21 +205,30 @@ class Detector:
     def _step_label(self, obs, subj, taps):
         if taps:
             return step_direction(taps[0], subj["side"]), "input"
+        if not self_moved(subj):
+            return None, None
         start_subj, start_opp = obs["origin"]
         lateral, forward = lateral_and_forward(start_subj, start_opp, subj)
         if abs(lateral) >= LATERAL_MM and abs(lateral) > abs(forward):
-            return ("left" if lateral > 0 else "right"), "displacement"
+            return ("right" if lateral > 0 else "left"), "displacement"
         return None, None
 
     def _after_block(self, obs, state, subj, opp, prev_subj):
         frame = state["frame"]
         if obs["free_frame"] is None:
-            if subj["free_movement"]:
+            started = (subj["hit_level"] != "none" and not subj["free_movement"] and frame > obs["frame"]
+                       and (prev_subj["hit_level"] == "none" or prev_subj["move_id"] != subj["move_id"]))
+            if subj["free_movement"] or started:
                 obs["free_frame"] = frame
                 obs["origin"] = (copy.copy(subj), copy.copy(opp))
+                if started:
+                    obs["press_at"] = frame
+                    obs["press_move"] = subj["move_id"]
+                    obs["buffered"] = True
             elif frame - obs["frame"] > THROW_LIMIT:
                 self.pending.remove(obs)
-            return []
+            if not started:
+                return []
         taps = self._tap(obs, subj, frame)
         obs["dirs"][subj["dir_held"]] += 1
         attacking = subj["hit_level"] not in ("none",) and not subj["free_movement"]
@@ -217,12 +236,13 @@ class Detector:
             obs["press_at"] = frame
             obs["press_move"] = subj["move_id"]
         if obs["press_at"] is not None and frame - obs["press_at"] >= PRESS_CONFIRM:
-            return [self._close(obs, state, "press", obs["adv"] >= PUNISH_THRESHOLD, adv=obs["adv"], response_move_id=obs["press_move"])]
+            return [self._close(obs, state, "press", obs["adv"] >= PUNISH_THRESHOLD, adv=obs["adv"], response_move_id=obs["press_move"],
+                                buffered=obs.get("buffered"))]
         label, evidence = self._step_label(obs, subj, taps)
         if label and obs["press_at"] is None:
             return [self._close(obs, state, f"ss_{label}", obs["adv"] < PUNISH_THRESHOLD, adv=obs["adv"], evidence=evidence)]
         if obs["press_at"] is None and obs["origin"] is not None:
-            _, forward = lateral_and_forward(obs["origin"][0], obs["origin"][1], subj)
+            _, forward = lateral_and_forward(obs["origin"][0], obs["origin"][1], subj) if self_moved(subj) else (0.0, 0.0)
             backs = [d for d in obs["taps"] if d["dir"] == "b"]
             if forward <= -RETREAT_MM or len(backs) >= 2:
                 return [self._close(obs, state, "backdash", obs["adv"] < PUNISH_THRESHOLD, adv=obs["adv"],
@@ -242,6 +262,8 @@ class Detector:
 
     def _sidestep(self, obs, state, subj, prev_subj):
         frame = state["frame"]
+        if not self_moved(subj):
+            return [self._close(obs, state, "none", False)]
         taps = self._tap(obs, subj, frame)
         label, evidence = self._step_label(obs, subj, taps)
         if label:

@@ -91,7 +91,7 @@ class FinetuneFormatTest(unittest.TestCase):
             oracle = Laya(agent=FakeAgent(answer=lambda text, key: 1.0))
             result = evaluate(oracle, rows)
             self.assertEqual(result["opp_ducks"]["accuracy"], 0.0)
-            self.assertEqual(result["opp_ducks"]["n"], 23)
+            self.assertEqual(result["opp_ducks"]["n"], sum(1 for r in rows if r["split"] == "heldout" and "opp_ducks" in r["questions"]))
             labels = {r["text"]: r["questions"] for r in rows}
             perfect = Laya(agent=FakeAgent(answer=lambda text, key: 1.0 if labels[text].get(key) else 0.0))
             result = evaluate(perfect, rows)

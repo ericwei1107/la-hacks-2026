@@ -17,7 +17,7 @@ MID = 0x8000020A
 HIGH = 0xA000050F
 THROW_LEVEL = 0x60000A1D
 PRESS_2 = 0xE000001F
-DIR = {"n": 32, "b": 16, "d": 4, "db": 2, "u": 256, "f": 64}
+DIR = {"n": 32, "b": 16, "d": 4, "db": 2, "df": 8, "u": 256, "f": 64}
 BUTTON_2 = 0x2
 D4, DF1, JAB, THROW_ATTEMPT = 0x6DB, 0x6A6, 0x643, 0x70E
 
@@ -195,11 +195,74 @@ class AfterBlockTest(unittest.TestCase):
     def test_sidestep_by_displacement(self):
         seq, c, free = self.setup()
         respond(seq, free, lambda f, h: h.update(position=(-6000.0 + 20.0 * (f - free), 1040.0, -1000.0)))
-        ev = only(self, run(seq)[1], "after_block:df1", "ss_right", True)
+        ev = only(self, run(seq)[1], "after_block:df1", "ss_left", True)
         self.assertEqual(ev["detail"]["evidence"], "displacement")
         seq, c, free = self.setup()
         respond(seq, free, lambda f, h: h.update(position=(-6000.0 - 20.0 * (f - free), 1040.0, -1000.0)))
-        only(self, run(seq)[1], "after_block:df1", "ss_left", True)
+        only(self, run(seq)[1], "after_block:df1", "ss_right", True)
+
+    def test_input_and_displacement_agree(self):
+        seq, c, free = self.setup()
+        respond(seq, free, lambda f, h: h.update(dir_held=DIR["u"]) if f in (free + 2, free + 3) else None)
+        by_input = only(self, run(seq)[1], "after_block:df1", "ss_left", True)
+        seq, c, free = self.setup()
+        respond(seq, free, lambda f, h: h.update(position=(-6000.0 + 20.0 * (f - free), 1040.0, -1000.0)))
+        by_move = only(self, run(seq)[1], "after_block:df1", "ss_left", True)
+        self.assertEqual(by_input["action"], by_move["action"])
+
+    def test_crouch_dash_is_not_a_sidestep(self):
+        seq, c, free = self.setup()
+        pattern = {free + 2: DIR["d"], free + 3: DIR["df"], free + 4: DIR["df"], free + 5: DIR["df"]}
+        respond(seq, free, lambda f, h: h.update(dir_held=pattern.get(f, DIR["n"])))
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertEqual(len(decisions), 1)
+        self.assertNotIn(decisions[0]["action"], ("ss_left", "ss_right"))
+        seq, c, free = self.setup()
+        pattern = {free + 2: DIR["d"], free + 3: DIR["db"]}
+        respond(seq, free, lambda f, h: h.update(dir_held=pattern.get(f, DIR["n"])))
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertNotIn(decisions[0]["action"], ("ss_left", "ss_right"))
+
+    def test_knockback_is_not_movement(self):
+        seq, c, free = self.setup()
+
+        def knocked(f, h):
+            if f >= free + 3:
+                h.update(position=(-6000.0 + 60.0 * (f - free - 2), 1040.0, -1000.0 - 40.0 * (f - free - 2)), hit_reaction=3,
+                         move_id=0x600, frame_in_move=f - free - 2, move_total=25, free_movement=0)
+
+        respond(seq, free, knocked)
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertEqual(len(decisions), 1)
+        self.assertNotIn(decisions[0]["action"], ("ss_left", "ss_right", "backdash"))
+
+    def test_buffered_punish_counts_as_press(self):
+        seq, c, free = self.setup(def_total=5)
+
+        def buffered(f, h):
+            if f >= free:
+                h.update(move_id=JAB, frame_in_move=f - free + 1, move_total=27, free_movement=0, hit_level=HIGH, hit_level_name="high")
+
+        respond(seq, free, buffered)
+        ev = only(self, run(seq)[1], "after_block:df1", "press", True)
+        self.assertTrue(ev["detail"]["buffered"])
+        self.assertEqual(ev["detail"]["response_move_id"], JAB)
+        self.assertEqual(ev["frame"], free + 12)
+
+    def test_string_opens_one_window_and_a_hit_cancels(self):
+        first, c1, end1 = blocked_df1(def_total=19, tail=0)
+        second, c2, end2 = exchange(attacker=1, move=0x6A7, total=41, connect_at=15, level_code=MID, level="mid", reaction=1,
+                                    def_move=0x720, def_total=19, tail=45, start=end1 + 1)
+        seq = first + second
+        decisions = [d for d in run(seq)[1] if d["situation"].startswith("after_block")]
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0]["situation"], "after_block:0x6a7")
+        first, c1, end1 = blocked_df1(def_total=19, tail=0)
+        hit_after, c2, end2 = exchange(attacker=1, move=0x6A7, total=41, connect_at=15, level_code=MID, level="mid", reaction=3,
+                                       def_move=0x600, def_total=25, damage=12, tail=45, start=end1 + 1)
+        seq = first + hit_after
+        decisions = [d for d in run(seq)[1] if d["situation"].startswith("after_block")]
+        self.assertEqual(decisions, [])
 
     def test_backdash_taps(self):
         seq, c, free = self.setup()

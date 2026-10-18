@@ -62,16 +62,26 @@ class BotHooks(Hooks):
         records = self.reflex.step(state, events)
         decisions = self.detector.step(state, events)
         records += decisions
-        records += self.learning.step(state, events + decisions)
+        learned = self.learning.step(state, events + decisions)
+        records += learned
         records += self.tactical.step(state, events, self.reflex)
-        for ev in events:
-            if ev["kind"] == "round_end":
-                records += self.learning.round_end(state, ev)
-                print(f"learning r{state['round']}: {self.learning.status()}", flush=True)
+        self.report(learned)
         bot = state["players"][1 - state["human_slot"]]
         self.seq.on_frame(state["frame"], bot, self.reflex.live(state))
         self.seq.pop_finished()
         return records
+
+    def report(self, learned):
+        for rec in learned:
+            if rec.get("t") == "round_summary":
+                print(f"learning r{rec['round']}: {self.learning.status()}", flush=True)
+
+    def finish(self, state, events):
+        if self.learning is None:
+            return []
+        learned = self.learning.step(state, events)
+        self.report(learned)
+        return learned
 
     def close(self):
         if self.seq is not None:

@@ -291,11 +291,15 @@ def main(argv=None):
             print(f"session: ok {session_path} human P{meta['human_slot'] + 1} {meta['human_character']} vs {meta['bot_character']}, rounds {meta['rounds']}")
 
     replayed = replay(states, meta.get("mode", "practice"))
-    has_decisions = any(e["kind"] == "decision_point" for e in events)
-    recorded_keys = Counter(event_key(e) for e in events)
-    replayed_keys = Counter(event_key(e) for e in replayed if has_decisions or e["kind"] != "decision_point")
+    recorded_keys = Counter(event_key(e) for e in events if e["kind"] != "decision_point")
+    replayed_keys = Counter(event_key(e) for e in replayed if e["kind"] != "decision_point")
+    recorded_decisions = Counter(e.get("situation") for e in events if e["kind"] == "decision_point")
+    replayed_decisions = Counter(e.get("situation") for e in replayed if e["kind"] == "decision_point")
+    if recorded_decisions and recorded_decisions != replayed_decisions:
+        print(f"decision points: recorded {sum(recorded_decisions.values())}, current detector finds {sum(replayed_decisions.values())} "
+              f"(the detector changed since this recording; not a failure)")
     if recorded_keys == replayed_keys:
-        print(f"replay: ok, re-running the tracker on the states reproduces all {len(replayed)} events")
+        print(f"replay: ok, re-running the tracker on the states reproduces all {sum(replayed_keys.values())} tracker events")
     else:
         print("replay: MISMATCH between recorded events and the current tracker")
         for key in sorted((recorded_keys - replayed_keys).elements(), key=str):

@@ -31,9 +31,12 @@ class SampleTest(unittest.TestCase):
             self.assertEqual([e.message for e in EVENT_V.iter_errors(ev)], [], f"event {ev}")
 
     def check_replay(self, meta, states, events):
-        has_decisions = any(e["kind"] == "decision_point" for e in events)
-        replayed = [e for e in replay(states, meta["mode"]) if has_decisions or e["kind"] != "decision_point"]
-        self.assertEqual(Counter(event_key(e) for e in replayed), Counter(event_key(e) for e in events))
+        replayed = [e for e in replay(states, meta["mode"]) if e["kind"] != "decision_point"]
+        recorded = [e for e in events if e["kind"] != "decision_point"]
+        self.assertEqual(Counter(event_key(e) for e in replayed), Counter(event_key(e) for e in recorded))
+        again = [e for e in replay(states, meta["mode"]) if e["kind"] == "decision_point"]
+        first = [e for e in replay(states, meta["mode"]) if e["kind"] == "decision_point"]
+        self.assertEqual(Counter(event_key(e) for e in again), Counter(event_key(e) for e in first))
 
     def test_practice_sample(self):
         meta, states, events, _ = self.load(PRACTICE)

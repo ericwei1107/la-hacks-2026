@@ -54,6 +54,23 @@ def is_homing(entry):
     return "homing" in entry.get("tags", [])
 
 
+def is_mid(entry):
+    return entry.get("hit_level") in ("mid", "special_mid")
+
+
+def is_homing_mid(entry):
+    return is_homing(entry) and is_mid(entry)
+
+
+def move_int(value):
+    if isinstance(value, str):
+        try:
+            return int(value, 16)
+        except ValueError:
+            return None
+    return value
+
+
 def break_codes(text):
     if not text:
         return set()
@@ -70,18 +87,18 @@ def not_broken_by(press):
 COUNTERS = {
     "low_defense": {
         "hit": [("low", is_true_low)],
-        "blocked": [("mid", None), ("throw", None)],
-        "jumped": [("mid", None)],
-        "low_parry": [("mid", None)],
+        "blocked": [("mid", is_mid), ("throw", None)],
+        "jumped": [("mid", is_mid)],
+        "low_parry": [("mid", is_mid)],
     },
     "after_block": {
         "press": [("mid", None)],
-        "duck": [("launcher", None)],
+        "duck": [("launcher", is_mid), ("mid", is_mid)],
         "block_high": [("low", is_true_low)],
-        "block_low": [("mid", None), ("throw", None)],
+        "block_low": [("mid", is_mid), ("throw", None)],
         "backdash": [("approach", None)],
-        "ss_left": [("mid", is_homing), ("launcher", is_homing)],
-        "ss_right": [("mid", is_homing), ("launcher", is_homing)],
+        "ss_left": [("mid", is_homing_mid), ("launcher", is_homing_mid)],
+        "ss_right": [("mid", is_homing_mid), ("launcher", is_homing_mid)],
     },
     "throw_break": {
         "break_1": [("throw", not_broken_by("1"))],
@@ -90,10 +107,11 @@ COUNTERS = {
         "none": [("throw", None)],
     },
     "sidestep_dir": {
-        "left": [("mid", is_homing), ("launcher", is_homing)],
-        "right": [("mid", is_homing), ("launcher", is_homing)],
+        "left": [("mid", is_homing_mid), ("launcher", is_homing_mid)],
+        "right": [("mid", is_homing_mid), ("launcher", is_homing_mid)],
     },
 }
+STATE_HISTORY = 240
 
 
 def family(key):
@@ -371,15 +389,18 @@ class Learning:
         seed = self.rng.randrange(1 << 30)
         self.predictor = Predictor.load(self.predictor_path, seed) if predictor else Predictor(None)
         self.recent = deque(maxlen=RECENT_ACTIONS)
+        self.states = deque(maxlen=STATE_HISTORY)
         self.last_option = None
         self.pull = None
+        self.next_pull = None
         self.session_id = None
         self.learning_path = None
         self.round = None
         self.prev_health = None
         self.damage = [0, 0]
         self.moments = []
-        self.last_decision = None
+        self.throw_moments = []
+        self.decisions = deque(maxlen=8)
         self.exploited = set()
         self.newly_fixed = []
         self.regressed = []
@@ -423,10 +444,14 @@ class Learning:
             self.session_id = state["session_id"]
             self.learning_path = self.root / "learning" / f"{self.session_id}.jsonl"
         if self.round != state["round"]:
+            if self.prev_health is not None:
+                self._settle_pending(self.prev_health[state["human_slot"]])
             self.round = state["round"]
             self.prev_health = None
             self.damage = [0, 0]
             self.moments = []
+            self.throw_moments = []
+            self.decisions.clear()
             self.exploited = set()
             self.newly_fixed = []
             self.regressed = []
@@ -434,6 +459,7 @@ class Learning:
             self.habits.half_life = HALF_LIFE
             self.predictor.reset_round()
             self.pull = None
+            self.next_pull = None
 
     def _record(self, state, **fields):
         rec = {"t": "learning_event", "session_id": state["session_id"], "round": state["round"], "frame": state["frame"]}
@@ -441,9 +467,22 @@ class Learning:
         self.events.append(rec)
         return rec
 
+    def _closing_state(self, state, ev):
+        if ev["round"] == state["round"]:
+            return state
+        stub = dict(state, round=ev["round"], frame=ev["frame"])
+        if self.prev_health is not None:
+            stub["players"] = [dict(p, health=h) for p, h in zip(state["players"], self.prev_health)]
+        return stub
+
     def step(self, state, events):
-        self._begin(state)
         out = []
+        ends = [ev for ev in events if ev.get("t") == "event" and ev.get("kind") == "round_end"]
+        for ev in ends:
+            if ev["round"] != state["round"] and self.round == ev["round"]:
+                out += self.round_end(self._closing_state(state, ev), ev)
+        self._begin(state)
+        self.states.append(state)
         human = state["human_slot"]
         healths = [p["health"] for p in state["players"]]
         if self.prev_health is not None:
@@ -451,25 +490,79 @@ class Learning:
                 if healths[i] < self.prev_health[i]:
                     self.damage[1 if i == human else 0] += self.prev_health[i] - healths[i]
         self.prev_health = healths
-        for ev in events:
-            if ev.get("t") != "event":
-                continue
+        self._track_bot_move(state)
+        ordered = sorted((ev for ev in events if ev.get("t") == "event"), key=lambda e: e.get("kind") != "decision_point")
+        for ev in ordered:
             if ev["kind"] == "decision_point" and ev.get("actor") == human:
                 out += self.observe(ev, state)
-            elif ev["kind"] in ("hit", "counter_hit", "throw") and ev.get("actor") == 1 - human and ev.get("damage"):
+            elif ev["kind"] in ("hit", "counter_hit") and ev.get("actor") == 1 - human and ev.get("damage"):
                 self._moment(ev)
+            elif ev["kind"] == "throw" and ev.get("actor") == 1 - human:
+                self._throw_moment(ev, state)
+            elif ev["kind"] == "throw_break" and ev.get("target") == 1 - human:
+                self._cancel_throw_moments(ev)
             self._resolve(ev, state)
+        self._update_throw_moments(state)
         self._expire(state)
+        for ev in ends:
+            if ev["round"] == state["round"]:
+                out += self.round_end(state, ev)
         return out
+
+    def _state_at(self, round_, frame):
+        for s in reversed(self.states):
+            if s["round"] == round_ and s["frame"] == frame:
+                return s
+            if s["round"] < round_ or (s["round"] == round_ and s["frame"] < frame):
+                break
+        return None
+
+    def _situation_for(self, ev):
+        for d in reversed(self.decisions):
+            if d["round"] == ev["round"] and d["start_frame"] is not None and abs(d["start_frame"] - ev["frame"]) <= 2:
+                return d["situation"], True
+        for d in reversed(self.decisions):
+            if d["round"] == ev["round"] and 0 <= ev["frame"] - d["frame"] <= MOMENT_WINDOW:
+                return d["situation"], False
+        return None, False
 
     def _moment(self, ev):
         moment = {"frame": ev["frame"], "kind": ev["kind"], "damage": int(ev.get("damage", 0))}
         if ev.get("move_id") is not None:
             moment["move_id"] = ev["move_id"]
-        last = self.last_decision
-        if last is not None and last["round"] == ev["round"] and 0 <= ev["frame"] - last["frame"] <= MOMENT_WINDOW:
-            moment["situation"] = last["situation"]
+        situation, exact = self._situation_for(ev)
+        if situation:
+            moment["situation"] = situation
+        moment["_exact"] = exact
         self.moments.append(moment)
+        return moment
+
+    def _throw_moment(self, ev, state):
+        human = state["human_slot"]
+        moment = self._moment(dict(ev, damage=0))
+        self.throw_moments.append({"moment": moment, "health": state["players"][human]["health"], "frame": ev["frame"], "round": ev["round"]})
+
+    def _cancel_throw_moments(self, ev):
+        for pending in [t for t in self.throw_moments if t["round"] == ev["round"] and 0 <= ev["frame"] - t["frame"] <= MOMENT_WINDOW]:
+            if pending["moment"] in self.moments:
+                self.moments.remove(pending["moment"])
+            self.throw_moments.remove(pending)
+
+    def _update_throw_moments(self, state):
+        human = state["human_slot"]
+        for pending in list(self.throw_moments):
+            if pending["round"] != state["round"]:
+                self.throw_moments.remove(pending)
+                continue
+            pending["moment"]["damage"] = max(0, pending["health"] - state["players"][human]["health"])
+            if state["frame"] - pending["frame"] > MOMENT_WINDOW:
+                self.throw_moments.remove(pending)
+
+    def _attribute(self, decision):
+        for moment in self.moments:
+            if not moment["_exact"] and decision["start_frame"] is not None and abs(moment["frame"] - decision["start_frame"]) <= 2:
+                moment["situation"] = decision["situation"]
+                moment["_exact"] = True
 
     def observe(self, ev, state):
         out = []
@@ -491,13 +584,16 @@ class Learning:
             elif change == "regressed":
                 self.regressed.append(key)
                 out.append(self._record(state, event="regressed", situation=key, mastery=round(self.mastery.p(key), 3)))
-        hit, changed = self.predictor.observe(features(keys[0], state, self.recent, self.last_option), action)
+        start = self._state_at(ev["round"], detail.get("start_frame")) or state
+        hit, changed = self.predictor.observe(features(keys[0], start, self.recent, self.last_option), action)
         if changed:
             self.player_changed = True
             self.habits.half_life = DRIFT_HALF_LIFE
             out.append(self._record(state, event="player_changed", situation=keys[0]))
         self.recent.append(action)
-        self.last_decision = {"round": ev["round"], "frame": ev["frame"], "situation": keys[0]}
+        decision = {"round": ev["round"], "frame": ev["frame"], "start_frame": detail.get("start_frame"), "situation": detail_key or keys[0]}
+        self.decisions.append(decision)
+        self._attribute(decision)
         return out
 
     def active_keys(self, state):
@@ -518,9 +614,16 @@ class Learning:
         out = {}
         round_ = state["round"]
         covered = set()
+        retests = set()
         for key in self.active_keys(state):
             if family(key) in covered:
                 continue
+            retest = self.mastery.retest_due(key, round_)
+            if self.mastery.fixed(key) and not retest:
+                covered.add(family(key))
+                continue
+            if retest:
+                retests.add(key)
             active = self.habits.active(key)
             if active is None:
                 continue
@@ -529,9 +632,6 @@ class Learning:
             if not targets:
                 continue
             covered.add(family(key))
-            retest = self.mastery.retest_due(key, round_)
-            if self.mastery.fixed(key) and not retest:
-                continue
             factor = self.exploit_factor(key)
             for cls, _ in targets:
                 if weights is not None and weights.get(cls, 1.0) <= 0:
@@ -539,7 +639,7 @@ class Learning:
                 current = out.get(cls)
                 if current is None or factor > current["factor"]:
                     out[cls] = {"factor": round(factor, 3), "situation": key, "action": action, "p": round(p, 3),
-                                "n": self.habits.seen[key], "retest": retest}
+                                "n": self.habits.seen[key], "retest": retest or (key == ANY_KEY and PLUS_KEY in retests)}
         return out
 
     def pick(self, cls, entries, boost, difficulty, rng=None):
@@ -551,27 +651,39 @@ class Learning:
             return None
         arms = [e["notation"] for e in fitting]
         chosen = self.bandit.pull(f"{key}|{action}", arms, difficulty.mixup_temperature, rng)
-        self.pull = {"key": f"{key}|{action}", "arm": chosen, "frame": None, "round": None, "health": None, "thrown": False}
-        return next(e for e in fitting if e["notation"] == chosen)
+        entry = next(e for e in fitting if e["notation"] == chosen)
+        self.next_pull = {"key": f"{key}|{action}", "arm": chosen, "move_id": move_int(entry.get("move_id")), "frame": None, "round": None,
+                          "health": None, "started": False, "thrown": False}
+        return entry
 
     def decided(self, chosen, boosts, state):
         self.last_option = chosen
         boost = boosts.get(chosen) if boosts else None
+        human = state["human_slot"]
         if boost:
             self.exploited.add(boost["situation"])
             if boost.get("retest"):
                 self.mastery.stamp_retest(boost["situation"], state["round"])
-        if self.pull is not None and self.pull["frame"] is None:
-            if boost:
-                human = state["human_slot"]
-                self.pull.update(frame=state["frame"], round=state["round"], health=state["players"][human]["health"])
-            else:
-                self.pull = None
+                if boost["situation"] == ANY_KEY and self.mastery.retest_due(PLUS_KEY, state["round"]):
+                    self.mastery.stamp_retest(PLUS_KEY, state["round"])
+        self._settle_pending(state["players"][human]["health"])
+        if boost and self.next_pull is not None:
+            self.pull = self.next_pull
+            self.pull.update(frame=state["frame"], round=state["round"], health=state["players"][human]["health"])
+        self.next_pull = None
 
     def _settle(self, reward):
         if self.pull is not None and self.pull["frame"] is not None:
             self.bandit.reward(self.pull["key"], self.pull["arm"], reward)
         self.pull = None
+
+    def _track_bot_move(self, state):
+        pull = self.pull
+        if pull is None or pull["frame"] is None or pull["started"] or pull["move_id"] is None:
+            return
+        bot = state["players"][1 - state["human_slot"]]
+        if bot["move_id"] == pull["move_id"] and state["round"] == pull["round"] and state["frame"] >= pull["frame"]:
+            pull["started"] = True
 
     def _resolve(self, ev, state):
         pull = self.pull
@@ -581,13 +693,17 @@ class Learning:
         bot = 1 - human
         if ev["frame"] < pull["frame"]:
             return
+        if ev.get("actor") == bot and pull["move_id"] is not None and ev.get("move_id") is not None and ev["move_id"] != pull["move_id"]:
+            return
+        if ev.get("actor") == bot and ev["kind"] in ("block", "whiff", "hit", "counter_hit", "throw"):
+            pull["started"] = True
         if ev.get("actor") == bot and ev["kind"] in ("block", "whiff"):
             self._settle(0.0)
         elif ev.get("actor") == bot and ev["kind"] in ("hit", "counter_hit"):
             self._settle(ev.get("damage", 0) / REWARD_DAMAGE)
         elif ev.get("actor") == bot and ev["kind"] == "throw":
             pull["thrown"] = True
-        elif ev["kind"] == "throw_break" and ev.get("target") == bot:
+        elif ev["kind"] == "throw_break" and ev.get("target") == bot and pull["thrown"]:
             self._settle(0.0)
 
     def _expire(self, state):
@@ -596,8 +712,7 @@ class Learning:
             return
         human = state["human_slot"]
         if state["round"] != pull["round"] or state["frame"] - pull["frame"] > OUTCOME_WINDOW:
-            lost = max(0, pull["health"] - state["players"][human]["health"])
-            self._settle(lost / REWARD_DAMAGE)
+            self._settle_pending(state["players"][human]["health"])
 
     def habit_rows(self, keys=None):
         rows = {}
@@ -651,7 +766,8 @@ class Learning:
 
     def summary(self, state, winner):
         human = state["human_slot"]
-        moments = sorted(self.moments, key=lambda m: -m["damage"])[:MOMENTS]
+        moments = sorted((m for m in self.moments if m["damage"] > 0), key=lambda m: -m["damage"])[:MOMENTS]
+        moments = [{k: v for k, v in m.items() if not k.startswith("_")} for m in moments]
         return {
             "t": "round_summary",
             "session_id": state["session_id"],
@@ -673,7 +789,7 @@ class Learning:
 
     def round_end(self, state, ev=None):
         self._begin(state)
-        self._settle_pending(state)
+        self._settle_pending(state["players"][state["human_slot"]]["health"])
         winner = (ev.get("detail") or {}).get("winner") if ev else None
         round_rec = self.round_record(state)
         self.rounds.append(round_rec)
@@ -688,12 +804,12 @@ class Learning:
         self.round = None
         return [summary]
 
-    def _settle_pending(self, state):
+    def _settle_pending(self, human_health):
         pull = self.pull
         if pull is not None and pull["frame"] is not None:
-            human = state["human_slot"]
-            lost = max(0, pull["health"] - state["players"][human]["health"])
-            self._settle(lost / REWARD_DAMAGE)
+            if pull["started"]:
+                lost = max(0, pull["health"] - human_health)
+                self._settle(lost / REWARD_DAMAGE)
         self.pull = None
 
     def status(self):

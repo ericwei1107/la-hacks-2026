@@ -112,6 +112,9 @@ class Hooks:
     def frame(self, state, events):
         return []
 
+    def finish(self, state, events):
+        return []
+
     def close(self):
         pass
 
@@ -137,6 +140,7 @@ def run_session(reader, args, hooks=None):
     count = 0
     gaps = 0
     skipped_states = 0
+    last = None
 
     def on_poll():
         recorder.tick()
@@ -154,6 +158,7 @@ def run_session(reader, args, hooks=None):
                 print(f"match over ({score} for the human): the counter reset into the post-match scene; stopping", flush=True)
                 break
             count += 1
+            last = gs
             events = tracker.step(gs)
             extra = hooks.frame(gs, events)
             recorder.events(events)
@@ -166,11 +171,18 @@ def run_session(reader, args, hooks=None):
     except KeyboardInterrupt:
         pass
     finally:
-        hooks.close()
         final = tracker.finish()
+        extra = []
+        if final and last is not None:
+            try:
+                extra = hooks.finish(last, final)
+            except Exception as e:
+                print(f"finish hook failed: {e!r}", flush=True)
+        hooks.close()
         recorder.events(final)
-        for ev in final:
-            print(fmt_event(ev), flush=True)
+        recorder.events(extra)
+        for rec in final + extra:
+            print(fmt_record(rec), flush=True)
         recorder.close(tracker.rounds, iso_utc(datetime.now(timezone.utc)), result_text(tracker.rounds, human))
         elapsed, rate = pacer.rate()
         kinds = ", ".join(f"{k} {n}" for k, n in sorted(tracker.events.items()))

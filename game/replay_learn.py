@@ -109,30 +109,34 @@ def run_learning(states, player="replay", difficulty=3, mode="practice", rounds_
                 reflex = Reflex(seq, diff, latency, load_punishers(bot_char)[0], rng, load_wakeups(bot_char)[0])
                 run.tactical = Tactical(seq, diff, latency, options, rng, learning=run.learning)
         found = run.detector.step(state, evs)
-        run.records += run.learning.step(state, evs + found)
+        learned = run.learning.step(state, evs + found)
+        run.records += learned
         if run.tactical is not None:
             run.records += reflex.step(state, evs)
             run.records += run.tactical.step(state, evs, reflex)
             seq.on_frame(state["frame"], state["players"][1 - human], reflex.live(state))
             seq.pop_finished()
-        for ev in evs:
-            if ev["kind"] == "round_end":
-                probe = copy.deepcopy(state)
-                probe["derived"]["situation"] = "neutral"
-                run.boosts.append((state["round"], run.learning.boosts(probe)))
-                run.summaries += run.learning.round_end(state, ev)
+        collect_summaries(run, learned, state)
         run.events += evs
         run.decisions += found
         run.last_state = state
     final = tracker.finish()
-    for ev in final:
-        if ev["kind"] == "round_end" and run.last_state is not None:
-            probe = copy.deepcopy(run.last_state)
-            probe["derived"]["situation"] = "neutral"
-            run.boosts.append((run.last_state["round"], run.learning.boosts(probe)))
-            run.summaries += run.learning.round_end(run.last_state, ev)
+    if final and run.last_state is not None:
+        learned = run.learning.step(run.last_state, final)
+        run.records += learned
+        collect_summaries(run, learned, run.last_state)
     run.events += final
     return run
+
+
+def collect_summaries(run, learned, state):
+    for rec in learned:
+        if rec.get("t") == "round_summary":
+            probe = copy.deepcopy(state)
+            probe["round"] = rec["round"] + 1
+            probe["derived"]["situation"] = "neutral"
+            run.summaries.append(rec)
+            run.boosts.append((rec["round"], run.learning.boosts(probe)))
 
 
 def situation_table(decisions):
