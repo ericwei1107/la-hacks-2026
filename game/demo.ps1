@@ -17,6 +17,13 @@ $SparkIncoming = "${Spark}:~/kumite-llm/incoming"
 $HealthSeconds = 60
 $Rows = New-Object System.Collections.ArrayList
 
+foreach ($scope in "Machine", "User") {
+    $saved = [Environment]::GetEnvironmentVariables($scope)
+    foreach ($name in $saved.Keys) {
+        if (-not (Test-Path -LiteralPath "Env:$name")) { Set-Item -LiteralPath "Env:$name" -Value $saved[$name] }
+    }
+}
+
 if ($Player -notmatch '^[A-Za-z0-9_-]+$') { throw "Player must be letters, digits, _ or -" }
 if ($Difficulty -lt 1 -or $Difficulty -gt 5) { throw "Difficulty must be 1..5" }
 
