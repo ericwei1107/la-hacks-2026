@@ -29,6 +29,16 @@ def fmt_event(ev):
 def fmt_record(rec):
     if rec.get("t") == "event":
         return fmt_event(rec)
+    if rec.get("t") == "plan":
+        weights = " ".join(f"{k}={v}" for k, v in rec.get("option_weights", {}).items())
+        return f"r{rec['round']} f{rec['frame']:>6} plan         {rec.get('note', '')!r} {weights}"
+    if rec.get("t") == "tactical" and rec.get("source") != "reflex":
+        detail = rec.get("tactical") or {}
+        p = rec.get("probabilities", {}).get(rec.get("chosen"))
+        extra = " ".join(f"{k}={v}" for k, v in detail.items()
+                         if k in ("situation", "distance_bucket", "frame_advantage", "direction", "hit_level") and v is not None)
+        return (f"r{rec['round']} f{rec['frame']:>6} {rec.get('source'):<12} {rec.get('chosen')} -> {detail.get('move')} "
+                f"p={p} {extra}")
     detail = rec.get("reflex") or {}
     extra = " ".join(f"{k}=0x{v:04X}" if k.endswith("move_id") and isinstance(v, int) else f"{k}={v}"
                      for k, v in detail.items() if k != "kind" and v is not None)

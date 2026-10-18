@@ -114,6 +114,49 @@ def outcome(rec, events, bot):
     return ""
 
 
+def tactical_outcome(rec, events, bot):
+    detail = rec.get("tactical") or {}
+    if rec["chosen"] not in ("mid", "low", "throw", "launcher"):
+        return "movement"
+    ev = first_event(events, rec["frame"], rec["round"], OUTCOME_WINDOW,
+                     lambda e: e.get("actor") == bot and e["kind"] in CONNECT_KINDS + ("whiff", "throw"))
+    if ev is None:
+        return "no result"
+    broke = ev["kind"] == "throw" and first_event(events, ev["frame"], rec["round"], BREAK_WINDOW,
+                                                  lambda e: e["kind"] == "throw_break" and e.get("target") == bot)
+    return "throw broken" if broke else ev["kind"]
+
+
+def tactical_section(records, events, human):
+    decisions = [r for r in records if r.get("t") == "tactical" and r.get("source") in ("default", "habit")]
+    plans = [r for r in records if r.get("t") == "plan"]
+    for plan in plans:
+        print("plan: " + fmt_record(plan))
+    if not decisions:
+        print("tactical decisions: none")
+        return
+    bot = 1 - human
+    sources = Counter(r["source"] for r in decisions)
+    print(f"tactical decisions: {len(decisions)} (" + ", ".join(f"{k} {n}" for k, n in sources.most_common()) + ")")
+    mix = Counter(r["chosen"] for r in decisions)
+    print("  option mix: " + ", ".join(f"{k} {n} ({n / len(decisions):.0%})" for k, n in mix.most_common()))
+    by_bucket = {}
+    for r in decisions:
+        by_bucket.setdefault((r.get("tactical") or {}).get("distance_bucket", "?"), Counter())[r["chosen"]] += 1
+    for bucket in ("point_blank", "close", "mid", "far", "very_far"):
+        if bucket in by_bucket:
+            print(f"  at {bucket}: " + ", ".join(f"{k} {n}" for k, n in by_bucket[bucket].most_common()))
+    rounds = {}
+    for r in decisions:
+        rounds.setdefault(r["round"], Counter())[r["chosen"]] += 1
+    for rnd in sorted(rounds):
+        print(f"  round {rnd}: " + ", ".join(f"{k} {n}" for k, n in rounds[rnd].most_common()))
+    moves = Counter((r.get("tactical") or {}).get("move") for r in decisions)
+    print("  moves: " + ", ".join(f"{k} {n}" for k, n in moves.most_common(12)))
+    outcomes = Counter(tactical_outcome(r, events, bot) for r in decisions)
+    print("  attack outcomes: " + ", ".join(f"{k} {n}" for k, n in outcomes.most_common() if k != "movement"))
+
+
 def reflex_section(records, events, human):
     decisions = [r for r in records if r.get("t") == "tactical" and r.get("source") == "reflex"]
     if not decisions:
@@ -192,6 +235,7 @@ def main(argv=None):
         else:
             print(f"blocked jab 0x{jab:X}: none found in this recording")
     reflex_section(records, replayed, human)
+    tactical_section(records, replayed, human)
     print("PASS" if failures == 0 else f"{failures} failure(s)")
     return 1 if failures else 0
 

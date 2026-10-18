@@ -219,6 +219,26 @@ class BlockTest(unittest.TestCase):
         self.assertTrue(all(p == set() for p in rig.pressed.values()))
 
 
+class SpentThreatTest(unittest.TestCase):
+    def test_guard_releases_after_active_frames(self):
+        frames = attack(0, "mid", start=100, length=40)
+        for _, pair in frames:
+            if pair[0]["move_id"] == ATTACK:
+                pair[0].update(first_active=5, last_active=6)
+        rig = Rig(exact(0)).run(frames)
+        self.assertEqual(rig.pressed[100], {"DPAD_RIGHT"})
+        self.assertEqual(rig.pressed[109], {"DPAD_RIGHT"})
+        self.assertEqual(rig.pressed[115], set())
+        self.assertFalse(rig.states[115]["players"][0]["free_movement"])
+        self.assertEqual(rig.reflex.guard, "n")
+        self.assertEqual(len(rig.kind("block")), 1)
+
+    def test_unknown_active_frames_keep_old_behaviour(self):
+        rig = Rig(exact(0)).run(attack(0, "mid", start=100, length=40))
+        self.assertEqual(rig.pressed[139], {"DPAD_RIGHT"})
+        self.assertEqual(rig.pressed[144], set())
+
+
 class IncapableTest(unittest.TestCase):
     def test_no_block_while_downed_or_juggled(self):
         for bit in (DOWNED, JUGGLED):

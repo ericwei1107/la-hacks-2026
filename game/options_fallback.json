@@ -1,0 +1,71 @@
+{
+  "source": "prep/ids.md move tables (ids, hit levels, startup) with on-block values from tekkendocs; used until characters/<name>/options.json and moves.json exist. Classes are the GamePlan option classes from contracts/gameplan.schema.json. ranges are derived.distance_bucket values where the entry is usable; movement_set is the lowest difficulty movement set that may use it (basic < sidestep < character < full).",
+  "default_plan": {
+    "aggression": 0.5,
+    "risk_tolerance": 0.3,
+    "target_habits": [],
+    "option_weights": {"mid": 1.0, "low": 0.8, "throw": 0.6, "launcher": 0.4, "backdash": 0.6, "sidestep": 0.5, "approach": 0.8, "wait": 0.7},
+    "wall_strategy": "none",
+    "note": "Kazuya defaults"
+  },
+  "kazuya": {
+    "classes": {
+      "mid": [
+        {"notation": "df+1", "move_id": "0x6A6", "hit_level": "mid", "startup": 15, "on_block": -7, "weight": 1.0, "ranges": ["point_blank", "close", "mid"], "tags": []},
+        {"notation": "df+4", "move_id": "0x6C3", "hit_level": "mid", "startup": 13, "on_block": -9, "weight": 0.9, "ranges": ["point_blank", "close"], "tags": []},
+        {"notation": "f+4", "move_id": "0x680", "hit_level": "mid", "startup": 19, "on_block": 4, "weight": 0.9, "ranges": ["close", "mid"], "tags": ["plus_on_block"]},
+        {"notation": "db+2", "move_id": "0x6C5", "hit_level": "mid", "startup": 18, "on_block": -4, "weight": 0.8, "ranges": ["close", "mid"], "tags": []},
+        {"notation": "b+2", "move_id": "0x685", "hit_level": "mid", "startup": 14, "on_block": -8, "weight": 0.7, "ranges": ["point_blank", "close"], "tags": []},
+        {"notation": "df+3", "move_id": "0x6B0", "hit_level": "mid", "startup": 18, "on_block": -7, "weight": 0.6, "ranges": ["point_blank", "close", "mid"], "tags": []},
+        {"notation": "df+2", "move_id": "0x6AF", "hit_level": "mid", "startup": 14, "on_block": -12, "weight": 0.6, "ranges": ["point_blank", "close", "mid"], "tags": ["homing"]},
+        {"notation": "1", "move_id": "0x659", "hit_level": "high", "startup": 10, "on_block": 1, "weight": 0.8, "ranges": ["point_blank", "close"], "tags": ["poke"]}
+      ],
+      "low": [
+        {"notation": "d+4", "move_id": "0x6DB", "hit_level": "low", "startup": 12, "on_block": -15, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": []},
+        {"notation": "db+3", "move_id": "0x6C6", "hit_level": "low", "startup": 19, "on_block": -12, "weight": 0.8, "ranges": ["point_blank", "close", "mid"], "tags": []},
+        {"notation": "db+4", "move_id": "0x6CE", "hit_level": "low", "startup": 20, "on_block": -12, "weight": 0.8, "ranges": ["close", "mid"], "tags": []},
+        {"notation": "d+3", "move_id": "0x6DA", "hit_level": "low", "startup": 16, "on_block": -17, "weight": 0.5, "ranges": ["point_blank", "close"], "tags": []},
+        {"notation": "f,n,d,DF+4", "move_id": null, "hit_level": "low", "startup": 16, "on_block": -23, "weight": 0.6, "ranges": ["close", "mid"], "tags": ["hellsweep", "launcher_on_ch"], "movement_set": "character"},
+        {"notation": "d+2", "move_id": "0x6D7", "hit_level": "special_low", "startup": 11, "on_block": -4, "weight": 0.5, "ranges": ["point_blank", "close"], "tags": []},
+        {"notation": "d+1", "move_id": "0x6D5", "hit_level": "special_low", "startup": 10, "on_block": -5, "weight": 0.4, "ranges": ["point_blank", "close"], "tags": []}
+      ],
+      "throw": [
+        {"notation": "1+3", "move_id": "0x71B", "hit_level": "throw", "startup": 12, "on_block": 0, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": [], "break": "1/2"},
+        {"notation": "2+4", "move_id": null, "hit_level": "throw", "startup": 12, "on_block": 0, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": [], "break": "1/2"},
+        {"notation": "uf+1+2", "move_id": null, "hit_level": "throw", "startup": 12, "on_block": 0, "weight": 0.7, "ranges": ["point_blank", "close"], "tags": [], "break": "1+2"}
+      ],
+      "launcher": [
+        {"notation": "1+2", "move_id": "0x64B", "hit_level": "mid", "startup": 12, "on_block": -13, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": ["launcher"]},
+        {"notation": "ws+2", "move_id": "0x698", "hit_level": "mid", "startup": 16, "on_block": -18, "weight": 0.6, "ranges": ["point_blank", "close"], "tags": ["launcher", "homing"]},
+        {"notation": "f+2", "move_id": "0x65B", "hit_level": "mid", "startup": 20, "on_block": -12, "weight": 0.6, "ranges": ["close", "mid"], "tags": ["launcher", "power_crush"]},
+        {"notation": "f,n,d,df+2", "move_id": "0x702", "hit_level": "high", "startup": 11, "on_block": -10, "weight": 0.7, "ranges": ["close", "mid"], "tags": ["launcher", "wind_god_fist"], "movement_set": "character"}
+      ],
+      "backdash": [
+        {"notation": "b,b", "weight": 1.0, "movement_set": "basic"}
+      ],
+      "sidestep": [
+        {"notation": "u", "weight": 1.0, "movement_set": "sidestep"},
+        {"notation": "d", "weight": 1.0, "movement_set": "sidestep"}
+      ],
+      "approach": [
+        {"notation": "f,f", "weight": 1.0, "movement_set": "basic", "tags": ["dash"]},
+        {"notation": "F", "weight": 0.5, "movement_set": "basic", "tags": ["walk"]},
+        {"notation": "f,n,d,df,f,n,d,df", "weight": 1.0, "movement_set": "character", "tags": ["wavedash"]}
+      ],
+      "wait": [
+        {"notation": "B", "weight": 1.0, "movement_set": "basic"}
+      ]
+    },
+    "move_names": {
+      "0x659": "1", "0x65A": "1", "0x645": "2", "0x64E": "3", "0x652": "4",
+      "0x64A": "1+2", "0x64B": "1+2", "0x71B": "1+3", "0x814": "1+3",
+      "0x6A6": "df+1", "0x6AF": "df+2", "0x6B0": "df+3", "0x6C3": "df+4",
+      "0x6D5": "d+1", "0x6D7": "d+2", "0x6DA": "d+3", "0x6DB": "d+4",
+      "0x6D2": "db+1", "0x6C5": "db+2", "0x6C6": "db+3", "0x6CE": "db+4",
+      "0x681": "b+1", "0x685": "b+2", "0x68E": "b+3", "0x68F": "b+3", "0x674": "b+4", "0x68D": "b+1+2",
+      "0x65B": "f+2", "0x67B": "f+3", "0x680": "f+4", "0x624": "uf+4",
+      "0x702": "f,n,d,df+2", "0x701": "f,n,d,df+2",
+      "0x696": "ws+1", "0x698": "ws+2"
+    }
+  }
+}
