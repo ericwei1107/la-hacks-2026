@@ -100,6 +100,18 @@ class DemoCaptureTest(unittest.TestCase):
         self.assertEqual(widen([[0, "n", ["1"], 1], [1, "n", ["2"], 1]]), [[0, "n", ["1"], 2], [1, "n", ["2"], 2]])
 
 
+LEAD_IN = 14 + 29
+
+
+def lead_in(runner, seq, start, target, bot, limit=200):
+    for f in range(start, start + limit):
+        out = runner.on_state({"frame": f, "players": [target, bot]})
+        seq.on_frame(f, bot)
+        if out is not None:
+            return f, out
+    return None, None
+
+
 class DemoReplayTest(unittest.TestCase):
     def test_opener_replays_recorded_inputs(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
@@ -108,10 +120,32 @@ class DemoReplayTest(unittest.TestCase):
         seq = Sequencer(pad, 2, rng=random.Random(0))
         runner = ComboRunner(route, seq, 1, name="ws12")
         bot, target = player(side=1), player()
-        self.assertEqual(runner.on_state({"frame": 100, "players": [target, bot]}), "ws1,2")
+        self.assertEqual(lead_in(runner, seq, 100, target, bot), (100 + LEAD_IN, "ws1,2"))
         self.assertEqual(runner.move.frames, captured_frames(route["launcher_inputs"])[0])
-        seq.on_frame(100, bot)
         self.assertEqual(device.pressed, {"DPAD_DOWN"})
+
+    def test_walks_14_frames_then_stands_30_before_the_opener(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"})
+        pad, device = fake_pad()
+        seq = Sequencer(pad, 2)
+        runner = ComboRunner(route, seq, 1, name="ws12")
+        bot, target = player(side=0), player(x=500.0)
+        pressed = []
+        for f in range(100, 100 + LEAD_IN):
+            self.assertIsNone(runner.on_state({"frame": f, "players": [target, bot]}))
+            seq.on_frame(f, bot)
+            pressed.append(set(device.pressed))
+        self.assertEqual(pressed[:14], [{"DPAD_RIGHT"}] * 14)
+        self.assertEqual(pressed[14:], [set()] * (LEAD_IN - 14))
+        self.assertEqual(runner.on_state({"frame": 100 + LEAD_IN, "players": [target, bot]}), "ws1,2")
+
+    def test_counter_hit_route_skips_the_minimum_walk(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = replay_route(build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"}), counter_hit=True)
+        runner = ComboRunner(route, Sequencer(fake_pad()[0], 2), 1, name="ws12")
+        charging = player(buttons_pressed=["1", "2", "3", "4"], buttons_held=["1", "2", "3", "4"])
+        self.assertEqual(runner.on_state({"frame": 100, "players": [charging, player(side=1)]}), "ws1,2")
 
     def test_opener_waits_for_the_demo_start_frame(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
@@ -121,7 +155,8 @@ class DemoReplayTest(unittest.TestCase):
         bot, target = player(side=1), player()
         for f in range(30, 43):
             self.assertIsNone(runner.on_state({"frame": f, "players": [target, bot]}))
-        self.assertEqual(runner.on_state({"frame": 43, "players": [target, bot]}), "ws1,2")
+            self.assertIsNone(runner.approach_start)
+        self.assertEqual(lead_in(runner, runner.seq, 43, target, bot), (43 + LEAD_IN, "ws1,2"))
 
     def test_counter_hit_route_waits_for_ki_charge(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
@@ -193,12 +228,11 @@ class DemoReplayTest(unittest.TestCase):
         seq = Sequencer(fake_pad()[0], 2)
         runner = ComboRunner(route, seq, 1, name="ws12")
         bot = player(side=0, x=0.0)
-        self.assertEqual(runner.on_state({"frame": 50, "players": [player(x=1500.0), bot]}), "ws1,2")
-        seq.on_frame(50, bot)
+        self.assertEqual(lead_in(runner, seq, 50, player(x=1500.0), bot), (50 + LEAD_IN, "ws1,2"))
         busy = dict(bot, free_movement=False, move_id=0x696)
-        runner.on_state({"frame": 60, "players": [player(x=1000.0), busy]})
-        seq.on_frame(60, busy)
-        runner.on_state({"frame": 61, "players": [player(x=1000.0, health=180, hit_reaction=12), busy]})
+        runner.on_state({"frame": 100, "players": [player(x=1000.0), busy]})
+        seq.on_frame(100, busy)
+        runner.on_state({"frame": 101, "players": [player(x=1000.0, health=180, hit_reaction=12), busy]})
         self.assertEqual(runner.reach, 500)
         self.assertNotIn("learned_reach", route)
         self.assertEqual(runner.fire_distance(), 962 + 590)
@@ -210,16 +244,12 @@ class DemoReplayTest(unittest.TestCase):
         seq = Sequencer(fake_pad()[0], 2)
         runner = ComboRunner(route, seq, 1, name="ws12")
         bot = player(side=0, x=0.0)
-        self.assertIsNone(runner.on_state({"frame": 50, "players": [player(x=1774.0), bot]}))
-        for f in range(51, 80):
-            self.assertIsNone(runner.on_state({"frame": f, "players": [player(x=1400.0), bot]}))
-        self.assertEqual(runner.on_state({"frame": 80, "players": [player(x=1400.0), bot]}), "ws1,2")
-        seq.on_frame(80, bot)
+        self.assertEqual(lead_in(runner, seq, 50, player(x=1400.0), bot), (50 + LEAD_IN, "ws1,2"))
         busy = dict(bot, free_movement=False, move_id=0x697)
-        runner.on_state({"frame": 90, "players": [player(x=1100.0), busy]})
-        seq.on_frame(90, busy)
-        runner.on_state({"frame": 91, "players": [player(x=1100.0, health=178, hit_reaction=12), busy]})
-        self.assertEqual(runner.connect_frame, 91)
+        runner.on_state({"frame": 100, "players": [player(x=1100.0), busy]})
+        seq.on_frame(100, busy)
+        runner.on_state({"frame": 101, "players": [player(x=1100.0, health=178, hit_reaction=12), busy]})
+        self.assertEqual(runner.connect_frame, 101)
         self.assertIsNone(runner.reach)
         self.assertNotIn("learned_reach", route)
 
@@ -227,10 +257,12 @@ class DemoReplayTest(unittest.TestCase):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
         route = build_demo_route("x", rows, SUBJECT)
         self.assertEqual(route["launcher"], "0x0696")
-        runner = ComboRunner(route, Sequencer(fake_pad()[0], 2), 1, name="x")
+        seq = Sequencer(fake_pad()[0], 2)
+        runner = ComboRunner(route, seq, 1, name="x")
         busy = player(side=1, free_movement=False, frames_until_actionable=10)
         self.assertIsNone(runner.on_state({"frame": 60, "players": [player(), busy]}))
-        self.assertEqual(runner.on_state({"frame": 61, "players": [player(), player(side=1)]}), "0x0696")
+        self.assertIsNone(runner.approach_start)
+        self.assertEqual(lead_in(runner, seq, 61, player(), player(side=1)), (61 + LEAD_IN, "0x0696"))
 
     def test_counter_hit_opener_marks_route(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))

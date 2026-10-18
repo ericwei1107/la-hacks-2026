@@ -17,6 +17,7 @@ KI_CHARGE = ("1", "2", "3", "4")
 COUNTER_HIT_REACTIONS = (10, 11)
 MAX_APPROACH_FRAMES = 40
 RELEASE_FRAMES = 2
+MIN_WALK_FRAMES = 14
 IDLE_FRAMES = 30
 MAX_SETTLE_FRAMES = 90
 OPENER_HIT_WINDOW = 1
@@ -388,12 +389,15 @@ class ComboRunner:
 
     def _approach(self, frame, bot, target):
         fire = self.fire_distance()
-        if fire is None:
+        min_walk = 0 if self.captured.get("trigger") == "ki_charge" else MIN_WALK_FRAMES
+        if fire is None and not min_walk:
             return False
         if self.approach_start is None:
             self.approach_start = frame
         if self.release_frame is None:
-            if distance(bot, target) > fire and frame - self.approach_start < MAX_APPROACH_FRAMES:
+            walked = frame - self.approach_start
+            far = fire is not None and distance(bot, target) > fire
+            if walked < min_walk or (far and walked < MAX_APPROACH_FRAMES):
                 self.seq.hold("f")
                 self.walked = True
                 return True
