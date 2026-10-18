@@ -80,7 +80,7 @@ Starting to record stops the coach's voice. A transcript that arrives after the 
 
 When the transcript is empty, a muted line under the input bar reads "Didn't catch that. Hold the key and try again." When the microphone or the call fails, the line reads "Couldn't hear you. <reason>", with "Microphone access is off. Allow it in System Settings → Privacy & Security → Microphone." for a refused microphone. The line clears on the next attempt or the next typed question.
 
-Hold to talk is unavailable, and the button drawn disabled, under the same conditions as the text field (replay service offline, answer pending), and in a plain browser.
+Hold to talk is unavailable, and the button drawn disabled, under the same conditions as the text field (replay service offline, answer pending), and in a plain browser. While a recording is being transcribed, new presses are ignored.
 
 **Microphone permission.** The main process grants microphone requests from the app's own pages and refuses every other media request. On macOS it asks the system for microphone access the first time a recording starts.
 
@@ -101,7 +101,7 @@ Hold to talk is unavailable, and the button drawn disabled, under the same condi
 ## Open Questions & Future Decisions
 
 ### Deferred
-1. The Coach screen's voice: spoken answers, hold to talk and the transcribe call. They wait on the replay service's `/coach/chat`.
+1. Spoken answers on the Coach screen, until the replay service's `/coach/chat` is ready. Until then an answer is text only.
 2. Holding to talk while the game has focus (HLD open question), for a quick follow-up question between rounds.
 3. OpenAI speech as the fallback when ElevenLabs is down (HLD, Voice). Until then a failure is text-only.
 

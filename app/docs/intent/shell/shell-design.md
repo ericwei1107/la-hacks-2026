@@ -49,13 +49,14 @@ window.kumite = {
                  warning: 'KUMITE_REPLAY_URL in the environment is not an http(s) URL: "192.168.50.2:8766"' },
     analytics: { url: 'http://localhost:8767',    source: 'default' }
   },
-  speak: (text) => Promise<SpeakResult>
+  speak: (text) => Promise<SpeakResult>,
+  transcribe: (recording, mimeType) => Promise<TranscribeResult>
 }
 ```
 
 The preload asks the main process for `services` over one synchronous IPC call while it runs, so the object is complete before any page script executes. The service clients can then build every URL at module load without waiting.
 
-`speak` carries the voice component's text-to-speech call: the text goes to the main process over an asynchronous `ipcRenderer.invoke`, and the clip or a failure reason comes back (voice design). Only the text and the result cross; the ElevenLabs settings stay in the main process.
+`speak` and `transcribe` carry the voice component's calls: the text or the recording goes to the main process over an asynchronous `ipcRenderer.invoke`, and the clip, the transcript or a failure reason comes back (voice design). Only the data and the result cross; the ElevenLabs settings stay in the main process. The main process also answers the windows' microphone permission requests (voice design).
 
 A page opened outside Electron, such as the renderer dev server in a plain browser, has no `window.kumite`. The service clients design covers that case.
 
@@ -92,8 +93,7 @@ The main process opens two windows from the same renderer build, both with the s
 
 ### Deferred
 1. The global push-to-talk key, including hold-to-talk while the game has focus (HLD open question).
-2. The voice component's speech-to-text bridge call, `transcribe` (voice design, deferred).
-3. Choosing the display the overlay covers, for a game on a secondary display.
+2. Choosing the display the overlay covers, for a game on a secondary display.
 
 ## References
 

@@ -18,10 +18,15 @@ export type SpeakResult =
   | { ok: true; audio: Uint8Array<ArrayBuffer> }
   | { ok: false; reason: VoiceFailure; status?: number }
 
+export type TranscribeResult =
+  | { ok: true; text: string }
+  | { ok: false; reason: VoiceFailure; status?: number }
+
 export interface KumiteApi {
   platform: string
   services: ServiceAddresses
   speak: (text: string) => Promise<SpeakResult>
+  transcribe: (recording: Uint8Array<ArrayBuffer>, mimeType: string) => Promise<TranscribeResult>
 }
 
 export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
@@ -33,3 +38,5 @@ export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
 export const SERVICES_CHANNEL = 'kumite:services'
 
 export const SPEAK_CHANNEL = 'kumite:speak'
+
+export const TRANSCRIBE_CHANNEL = 'kumite:transcribe'

@@ -1,8 +1,9 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { SERVICES_CHANNEL } from '../shared/bridge'
 import { overlayEnabled, readAppEnv, resolveServiceAddresses } from './services'
-import { handleVoice, readVoiceSettings } from './voice'
+import { handleMicrophone, handleVoice, readVoiceSettings } from './voice'
 
 const OVERLAY_DESIGN_WIDTH = 1920
 
@@ -15,6 +16,13 @@ const webPreferences = {
 }
 
 let mainWindow: BrowserWindow | null = null
+
+function isAppPage(url: string): boolean {
+  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+    return url.startsWith(`${process.env.ELECTRON_RENDERER_URL.replace(/\/+$/, '')}/`)
+  }
+  return url.startsWith(`${pathToFileURL(join(__dirname, '../renderer')).href}/`)
+}
 
 function loadPage(win: BrowserWindow, page: 'index.html' | 'overlay.html'): void {
   if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
@@ -79,6 +87,7 @@ app.whenReady().then(() => {
     event.returnValue = services
   })
   handleVoice(readVoiceSettings(fileValues))
+  handleMicrophone(isAppPage)
   mainWindow = createMainWindow()
   if (overlayEnabled(fileValues)) createOverlayWindow()
   app.on('activate', () => {

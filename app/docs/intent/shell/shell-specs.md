@@ -20,11 +20,12 @@ Design: `shell-design.md`
 
 ## The bridge
 
-- [ ] **SHELL-BRIDGE-001**: The preload script shall expose one object to every window's page as `window.kumite`, holding `platform` (the operating system platform as `process.platform` reports it), `services` and `speak`.
+- [ ] **SHELL-BRIDGE-001**: The preload script shall expose one object to every window's page as `window.kumite`, holding `platform` (the operating system platform as `process.platform` reports it), `services`, `speak` and `transcribe`.
 - [ ] **SHELL-BRIDGE-002**: The `window.kumite.services` object shall hold, for each of `brain`, `replay` and `analytics`, the resolved `url`, its `source`, and its `warning` when one exists.
 - [ ] **SHELL-BRIDGE-003**: The preload script shall obtain `window.kumite.services` from the main process with one synchronous IPC call made while the preload runs, so the object is complete before any page script executes.
 - [ ] **SHELL-BRIDGE-004**: The bridge shall pass to a window no value read from the process environment or `app/.env` other than the three resolved service addresses and their warnings.
 - [ ] **SHELL-BRIDGE-005**: When a page calls `window.kumite.speak` with a text, the bridge shall pass the text to the main process's speak call over an asynchronous IPC call and resolve with that call's result.
+- [ ] **SHELL-BRIDGE-006**: When a page calls `window.kumite.transcribe` with a recording and its MIME type, the bridge shall pass both to the main process's transcribe call over an asynchronous IPC call and resolve with that call's result.
 
 ## Windows
 
@@ -48,7 +49,7 @@ Design: `shell-design.md`
 | SHELL-ADDR-002, SHELL-ADDR-004 – SHELL-ADDR-013 | `src/main/services.ts` (`resolveServiceAddresses`) |
 | SHELL-ADDR-003 | `src/shared/bridge.ts` (`DEFAULT_SERVICE_URLS`) |
 | SHELL-BRIDGE-001 – SHELL-BRIDGE-004 | `src/preload/index.ts`, answered by `src/main/index.ts` (the `SERVICES_CHANNEL` handler) |
-| SHELL-BRIDGE-005 | `src/preload/index.ts`, answered by `src/main/voice.ts` (`handleVoice`) |
+| SHELL-BRIDGE-005, SHELL-BRIDGE-006 | `src/preload/index.ts`, answered by `src/main/voice.ts` (`handleVoice`) |
 | SHELL-WIN-001, SHELL-WIN-002, SHELL-WIN-009, SHELL-WIN-011 | `src/main/index.ts` (`createMainWindow`) |
 | SHELL-WIN-010 | `src/main/index.ts` (`webPreferences`) |
 | SHELL-WIN-003 – SHELL-WIN-008 | `src/main/index.ts` (`createOverlayWindow`), `src/main/services.ts` (`overlayEnabled`) |
