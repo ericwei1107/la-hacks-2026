@@ -198,7 +198,8 @@ class Tracker:
         if winner is not None:
             self.wins[winner] += 1
         self.rounds.append({"round": self.round, "winner": winner, "start_frame": self.round_start, "end_frame": frame})
-        out.append(self.event("round_end", frame, detail={"reason": reason, "winner": winner}))
+        over = self.match_over or reason == "stop"
+        out.append(self.event("round_end", frame, detail={"reason": reason, "winner": winner, "match_over": over}))
 
     def _start_round(self, frame, reason, out):
         self.round += 1
