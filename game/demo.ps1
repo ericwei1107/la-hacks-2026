@@ -1,6 +1,7 @@
 param(
     [string]$Player = "demo",
     [int]$Difficulty = 3,
+    [double]$LayaWeight = 1.0,
     [switch]$NoSpark,
     [switch]$NoApp,
     [switch]$NoDemo
@@ -26,6 +27,8 @@ foreach ($scope in "Machine", "User") {
 
 if ($Player -notmatch '^[A-Za-z0-9_-]+$') { throw "Player must be letters, digits, _ or -" }
 if ($Difficulty -lt 1 -or $Difficulty -gt 5) { throw "Difficulty must be 1..5" }
+if ($LayaWeight -lt 0 -or $LayaWeight -gt 1) { throw "LayaWeight must be 0..1" }
+$LayaWeightArg = $LayaWeight.ToString([Globalization.CultureInfo]::InvariantCulture)
 
 function Add-Row([string]$Title, [string]$Window, [string]$Health) {
     [void]$Rows.Add([pscustomobject]@{ Window = $Title; Status = $Window; Health = $Health })
@@ -161,7 +164,7 @@ if ($NoApp) {
 }
 
 $title = "Kumite bot"
-$botCmd = "python -m game.bot --player $Player --bot kazuya --difficulty $Difficulty --mode versus --loop --laya --wait-for-match"
+$botCmd = "python -m game.bot --player $Player --bot kazuya --difficulty $Difficulty --mode versus --loop --laya --laya-weight $LayaWeightArg --wait-for-match"
 if (-not $NoDemo) { $botCmd += " --demo" }
 if (Test-Window $title) {
     Add-Row $title "already running" "window open; close it or run demo-stop.ps1 for a new bot"
