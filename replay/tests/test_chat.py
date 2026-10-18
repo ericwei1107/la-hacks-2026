@@ -327,3 +327,23 @@ def test_conflicting_human_slots_do_not_attribute_hit_events_with_confidence(cli
     assert response.status_code == 200
     assert "uncertain" in response.json()["text"]
     assert "human landed" not in response.json()["text"]
+
+
+@pytest.mark.parametrize("question,label,value", [
+    ("Have I improved my low blocking?", "low_defense", 0.22),
+    ("Have I improved my throw breaks?", "throw_break", 0.35),
+])
+def test_learning_questions_scope_local_estimates_to_requested_situation(client, question, label, value):
+    path = client.app.state.settings.data_dir / "learning"
+    path.mkdir()
+    habits = {name: {"p": 0.7, "n": 4, "mastery": estimate} for name, estimate in [
+        ("after_block:any", 0.9), ("after_block:bot_minus", 0.8), ("after_block:bot_plus", 0.7),
+        ("low_defense", 0.22), ("sidestep_dir", 0.2), ("throw_break", 0.35)]}
+    (path / f"{SESSION}.jsonl").write_text(json.dumps({"t": "learning_round", "session_id": SESSION,
+        "round": 1, "prediction_accuracy": None, "habits": habits}) + "\n")
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(503))
+    response = client.post("/coach/chat", json={**QUESTION, "message": question})
+    assert response.status_code == 200
+    assert str(value) in response.json()["text"]
+    assert label.replace("_", " ") in response.json()["text"]
+    assert "after block" not in response.json()["text"]

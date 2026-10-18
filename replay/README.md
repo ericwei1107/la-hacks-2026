@@ -335,11 +335,15 @@ Invoke-RestMethod "http://127.0.0.1:8766/reports/$sessionId"
 ```
 
 Expect mastery only for situations present in the latest valid snapshot, with
-source evidence. The live sample was absent from main at `843dcb1`; this
-follow-up was verified offline against PR #8's explicitly synthetic DATA_DIR
-bundle (35 human decisions, round-3 mastery, and three round summaries), plus
-unit tests. Synthetic values are not measured player learning. The real
-`live_learning` recording still needs an integration check after it lands.
+source evidence. Earlier integration used PR #8's explicitly synthetic DATA_DIR
+bundle (35 human decisions, round-3 mastery, and three round summaries).
+Synthetic values are not measured player learning. Main at `a360f8d` also
+contains the real live-learning set `2026-10-18T05-14-03_sahil_djin_vs_kaz`.
+Offline integration with `DATA_DIR=./data/samples/live_learning` verified its
+58 human decisions, four summaries, result `loss 1-3`, and round-4/line-4 mastery:
+sidestep and low defense `0.1714`, throw breaking `0.543`. These are recorded
+learner estimates. The live low-defense habit was not fixed. No live Jev pass
+was run on this newer sample.
 
 ## Coach chat
 
@@ -372,7 +376,9 @@ their preference meaning and candidate limitations.
 Frame-data answers name only uniquely verified moves belonging to characters
 in the recording. Hypothetical punishers come from the human's character data
 and explicitly leave range, timing and string completion unverified. Mastery
-comes from validated local learning snapshots. `get_learning_curve(session)`
+comes from validated local learning snapshots. Learning/mastery tools can filter
+by situation, so a low-blocking question does not return unrelated estimates.
+`get_learning_curve(session)`
 calls `GET /learning/{session}` at `KUMITE_ANALYTICS_URL` (default
 `http://127.0.0.1:8767`), validates the frozen metrics schema/session, and uses
 only recorded rounds. Analytics has a 1.2-second overall deadline, no redirects,
@@ -430,4 +436,8 @@ or `Have I improved?` for learning availability. Local answers have no model
 charges; analytics failures clearly mark the learning curve unavailable. Set
 `KUMITE_COACH_MODE=auto` and restart for optional model-guided retrieval. Automated
 checks use mocked Responses/analytics transports; paid live-model and ElevenLabs
-voice verification are separate integration checks.
+voice verification are separate integration checks. Local chat was also checked
+against the real live-learning sample: recorded low-defense decisions cite
+round 2/frame 462 and round 2/frame 1225, and low-blocking/throw-breaking questions
+return the appropriate latest estimates with no invented frame citations or
+claims of improvement.

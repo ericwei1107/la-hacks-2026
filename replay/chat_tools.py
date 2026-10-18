@@ -31,7 +31,7 @@ ROUND = {"type": "integer", "minimum": 1}
 FRAME = {"type": "integer", "minimum": 0}
 TOOL_DEFS = [
     tool("get_habits", "Observed human action frequencies; not automatically weaknesses.", {"situation": TEXT}),
-    tool("get_mastery", "Latest recorded local learner estimates, with missing-data limitations."),
+    tool("get_mastery", "Latest recorded local learner estimates, with missing-data limitations.", {"situation": TEXT}),
     tool("find_moments", "Find original recording events and any validated saved Jev preference.",
          {"situation": TEXT, "round": ROUND, "limit": {"type": "integer", "minimum": 1, "maximum": 5}}),
     tool("get_state_at", "Exact recorded state; round is required because frame counters reset.",
@@ -42,13 +42,25 @@ TOOL_DEFS = [
          {"character": TEXT, "frames": {"type": "integer", "minimum": 10, "maximum": 20},
           "crouching": {"type": "boolean"}}, ["character", "frames"]),
     tool("get_learning_curve", "Read analytics GET /learning/{session} on port 8767; local latest-estimate fallback.",
-         {"session": TEXT}, ["session"]),
+         {"session": {"type": "string", "maxLength": 180}, "situation": TEXT}, ["session"]),
 ]
 VALIDATORS = {entry["name"]: Draft202012Validator(entry["parameters"]) for entry in TOOL_DEFS}
 
 
 def words(value):
     return str(value).replace("_", " ")
+
+
+def question_situation(question):
+    if re.search(r"\blows?\b|low_defense", question):
+        return "low_defense"
+    if re.search(r"\bthrows?\b|\bbreaks?\b|throw_break", question):
+        return "throw_break"
+    if re.search(r"after[ _-]block", question):
+        return "after_block"
+    if "sidestep" in question:
+        return "sidestep_dir"
+    return ""
 
 
 class ChatTools:
@@ -123,7 +135,7 @@ class ChatTools:
             return {"error": "Tools are scoped to the selected session", "facts": [self.fact("I can only use evidence from the selected set.")]}
         try:
             if name == "get_learning_curve":
-                facts = await self.get_learning_curve()
+                facts = await self.get_learning_curve(situation=arguments.get("situation", ""))
             else:
                 facts = await asyncio.to_thread(getattr(self, name), **arguments)
             return {"facts": facts}
@@ -147,17 +159,18 @@ class ChatTools:
                                        "Whether that would change a particular recorded exchange is not established.", cites[:1]))
         return facts or [self.fact("No attributable labeled human decisions are available for that situation; bot choices do not identify human actions.")]
 
-    def get_mastery(self):
+    def get_mastery(self, situation=""):
         path = within(self.reports.data_dir, self.reports.data_dir / "learning" / f"{self.session}.jsonl")
         mastery, warnings = latest_mastery(path, self.session, self.last_round)
         caveat = " " + " ".join(warnings) if warnings else ""
+        matching = [(label, estimate) for label, estimate in mastery.items() if not situation or situation in label]
         facts = [self.fact(f"The learner's latest valid {words(label)} mastery estimate is {estimate['mastery']:.3g}, "
                            f"from round {estimate['round']}'s recorded learning snapshot. "
                            "This is a model estimate, not proof of improvement." + caveat)
-                 for label, estimate in list(mastery.items())[:5]]
+                 for label, estimate in matching[:5]]
         if warnings:
             facts.append(self.fact(" ".join(warnings[:2]) + ". Improvement cannot be confirmed from missing or invalid learning data."))
-        return facts or [self.fact("Learning mastery is unavailable for this set; improvement cannot be confirmed.")]
+        return facts or [self.fact("Learning mastery is unavailable for the requested situation; improvement cannot be confirmed.")]
 
     def saved_preference(self, moment):
         if (self.report is None or not moment["human_action"] or not moment["context"]
@@ -269,7 +282,7 @@ class ChatTools:
         return [self.fact(f"For a hypothetical {frames}-frame {'crouching' if crouching else 'standing'} window, character data lists "
                           + ", ".join(candidates[:3]) + ". These are practice candidates; actual range, timing and string completion are unverified.")]
 
-    async def get_learning_curve(self):
+    async def get_learning_curve(self, situation=""):
         try:
             async with asyncio.timeout(1.2):
                 async with httpx.AsyncClient(timeout=1, transport=self.analytics_transport, follow_redirects=False) as client:
@@ -281,7 +294,8 @@ class ChatTools:
             rows = [row for row in metrics["rounds"] if row["round"] <= self.last_round]
             if any(row.get("session_id", self.session) != self.session for row in rows):
                 raise ValueError("Learning session mismatch")
-            labels = sorted({label for row in rows for label, habit in row["habits"].items() if "mastery" in habit})
+            labels = sorted({label for row in rows for label, habit in row["habits"].items()
+                             if "mastery" in habit and (not situation or situation in label)})
             facts = []
             for label in labels[:4]:
                 values = [f"round {row['round']}: {row['habits'][label]['mastery']:.3g}" for row in sorted(rows, key=lambda item: item["round"])
@@ -290,7 +304,7 @@ class ChatTools:
                                        + ". These estimates alone do not confirm improvement."))
             return facts or [self.fact("Analytics has no matching mastery estimates for the recorded rounds.")]
         except (httpx.HTTPError, httpx.InvalidURL, ValueError, TimeoutError):
-            return [self.fact("The analytics learning curve is unavailable; I can only check local recorded estimates.") , *self.get_mastery()]
+            return [self.fact("The analytics learning curve is unavailable; I can only check local recorded estimates."), *self.get_mastery(situation)]
 
     async def initial(self, request):
         question = request.message
@@ -299,8 +313,9 @@ class ChatTools:
             if previous:
                 question = previous[-1] + " " + question
         lowered = question.lower()
+        situation = question_situation(lowered)
         if any(token in lowered for token in ("mastery", "improv", "learning", "progress", "better", "fixed")):
-            return (await self.call("get_learning_curve", {"session": self.session}))["facts"][:3]
+            return (await self.call("get_learning_curve", {"session": self.session, "situation": situation}))["facts"][:3]
         round_match = re.search(r"\bround\s+(\d+)\b", lowered)
         frame_match = re.search(r"\bframe\s+(\d+)\b", lowered)
         if frame_match:
@@ -330,9 +345,6 @@ class ChatTools:
                 compact_pattern = r"\b" + re.escape(compact_command) + r"\b"
                 if re.search(pattern, lowered) or (re.search(r"[a-z]", compact_command) and len(compact_command) > 1 and re.search(compact_pattern, lowered)):
                     return (await self.call("get_frame_data", {"character": character, "move": query}))["facts"]
-        situation = next((label for tokens, label in [(("low",), "low_defense"), (("throw", "break"), "throw_break"),
-                                                    (("after block", "after blocking"), "after_block")]
-                          if any(token in lowered for token in tokens)), "")
         if any(token in lowered for token in ("moment", "decision", "happen", "why", "round", "score", "jev")):
             args = {"situation": situation, "limit": 2}
             if round_match:
