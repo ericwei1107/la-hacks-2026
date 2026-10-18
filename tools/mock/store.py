@@ -3,6 +3,7 @@ import os
 import sys
 import subprocess
 import logging
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -26,22 +27,48 @@ def check(name, obj, sub=None):
     return [f"{'/'.join(map(str, e.absolute_path)) or '(root)'}: {e.message}" for e in errors]
 
 
-def load_jsonl(path):
+def load_jsonl(path, text=None):
     try:
-        return [record for record in read_lines(Path(path).read_text(encoding='utf-8'), str(path)) if isinstance(record.get('t'), str)]
+        if text is None:
+            text = Path(path).read_text(encoding='utf-8')
+        return [record for record in read_lines(text, str(path)) if isinstance(record.get('t'), str)]
     except DataError as exc:
         raise ValueError(str(exc)) from exc
+
+
+def load_archive(path):
+    try:
+        with zipfile.ZipFile(path) as archive:
+            recordings = [info for info in archive.infolist() if not info.is_dir() and info.filename.endswith('.jsonl') and not info.filename.endswith('.learning.jsonl')]
+            if len(recordings) != 1:
+                raise ValueError(f'{path}: expected exactly one recording JSONL member; found {len(recordings)}')
+            recording = recordings[0]
+            meta_name = recording.filename.removesuffix('.jsonl') + '.session.json'
+            metadata = [info for info in archive.infolist() if info.filename == meta_name]
+            if len(metadata) != 1:
+                raise ValueError(f'{path}: expected one paired metadata member {meta_name}; found {len(metadata)}')
+            return recording.filename, archive.read(recording), meta_name, archive.read(metadata[0]).decode('utf-8')
+    except zipfile.BadZipFile as exc:
+        raise ValueError(f'{path}: invalid ZIP archive') from exc
 
 
 class Session:
     def __init__(self, path):
         self.path = Path(path)
-        self.records = load_jsonl(self.path)
+        self.recording_bytes = None
+        if self.path.suffix == '.zip':
+            member, self.recording_bytes, meta_member, meta_text = load_archive(self.path)
+            self.records = load_jsonl(f'{self.path}:{member}', self.recording_bytes.decode('utf-8'))
+            meta_path = f'{self.path}:{meta_member}'
+        else:
+            self.records = load_jsonl(self.path)
         self.id = next((r["session_id"] for r in self.records if r.get("session_id")), self.path.stem)
-        meta_path = self.find_meta()
-        if meta_path is None:
-            raise ValueError(f"{self.path}: missing metadata; provide {self.path.stem}.session.json or DATA_DIR/sessions/{self.id}.json")
-        self.meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        if self.recording_bytes is None:
+            meta_path = self.find_meta()
+            if meta_path is None:
+                raise ValueError(f"{self.path}: missing metadata; provide {self.path.stem}.session.json or DATA_DIR/sessions/{self.id}.json")
+            meta_text = meta_path.read_text(encoding="utf-8")
+        self.meta = json.loads(meta_text)
         errors = check("session", self.meta)
         if errors or self.meta["session_id"] != self.id:
             raise ValueError(f"{meta_path}: invalid session metadata: {errors or 'session_id does not match recording'}")
@@ -89,8 +116,9 @@ class Store:
     def paths(self):
         found = list(self.explicit or [])
         if not self.explicit:
-            found.extend(sorted((data_dir() / "samples").glob("*.jsonl")))
-            found.extend(sorted((data_dir() / "recordings").glob("*.jsonl")))
+            for directory in (data_dir() / 'samples', data_dir() / 'recordings'):
+                found.extend(sorted(directory.glob('*.jsonl')))
+                found.extend(sorted(directory.glob('*.zip')))
         for meta_path in sorted((data_dir() / "sessions").glob("*.json")):
             try:
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))

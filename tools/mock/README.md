@@ -20,13 +20,26 @@ For the real analytics service alongside mock brain/replay:
 python tools/mock/serve.py --recording data/samples/practice_djin_vs_kaz.jsonl --services brain,replay
 ```
 
+To discover the shipped practice and two zipped versus sessions automatically:
+
+```sh
+python tools/mock/serve.py --services brain,replay
+curl http://localhost:8765/sessions
+```
+
+Expected: three shipped sessions, plus any local recordings indexed under `DATA_DIR` (four when the synthetic session has been generated there). Sessions are listed newest first; the neutral versus session `2026-10-18T01-24-57_sahil_djin_vs_kaz` is the default with the shipped samples. Its state stream is `ws://localhost:8765/ws/state?session=2026-10-18T01-24-57_sahil_djin_vs_kaz`.
+
+Select one archive explicitly with `python tools/mock/serve.py --recording data/samples/versus_djin_vs_kaz_l3.zip --services brain,replay`. The first `--recording` is the default stream even when other indexed sessions are newer.
+
 The launcher checks all requested ports before serving. An occupied port fails startup with the service and port in the error; it does not stop the process already using that port.
 
 ## Input files
 
-`DATA_DIR` defaults to the repository's `data/`. Without `--recording`, discover `data/samples/*.jsonl` and `DATA_DIR/recordings/*.jsonl`. Metadata files in `DATA_DIR/sessions/` also index their existing recording references. Relative recording references resolve from the repository root.
+`DATA_DIR` defaults to the repository's `data/`. Without `--recording`, discover `.jsonl` and `.zip` files in `DATA_DIR/samples/` and `DATA_DIR/recordings/`. Metadata files in `DATA_DIR/sessions/` also index their existing recording references, including ZIP paths. Relative recording references resolve from the repository root.
 
 Each recording needs metadata from `<recording-stem>.session.json`, or `DATA_DIR/sessions/<session_id>.json`. Missing or invalid required files fail with a diagnostic. The id comes from the records, not the filename. The shipped sample is named `practice_djin_vs_kaz.jsonl`, but its id is `2026-10-17T21-13-10_sahil_djin_vs_kaz`.
+
+Each ZIP must contain exactly one recording `.jsonl` and its paired `<recording-stem>.session.json` in the same archive directory. Nested directories are supported. `.learning.jsonl` members are excluded from recording selection; learning continues to use external or inline records as described below. Archive metadata is validated and must match the recording's session id. Members are read directly without extracting files or following the metadata's `recording` reference. Corrupt archives, missing paired metadata, and multiple recording members fail with a diagnostic; invalid discovered archives are isolated from healthy sessions. The recording download returns the exact decompressed JSONL bytes with the same media type as an ordinary recording.
 
 Optional files are `DATA_DIR/learning/<session_id>.jsonl`, `profiles/*.json`, and `reports/<session_id>.json`. A companion learning file takes precedence; inline learning records remain a fallback for standalone mock fixtures. Repeated round numbers use the last complete record and are sorted by round. Unknown learning extension fields are retained. Missing learning returns empty rounds/maps and null fine-tune values; missing profiles returns an empty list. Known records and schema-backed responses are validated. Fine-tune values come only from `DATA_DIR/eval/<session_id>.json`, using real analytics validation; a missing file gives nulls and an invalid existing file gives 503. Unknown fields are retained, unsupported record types are ignored by playback, and an incomplete final JSON line is tolerated. Malformed complete lines fail with a filename and line number.
 
@@ -47,7 +60,7 @@ Playback advances at 60 game frames per second, preserving frame gaps and source
 
 ## Flags
 
-- `--recording PATH`: select a recording, repeatable; the first is the default stream. Other sessions indexed through metadata remain available by id.
+- `--recording PATH`: select a JSONL or ZIP recording, repeatable; the first is the default stream. Other sessions indexed through metadata remain available by id.
 - `--services brain,replay,analytics`: choose services to run; default is all three.
 - `--skip analytics`: compatibility shorthand for omitting a service; repeatable.
 - `--host 0.0.0.0`: allow LAN clients; default is loopback only.
@@ -66,7 +79,7 @@ python -m unittest discover -s tools/mock/tests
 python tools/mock/tests/smoke.py
 ```
 
-Expected: validators print `PASS`, unit tests pass, and the smoke script prints two `PASS` lines. The smoke test needs free local ports 8765–8767 and runs the actual launcher, HTTP APIs, WebSockets, occupied-port handling, and SIGINT shutdown. It uses temporary storage and stops its servers afterward. The small two-round test fixture is independent of the generator and covers frame resets, unknown fields/types, summaries and learning records.
+Expected: validators print `PASS`, unit tests pass, and the smoke script prints three `PASS` lines. The smoke test needs free local ports 8765–8767 and runs the actual launcher, HTTP APIs, WebSockets, occupied-port handling, and SIGINT shutdown. Its first two checks use temporary storage; its final check reads the repository's `data/` to verify discovery, both versus downloads and the neutral versus WebSocket. It stops its servers afterward. The small two-round test fixture is independent of the generator and covers frame resets, unknown fields/types, summaries and learning records.
 
 When section 3.1 produces another recording, select its JSONL with `--recording`; provide its companion metadata and learning file in the documented locations. No server changes are needed.
 
