@@ -1,0 +1,491 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SessionInsightsV1Proposal",
+  "description": "Proposed public GET /insights/{session_id} response. Not a frozen contract until all four owners agree; then it moves to contracts/insights.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "snapshot_id",
+    "session_id",
+    "synthetic",
+    "recording_sha256",
+    "freshness",
+    "quality",
+    "metrics",
+    "focus",
+    "habits",
+    "moments",
+    "moments_total",
+    "report"
+  ],
+  "properties": {
+    "format_version": {
+      "const": 1
+    },
+    "snapshot_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "synthetic": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "recording_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latest_completed_round",
+        "latest_recording_round",
+        "latest_learning_round",
+        "pending_learning_rounds",
+        "learning_ahead_rounds"
+      ],
+      "properties": {
+        "latest_completed_round": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "latest_recording_round": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "latest_learning_round": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "pending_learning_rounds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "learning_ahead_rounds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "quality": {
+      "enum": [
+        "observed",
+        "pending",
+        "invalid"
+      ]
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "low_defense",
+        "throw_defense",
+        "punish_conversion"
+      ],
+      "properties": {
+        "low_defense": {
+          "$ref": "#/$defs/metric"
+        },
+        "throw_defense": {
+          "$ref": "#/$defs/metric"
+        },
+        "punish_conversion": {
+          "$ref": "#/$defs/metric"
+        }
+      }
+    },
+    "focus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "metric",
+        "state",
+        "reason",
+        "action",
+        "action_reviewed"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "automatic",
+            "manual"
+          ]
+        },
+        "metric": {
+          "enum": [
+            "low_defense",
+            "throw_defense",
+            "punish_conversion",
+            null
+          ]
+        },
+        "state": {
+          "enum": [
+            "observed",
+            "early_signal",
+            null
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "action_reviewed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "habits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "first_detected_round",
+          "first_fixed_round",
+          "current_round",
+          "fixed",
+          "regressed",
+          "last_regressed_round"
+        ],
+        "properties": {
+          "first_detected_round": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "first_fixed_round": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "current_round": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fixed": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "regressed": {
+            "type": "boolean"
+          },
+          "last_regressed_round": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "moments": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference",
+          "metrics",
+          "outcome",
+          "response",
+          "event",
+          "metric_outcomes"
+        ],
+        "properties": {
+          "reference": {
+            "$ref": "#/$defs/location"
+          },
+          "metrics": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "low_defense",
+                "throw_defense",
+                "punish_conversion"
+              ]
+            }
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "failure",
+              "mixed",
+              "damage"
+            ]
+          },
+          "response": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event": {
+            "$ref": "#/$defs/event"
+          },
+          "metric_outcomes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "low_defense": {
+                "$ref": "#/$defs/metric_outcome"
+              },
+              "throw_defense": {
+                "$ref": "#/$defs/metric_outcome"
+              },
+              "punish_conversion": {
+                "$ref": "#/$defs/metric_outcome"
+              }
+            }
+          }
+        }
+      }
+    },
+    "moments_total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "report": {
+      "enum": [
+        "unavailable",
+        "invalid",
+        "available_unverified_revision"
+      ]
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "integer"
+        },
+        "target": {
+          "type": "integer"
+        },
+        "damage": {
+          "type": [
+            "integer",
+            "number"
+          ]
+        },
+        "hit_level": {
+          "type": "string"
+        },
+        "move_id": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "frame_advantage": {
+          "type": [
+            "integer",
+            "number"
+          ]
+        }
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "line",
+        "round",
+        "frame"
+      ],
+      "properties": {
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "frame": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "successes",
+        "opportunities",
+        "failures",
+        "value",
+        "state",
+        "estimated",
+        "evidence",
+        "evidence_total"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "successes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "opportunities": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failures": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "state": {
+          "enum": [
+            "observed",
+            "early_signal",
+            "no_opportunities",
+            "invalid"
+          ]
+        },
+        "estimated": {
+          "type": "boolean"
+        },
+        "evidence_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "opportunity",
+              "response",
+              "outcome",
+              "event"
+            ],
+            "properties": {
+              "opportunity": {
+                "$ref": "#/$defs/location"
+              },
+              "response": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/location"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "outcome": {
+                "enum": [
+                  "success",
+                  "failure"
+                ]
+              },
+              "event": {
+                "$ref": "#/$defs/event"
+              }
+            }
+          }
+        }
+      }
+    },
+    "metric_outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "response"
+      ],
+      "properties": {
+        "outcome": {
+          "enum": [
+            "success",
+            "failure"
+          ]
+        },
+        "response": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/location"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

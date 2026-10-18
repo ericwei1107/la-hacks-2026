@@ -21,6 +21,9 @@ from analytics.stats import CALCULATION_VERSION
 FORMAT_VERSION = 1
 HISTORY_LIMIT = 50
 SNAPSHOT_VALIDATOR = Draft202012Validator(json.loads(Path(__file__).with_name('insights.schema.json').read_text()))
+PUBLIC_FORMAT_VERSION = 1
+PUBLIC_LIMIT = 5
+PUBLIC_VALIDATOR = Draft202012Validator(json.loads(Path(__file__).with_name('insights_v1.schema.json').read_text()))
 
 
 def encoded(value):
@@ -164,6 +167,21 @@ def habit_history(rounds, summaries):
     return result
 
 
+EVENT_FIELDS = ('kind', 'actor', 'target', 'damage', 'hit_level', 'move_id', 'frame_advantage')
+
+
+def event_summary(event):
+    return {key: event[key] for key in EVENT_FIELDS if key in event}
+
+
+def with_events(metrics, entries):
+    by_line = dict(entries)
+    for metric in metrics.values():
+        for item in metric['evidence']:
+            item['event'] = event_summary(by_line[item['opportunity']['line']])
+    return metrics
+
+
 def moments(entries, metrics, human, sid, source_hash, completed, limit):
     candidates = {}
     for key in METRIC_ORDER:
@@ -186,7 +204,7 @@ def moments(entries, metrics, human, sid, source_hash, completed, limit):
     for line in sorted(ranked):
         row = candidates[line]
         event = by_line[line]
-        row['event'] = {key: event[key] for key in ('kind', 'actor', 'target', 'damage', 'hit_level', 'move_id', 'frame_advantage') if key in event}
+        row['event'] = event_summary(event)
         selected.append(row)
     return selected, len(candidates)
 
@@ -290,7 +308,7 @@ class InsightRepository:
                 'quality': {'state': 'invalid' if invalid else 'pending' if waiting or ahead or any(s['pending_tail'] for s in sources.values()) else 'observed',
                             'skipped_recording_lines': len(invalid), 'invalid_line_positions': invalid[:50],
                             'unsupported_records': unsupported, 'deliberate_retests': 'unavailable'},
-                'metrics': bounded_metrics(metrics, limit),
+                'metrics': with_events(bounded_metrics(metrics, limit), completed_entries),
                 'rounds': [{'round': number, 'metrics': bounded_metrics(analyze([(line, r) for line, r in completed_entries if r['round'] == number], meta['human_slot'], sid, sources['recording']['sha256'], bool(invalid)), limit)} for number in completed[-HISTORY_LIMIT:]],
                 'rounds_total': len(completed), 'focus': select(metrics, focus),
                 'learning': {'habits': habit_history(completed_learning, summaries),
@@ -329,6 +347,65 @@ class InsightRepository:
             context = max(previous, key=lambda item: (item[1]['frame'], item[0])) if previous else None
             return {'reference': reference(sid, current['sources']['recording']['sha256'], line, found),
                     'record': copy.deepcopy(found), 'context': {'line': context[0], 'record': copy.deepcopy(context[1])} if context else None}
+
+
+def location(ref):
+    return None if ref is None else {'line': ref['line'], 'round': ref['round'], 'frame': ref['frame']}
+
+
+def public(snapshot):
+    completed = snapshot['freshness']['completed_rounds']
+    focus = snapshot['focus']
+    result = {
+        'format_version': PUBLIC_FORMAT_VERSION, 'snapshot_id': snapshot['snapshot_id'],
+        'session_id': snapshot['session_id'], 'synthetic': snapshot['synthetic'],
+        'recording_sha256': snapshot['sources']['recording']['sha256'],
+        'freshness': {'latest_completed_round': completed[-1] if completed else None,
+                      'latest_recording_round': snapshot['freshness']['latest_recording_round'],
+                      'latest_learning_round': snapshot['freshness']['latest_learning_round'],
+                      'pending_learning_rounds': list(snapshot['freshness']['pending_learning_rounds']),
+                      'learning_ahead_rounds': list(snapshot['freshness']['learning_ahead_rounds'])},
+        'quality': snapshot['quality']['state'],
+        'metrics': {key: {**{name: metric[name] for name in ('label', 'successes', 'opportunities', 'failures', 'value', 'state', 'estimated', 'evidence_total')},
+                          'evidence': [{'opportunity': location(item['opportunity']), 'response': location(item['response']), 'outcome': item['outcome'],
+                                        'event': copy.deepcopy(item['event'])} for item in metric['evidence']]}
+                    for key, metric in snapshot['metrics'].items()},
+        'focus': {'mode': focus['mode'], 'metric': focus['metric'], 'state': focus.get('state'), 'reason': focus['reason'],
+                  'action': focus['action'], 'action_reviewed': focus['action'] is not None and focus.get('action_status') == 'reviewed'},
+        'habits': {name: {'first_detected_round': row['first_detected_round'], 'first_fixed_round': row['first_fixed_round'],
+                          'current_round': row['current']['round'], 'fixed': row['current'].get('fixed'), 'regressed': row['current']['regressed'],
+                          'last_regressed_round': max((item['round'] for item in row['history'] if item['regressed']), default=None)}
+                   for name, row in sorted(snapshot['learning']['habits'].items())},
+        'moments': [{'reference': location(moment['reference']), 'metrics': list(moment['metrics']), 'outcome': moment['outcome'],
+                     'response': location(moment['response']), 'event': copy.deepcopy(moment['event']),
+                     'metric_outcomes': {key: {'outcome': value['outcome'], 'response': location(value['response'])}
+                                         for key, value in moment['metric_outcomes'].items()}} for moment in snapshot['moments']],
+        'moments_total': snapshot['moments_total'], 'report': snapshot['report']['status'],
+    }
+    validate(result, PUBLIC_VALIDATOR, 'public insight snapshot')
+    return result
+
+
+def register(app, data_dir):
+    from fastapi import HTTPException
+
+    repository = InsightRepository(data_dir)
+
+    @app.get('/insights/{session_id}')
+    def insights(session_id: str, limit: int = PUBLIC_LIMIT):
+        if not 1 <= limit <= 50:
+            raise HTTPException(422, 'limit must be between 1 and 50')
+        try:
+            snapshot = repository.snapshot(session_id, limit)
+        except ValueError:
+            raise HTTPException(422, 'Invalid session id')
+        except DataError:
+            raise HTTPException(503, 'Insight sources are unavailable, invalid or still changing; retry')
+        if snapshot is None:
+            raise HTTPException(404, 'Unknown session')
+        return public(snapshot)
+
+    return repository
 
 
 def markdown(snapshot):
@@ -397,11 +474,15 @@ def main(argv=None):
     parser.add_argument('--output-dir')
     parser.add_argument('--limit', type=int, default=10)
     parser.add_argument('--focus', choices=METRIC_ORDER)
+    parser.add_argument('--public', action='store_true', help='print the proposed public v1 JSON instead of writing exports')
     args = parser.parse_args(argv)
     try:
         snapshot = InsightRepository(args.data_dir).snapshot(args.session_id, args.limit, args.focus)
         if snapshot is None:
             parser.exit(1, 'Unknown session\n')
+        if args.public:
+            print(json.dumps(public(snapshot), indent=2, sort_keys=True, ensure_ascii=False))
+            return
         paths = write_export(snapshot, args.output_dir or Path(args.data_dir) / 'analytics')
     except (DataError, ValueError, OSError):
         parser.exit(1, 'Cannot export insights: invalid/unavailable input or output; check the session, source files and output directory\n')

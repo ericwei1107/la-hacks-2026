@@ -40,6 +40,13 @@
       "estimated": false,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "frame_advantage": -12,
+            "hit_level": "low",
+            "kind": "block",
+            "target": 0
+          },
           "opportunity": {
             "frame": 1,
             "line": 1,
@@ -73,6 +80,13 @@
       "estimated": true,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "frame_advantage": -12,
+            "hit_level": "low",
+            "kind": "block",
+            "target": 0
+          },
           "opportunity": {
             "frame": 1,
             "line": 1,

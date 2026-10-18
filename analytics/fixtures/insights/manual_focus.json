@@ -43,6 +43,13 @@
       "estimated": false,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
           "opportunity": {
             "frame": 1,
             "line": 1,
@@ -55,6 +62,13 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
           "opportunity": {
             "frame": 2,
             "line": 2,
@@ -67,6 +81,13 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
           "opportunity": {
             "frame": 3,
             "line": 3,
@@ -106,6 +127,12 @@
       "estimated": false,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "kind": "throw",
+            "target": 0
+          },
           "opportunity": {
             "frame": 20,
             "line": 7,
@@ -118,6 +145,12 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "kind": "throw",
+            "target": 0
+          },
           "opportunity": {
             "frame": 21,
             "line": 8,
@@ -130,6 +163,12 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "kind": "throw",
+            "target": 0
+          },
           "opportunity": {
             "frame": 22,
             "line": 9,

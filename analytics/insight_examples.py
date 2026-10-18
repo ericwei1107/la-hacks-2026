@@ -3,10 +3,11 @@ import json
 import tempfile
 from pathlib import Path
 
-from analytics.insights import InsightRepository
+from analytics.insights import InsightRepository, public
 from analytics.repository import ROOT
 
 FIXTURES = Path(__file__).parent / 'fixtures' / 'insights'
+PUBLIC_FIXTURES = FIXTURES / 'public'
 REAL_ID = '2026-10-18T05-14-03_sahil_djin_vs_kaz'
 SYNTHETIC_ID = '2026-10-17T13-05-00_synth_djin_vs_kaz'
 
@@ -60,29 +61,41 @@ def build_examples():
     return results
 
 
-def serialized_examples():
-    return {name + '.json': json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + '\n'
-            for name, value in build_examples().items()}
+def text(value):
+    return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + '\n'
+
+
+def serialized_examples(examples=None):
+    return {name + '.json': text(value) for name, value in (examples or build_examples()).items()}
+
+
+def serialized_public(examples=None):
+    return {name + '.json': text(public(value)) for name, value in (examples or build_examples()).items()}
+
+
+def drift(directory, values):
+    actual = {p.name for p in directory.glob('*.json')}
+    return sorted(set(values) ^ actual | {name for name, value in values.items()
+                                         if not (directory / name).exists() or (directory / name).read_text(encoding='utf-8') != value})
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Generate review-only insight fixtures from the production builder')
     parser.add_argument('--check', action='store_true', help='verify committed examples without rewriting them')
     args = parser.parse_args(argv)
-    values = serialized_examples()
+    examples = build_examples()
+    outputs = ((FIXTURES, serialized_examples(examples)), (PUBLIC_FIXTURES, serialized_public(examples)))
     if args.check:
-        expected = set(values)
-        actual = {p.name for p in FIXTURES.glob('*.json')}
-        drift = sorted(expected ^ actual | {name for name, value in values.items()
-                                           if not (FIXTURES / name).exists() or (FIXTURES / name).read_text(encoding='utf-8') != value})
-        if drift:
-            parser.exit(1, 'Insight fixture drift: ' + ', '.join(drift) + '\n')
-        print(f'PASS: {len(values)} generated insight examples match the builder')
+        stale = [f'{directory.relative_to(FIXTURES.parent)}/{name}' for directory, values in outputs for name in drift(directory, values)]
+        if stale:
+            parser.exit(1, 'Insight fixture drift: ' + ', '.join(stale) + '\n')
+        print(f'PASS: {len(examples)} internal and {len(examples)} public v1 insight examples match the builder')
         return
-    FIXTURES.mkdir(parents=True, exist_ok=True)
-    for name, content in values.items():
-        (FIXTURES / name).write_text(content, encoding='utf-8', newline='\n')
-    print(f'Wrote {len(values)} review fixtures under analytics/fixtures/insights')
+    for directory, values in outputs:
+        directory.mkdir(parents=True, exist_ok=True)
+        for name, content in values.items():
+            (directory / name).write_text(content, encoding='utf-8', newline='\n')
+    print(f'Wrote {len(examples)} internal and {len(examples)} public v1 fixtures under analytics/fixtures/insights')
 
 
 if __name__ == '__main__':

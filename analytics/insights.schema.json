@@ -85,7 +85,7 @@
         "state": {"enum": ["observed", "early_signal", "no_opportunities", "invalid"]},
         "estimated": {"type": "boolean"}, "anomalies": {"type": "array"},
         "evidence_total": {"type": "integer", "minimum": 0},
-        "evidence": {"type": "array", "maxItems": 3, "items": {"type": "object", "additionalProperties": false, "required": ["opportunity", "response", "outcome"], "properties": {"opportunity": {"$ref": "#/$defs/reference"}, "response": {"anyOf": [{"$ref": "#/$defs/reference"}, {"type": "null"}]}, "outcome": {"enum": ["success", "failure"]}}}}
+        "evidence": {"type": "array", "maxItems": 3, "items": {"type": "object", "additionalProperties": false, "required": ["opportunity", "response", "outcome"], "properties": {"opportunity": {"$ref": "#/$defs/reference"}, "response": {"anyOf": [{"$ref": "#/$defs/reference"}, {"type": "null"}]}, "outcome": {"enum": ["success", "failure"]}, "event": {"type": "object"}}}}
       }
     }
   }
