@@ -58,11 +58,15 @@ class Sim:
         return outs
 
     def connect(self, link_start, move=0x700):
-        frames = self.runner.move.frames
-        entry = link_start + last_press(frames) + self.seq.latency
+        while self.runner.move.start_frame is None:
+            self.step(free=False, until=40, move=move - 1)
+        entry = self.runner.move.start_frame + last_press(self.runner.move.frames) + self.seq.latency
+        need = sum(1 for h in self.runner.links[self.runner.index].hits if not h.get("optional"))
         self.busy_until(entry - 1, move - 1, 40)
         self.step(free=False, until=40, move=move)
-        return self.hit(10, free=False, until=30, move=move)
+        for _ in range(need):
+            out = self.hit(10, free=False, until=30, move=move)
+        return out
 
 
 class NotationRoundTripTest(unittest.TestCase):
@@ -150,20 +154,38 @@ class DifficultyCutTest(unittest.TestCase):
 
     def test_runner_cut_follows_sequencer_difficulty(self):
         pad, _ = fake_pad()
-        for level, count in ((1, 2), (2, 2), (3, 4), (5, 4)):
+        for level, count in ((1, 2), (2, 2), (3, 3), (5, 3)):
             seq = Sequencer(pad, 2, difficulty=Difficulty.preset(level))
             runner = ComboRunner(ROUTES["ewgf_reliable"], seq, BOT)
             with self.subTest(level=level):
                 self.assertEqual(len(runner.links), count)
-                self.assertEqual(runner.links[-1].notation, "f,F,b+2" if level <= 2 else "b+2,2,1+2")
+                self.assertEqual(runner.links[-1].notation, "f,F,b+2" if level <= 2 else "df+1,df+2")
 
     def test_full_plan_notations(self):
         self.assertEqual([link.notation for link in plan(ROUTES["ewgf_reliable"])],
-                         ["f,n,d,df+2", "f,F,b+2,2", "df+1,df+2", "b+2,2,1+2"])
-        self.assertEqual([link.notation for link in plan(ROUTES["ff3"])],
+                         ["f,n,d,df+2", "f,F,b+2,2", "df+1,df+2"])
+        self.assertEqual([link.notation for link in plan(ROUTES["ewgf_full"])],
+                         ["f,n,d,df+2", "f,F,b+2,2", "df+1,df+2", "f,F,b+2,2,1+2"])
+        self.assertEqual([link.notation for link in plan(ROUTES["ff3"])], ["f,F+3", "f,n,d,df+1+2"])
+        self.assertEqual([link.notation for link in plan(ROUTES["ff3_full"])],
                          ["f,F+3", "f,n,d,df+1+2", "1,2,4,3", "f,F,b+2,2,1+2"])
         self.assertEqual([link.notation for link in plan(ROUTES["ch_df2"])],
-                         ["df+2", "f,n,d,df+2", "f,F,b+2,2", "df+1,df+2", "b+2,2,1+2"])
+                         ["df+2", "f,n,d,df+2", "f,F,b+2,2", "df+1,df+2"])
+        self.assertEqual([link.notation for link in plan(ROUTES["ch_df2_full"])],
+                         ["df+2", "f,n,d,df+2", "f,F,b+2,2", "df+1,df+2", "f,F,b+2,2,1+2"])
+
+    def test_experimental_routes_extend_the_shipped_ones(self):
+        def strip(segments):
+            return [{k: v for k, v in s.items() if k != "note"} for s in segments]
+
+        for short, full in (("ewgf_reliable", "ewgf_full"), ("ff3", "ff3_full"), ("ch_df2", "ch_df2_full")):
+            with self.subTest(route=full):
+                self.assertTrue(ROUTES[full].get("experimental"))
+                n = len(ROUTES[short]["segments"])
+                self.assertLess(n, len(ROUTES[full]["segments"]))
+                self.assertEqual(strip(ROUTES[short]["segments"]), strip(ROUTES[full]["segments"][:n]))
+                self.assertEqual(ROUTES[full]["segments"][-1]["lead"], "f,F")
+        self.assertEqual(sorted(k for k, v in ROUTES.items() if not v.get("experimental")), ["ewgf_reliable", "ff3"])
 
 
 class RunnerTimingTest(unittest.TestCase):
@@ -234,17 +256,33 @@ class RunnerTimingTest(unittest.TestCase):
 
     def test_full_route_done_and_damage(self):
         sim = Sim()
-        for move in (0x701, 0x690, 0x6A7, 0x687):
+        for move in (0x701, 0x690, 0x6A7):
             outs = [sim.step(free=True, until=0, move=0x8001) for _ in range(3)]
             self.assertEqual(sum(o is not None for o in outs), 1)
             start = sim.frame - 2 + next(i for i, o in enumerate(outs) if o is not None)
             sim.connect(start, move)
         self.assertEqual(sim.runner.status, "done")
-        self.assertEqual(len(sim.runner.submitted), 4)
-        self.assertEqual(sim.runner.damage, 40)
-        self.assertEqual(sim.runner.listed_damage, 126)
+        self.assertEqual(len(sim.runner.submitted), 3)
+        self.assertEqual(sim.runner.damage, 50)
+        self.assertEqual(sim.runner.listed_damage, 80)
         self.assertEqual(sim.runner.first_reaction, 12)
         self.assertIsNone(sim.step())
+
+    def test_late_drop_alone_does_not_complete_a_string_link(self):
+        sim = Sim()
+        sim.step()
+        sim.connect(100, 0x701)
+        self.assertEqual(sim.step(free=True, until=0, move=0x8001), "f,F,b+2,2")
+        while sim.runner.move.start_frame is None:
+            sim.step(free=False, until=40, move=0x6F6)
+        press = sim.runner.move.start_frame + last_press(sim.runner.move.frames)
+        sim.busy_until(press + 10, 0x685, 30)
+        sim.step(free=False, until=30, move=0x686)
+        sim.hit(12, free=False, until=30, move=0x686)
+        self.assertTrue(sim.runner.hits[-1]["final"])
+        self.assertEqual(sim.runner.index, 1)
+        sim.hit(14, free=False, until=28, move=0x686)
+        self.assertEqual(sim.runner.index, 2)
 
     def test_counter_reset_aborts_and_releases(self):
         sim = Sim()
