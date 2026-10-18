@@ -290,6 +290,7 @@ class LearningTest(unittest.TestCase):
             rows = L.habit_rows(L.pooled_keys())
             self.assertIn(MINUS_KEY, rows)
             self.assertNotIn("after_block:f4", rows)
+            self.assertTrue(all(t["situation"] != MINUS_KEY for t in L.targets()))
         finally:
             rig.close()
 
@@ -373,7 +374,8 @@ class LearningTest(unittest.TestCase):
             self.assertTrue(L.pull["started"])
             L.step(state_at(800, human={"health": 160}), [])
             self.assertIsNone(L.pull)
-            self.assertAlmostEqual(sum(v[0] for v in L.bandit.arms["low_defense|hit"].values()), 0.8 * 0.9 + 1.0, places=3)
+            self.assertAlmostEqual(sum(v[0] for v in L.bandit.arms["low_defense|hit"].values()), 0.8 * 0.9, places=3)
+            self.assertAlmostEqual(L.bandit.arms["low_defense|hit"][entry["notation"]][1] % 1.0 if entry["notation"] != "db+3" else 0.0, 0.0, places=3)
             before = {k: list(v) for k, v in L.bandit.arms["low_defense|hit"].items()}
             entry = L.pick("low", OPTIONS["classes"]["low"], boosts["low"], L3)
             L.decided("low", boosts, state_at(900))
@@ -399,13 +401,17 @@ class LearningTest(unittest.TestCase):
             L.decided("low", boosts, state_at(600))
             mine = int(first["move_id"], 16)
             L.step(state_at(605, bot={"move_id": mine, "free_movement": 0, "frame_in_move": 2, "move_total": 30}), [])
-            L.step(state_at(612, human={"health": 170}), [])
             L.pick("low", OPTIONS["classes"]["low"], boosts["low"], L3)
-            L.decided("low", boosts, state_at(640, human={"health": 170}))
+            L.decided("low", boosts, state_at(611))
+            self.assertEqual(len(L.pulls), 2)
+            L.step(state_at(612, human={"health": 170}), [dict(hit(612, 20), move_id=mine)])
             s, f = L.bandit.arms["low_defense|hit"][first["notation"]]
             self.assertAlmostEqual(s + f, 1.0, places=3)
             self.assertAlmostEqual(s, 0.8, places=3)
-            self.assertEqual(L.pull["frame"], 640)
+            self.assertEqual(len(L.pulls), 1)
+            self.assertEqual(L.pull["frame"], 611)
+            L.decided("wait", {}, state_at(620))
+            self.assertEqual(len(L.pulls), 1)
         finally:
             rig.close()
 
@@ -428,7 +434,8 @@ class LearningTest(unittest.TestCase):
             self.assertEqual(out[0]["human_damage_taken"], 25)
             self.assertEqual(out[0]["exploited"], ["low_defense"])
             s, f = L.bandit.arms["low_defense|hit"][entry["notation"]]
-            self.assertAlmostEqual(s, 1.0, places=3)
+            self.assertAlmostEqual((s, f), (0.0, 1.0), places=3)
+            self.assertEqual(L.pulls, [])
             self.assertEqual(L.rounds[-1]["round"], 1)
             self.assertEqual(L.round, 2)
             self.assertEqual(L.damage, [0, 0])
@@ -535,6 +542,84 @@ class LearningTest(unittest.TestCase):
             self.assertEqual(seen[-1]["distance"], "close")
             L.step(state_at(200, bot={"position": (-6000.0, 1040.0, 2000.0)}), [decision(200, "low_defense", "hit", False, start_frame=5)])
             self.assertEqual(seen[-1]["distance"], "far")
+        finally:
+            rig.close()
+
+    def test_pull_matches_every_table_id(self):
+        from game.options import load_options
+        table = load_options("kazuya")[0]
+        jab = next(e for e in table["classes"]["mid"] if e["notation"] == "1")
+        self.assertEqual(sorted(jab["move_ids"]), ["0x659", "0x65a"])
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("after_block:df1", "press", False, adv=-4)
+            L = rig.learning
+            probe = state_at(600, situation="defense", adv=-4)
+            boosts = L.boosts(probe)
+            entry = L.pick("mid", [jab], boosts["mid"], L3)
+            self.assertEqual(entry["notation"], "1")
+            L.decided("mid", boosts, probe)
+            self.assertEqual(L.pull["ids"], {0x659, 0x65A})
+            L.step(state_at(603, bot={"move_id": 0x659, "free_movement": 0, "frame_in_move": 1, "move_total": 27}), [])
+            self.assertTrue(L.pull["started"])
+            L.step(state_at(612), [dict(hit(612, 7), move_id=0x659)])
+            self.assertEqual(L.pulls, [])
+            s, f = L.bandit.arms[f"{PLUS_KEY}|press"]["1"]
+            self.assertAlmostEqual(s, 7 / 25, places=3)
+        finally:
+            rig.close()
+
+    def test_movement_pull_settles_by_health_delta(self):
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("after_block:b4", "backdash", True, adv=-4)
+            L = rig.learning
+            probe = state_at(600, situation="defense", adv=-4)
+            boosts = L.boosts(probe)
+            self.assertIn("approach", boosts)
+            entry = L.pick("approach", OPTIONS["classes"]["approach"], boosts["approach"], L3)
+            L.decided("approach", boosts, probe)
+            self.assertTrue(L.pull["started"])
+            self.assertEqual(L.pull["ids"], set())
+            L.step(state_at(620), [hit(620, 20)])
+            self.assertEqual(len(L.pulls), 1)
+            L.step(state_at(700, human={"health": 160}), [])
+            self.assertEqual(L.pulls, [])
+            s, f = L.bandit.arms[f"{PLUS_KEY}|backdash"][entry["notation"]]
+            self.assertAlmostEqual(s, 1.0, places=3)
+        finally:
+            rig.close()
+
+    def test_throw_moment_tracks_the_throw_itself(self):
+        rig = LearningRig()
+        try:
+            L = rig.learning
+            thrown = {"being_thrown": 0xE000001F}
+            L.step(state_at(230), [{"t": "event", "session_id": SID, "frame": 230, "round": 1, "kind": "throw", "actor": 1, "target": 0, "move_id": 0x7DF}])
+            for f in range(231, 330):
+                health = 190 if f < 260 else 171 if f < 329 else 155
+                L.step(state_at(f, human=dict(thrown, health=health)), [])
+            for f in range(330, 340):
+                L.step(state_at(f, human={"health": 155}), [])
+            self.assertEqual(L.throw_moments, [])
+            throw = [m for m in L.moments if m["kind"] == "throw"][0]
+            self.assertEqual(throw["damage"], 35)
+            L.step(state_at(360, human={"health": 140}), [dict(hit(360, 15), move_id=0x6DB)])
+            self.assertEqual(throw["damage"], 35)
+            L.step(state_at(400, human={"health": 140}), [{"t": "event", "session_id": SID, "frame": 400, "round": 1, "kind": "throw", "actor": 1, "target": 0, "move_id": 0x7DF}])
+            L.step(state_at(410, human=dict(thrown, health=130)), [])
+            L.step(state_at(420, human=dict(thrown, health=130)), [dict(hit(420, 12), move_id=0x6A6)])
+            second = [m for m in L.moments if m["kind"] == "throw"][1]
+            self.assertEqual(second["damage"], 10)
+            self.assertEqual(L.throw_moments, [])
+            L.step(state_at(500, human={"health": 118}), [{"t": "event", "session_id": SID, "frame": 500, "round": 1, "kind": "throw", "actor": 1, "target": 0, "move_id": 0x7DF}])
+            L.step(state_at(540, human={"health": 118}), [])
+            self.assertEqual(L.throw_moments, [])
+            summary = L.summary(state_at(600), 1)
+            self.assertEqual([m["damage"] for m in summary["biggest_moments"]], [35, 15, 12])
+            L.step(state_at(610), [decision(610, "low_defense", "hit", False, start_frame=None)])
         finally:
             rig.close()
 

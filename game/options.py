@@ -58,6 +58,8 @@ def normalize_entry(entry, cls):
     if cls in ATTACK_CLASSES:
         out.setdefault("hit_level", "throw" if cls == "throw" else "mid")
         out.setdefault("move_id", None)
+        ids = [i for i in (out.get("move_ids") or []) if i] + ([out["move_id"]] if out.get("move_id") else [])
+        out["move_ids"] = sorted({str(i).lower() for i in ids})
         out.setdefault("startup", None)
         out.setdefault("on_block", None)
     if cls == "throw":
@@ -97,6 +99,7 @@ def attack_entry(command, notation, move, his_cls, position, breaks):
     entry = {
         "notation": notation,
         "move_id": move.get("move_id") or (ids[-1] if ids else None),
+        "move_ids": list(ids),
         "hit_level": first_level(move.get("hit_level")),
         "startup": move.get("startup"),
         "on_block": move.get("on_block"),
@@ -160,6 +163,16 @@ def from_characters(options, moves, throws=None, fallback=None):
         for e in (fallback or {}).get("classes", {}).get(cls, []):
             if e["notation"] not in have:
                 classes[cls].append(dict(e))
+    known = {}
+    for cls in ATTACK_CLASSES:
+        for e in (fallback or {}).get("classes", {}).get(cls, []):
+            known[e["notation"].lower()] = [i for i in (e.get("move_ids") or []) if i] + ([e["move_id"]] if e.get("move_id") else [])
+    for cls in ATTACK_CLASSES:
+        for e in classes[cls]:
+            extra = known.get(e["notation"].lower(), [])
+            e["move_ids"] = list(e.get("move_ids") or []) + extra
+            if not e.get("move_id") and extra:
+                e["move_id"] = extra[-1]
     names = {}
     for m in moves.get("moves", []):
         for mid in m.get("move_ids") or []:

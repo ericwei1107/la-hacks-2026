@@ -249,6 +249,39 @@ class AfterBlockTest(unittest.TestCase):
         self.assertEqual(ev["detail"]["response_move_id"], JAB)
         self.assertEqual(ev["frame"], free + 12)
 
+    def test_non_attack_move_out_of_stun_opens_the_window(self):
+        seq, c, free = self.setup()
+
+        def stance(f, h):
+            if free <= f < free + 100:
+                h.update(move_id=0x84C, frame_in_move=f - free + 1, move_total=130, free_movement=0, hit_reaction=0)
+            elif f >= free + 100:
+                h.update(move_id=0x850, frame_in_move=f - free - 99, move_total=60, free_movement=0, hit_level=MID, hit_level_name="mid")
+
+        respond(seq, free, stance)
+        seq = seq + [(f, [idle(0, f), idle(1, f)]) for f in range(seq[-1][0] + 1, free + 130)]
+        for f, pair in seq:
+            stance(f, pair[0]) if f >= free else None
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0]["action"], "none")
+        self.assertEqual(decisions[0]["frame"], free + 20)
+
+    def test_pushback_after_a_second_block_is_not_a_backdash(self):
+        seq, c, free = self.setup()
+
+        def blocked_again(f, h):
+            if free + 3 <= f < free + 14:
+                h.update(move_id=0x720, frame_in_move=f - free - 2, move_total=11, free_movement=0, hit_reaction=1,
+                         position=(-6000.0, 1040.0, -1000.0 - 40.0 * (f - free - 2)))
+            elif f >= free + 14:
+                h.update(position=(-6000.0, 1040.0, -1440.0))
+
+        respond(seq, free, blocked_again)
+        decisions = [d for d in run(seq)[1] if d["situation"].startswith("after_block")]
+        self.assertTrue(decisions)
+        self.assertTrue(all(d["action"] != "backdash" for d in decisions), decisions)
+
     def test_string_opens_one_window_and_a_hit_cancels(self):
         first, c1, end1 = blocked_df1(def_total=19, tail=0)
         second, c2, end2 = exchange(attacker=1, move=0x6A7, total=41, connect_at=15, level_code=MID, level="mid", reaction=1,
@@ -315,6 +348,37 @@ class ThrowBreakTest(unittest.TestCase):
 
 
 class SidestepDirTest(unittest.TestCase):
+    def test_stale_hit_reaction_does_not_close_the_window(self):
+        def human(f, h):
+            if 96 <= f <= 103:
+                h.update(hit_reaction=12)
+            if f in (102, 103):
+                h.update(dir_held=DIR["u"])
+
+        ev = only(self, run(bot_attack(human=human))[1], "sidestep_dir", "left", True)
+        self.assertEqual(ev["detail"]["evidence"], "input")
+        stale = lambda f, h: h.update(hit_reaction=1, frame_in_move=f - 80) if 90 <= f <= 103 else None
+        ev = only(self, run(bot_attack(lead=12, human=stale))[1], "sidestep_dir", "none", False)
+        self.assertEqual(ev["frame"], 115)
+        self.assertNotEqual(ev["detail"].get("evidence"), "struck")
+
+    def test_block_during_the_window_closes_it(self):
+        tracker = Tracker(SID)
+        det = Detector(0, TABLE)
+        decisions = []
+        for f, pair in bot_attack(lead=3, length=41, first=15, last=16):
+            state = build_state(pair, 0, f, SID)
+            evs = tracker.step(state)
+            if f == 106:
+                evs = evs + [{"t": "event", "session_id": SID, "frame": 106, "round": 1, "kind": "block", "actor": 1, "target": 0,
+                              "move_id": DF1, "hit_level": "mid", "frame_advantage": None}]
+            decisions += det.step(state, evs)
+            if f == 106:
+                break
+        ev = only(self, decisions, "sidestep_dir", "none", False)
+        self.assertEqual(ev["detail"].get("evidence"), "struck")
+        self.assertEqual(ev["frame"], 106)
+
     def test_step_left(self):
         frames = bot_attack(human=lambda f, h: h.update(dir_held=DIR["u"]) if f in (102, 103) else None)
         ev = only(self, run(frames)[1], "sidestep_dir", "left", True)
