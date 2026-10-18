@@ -85,6 +85,13 @@ class SynthTest(unittest.TestCase):
         self.assertEqual(learning["time_to_detect"]["low_defense"], 1)
         self.assertEqual(learning["time_to_mastery"]["low_defense"], 3)
         self.assertEqual([r["prediction_accuracy"] for r in learning["rounds"]], [0.41, 0.58, 0.71])
+        self.assertEqual(learning["finetune"], {"before": None, "after": None})
+        (self.tmp / "eval").mkdir(exist_ok=True)
+        (self.tmp / "eval" / f"{self.sid}.json").write_text(json.dumps({"before": 0.41, "after": 0.68}))
+        try:
+            self.assertEqual(client.get(f"/learning/{self.sid}").json()["finetune"], {"before": 0.41, "after": 0.68})
+        finally:
+            (self.tmp / "eval" / f"{self.sid}.json").unlink()
         stats = client.get(f"/stats/{self.sid}").json()
         self.assertEqual(stats["rounds"][0]["low_block_rate"], 0.2)
         self.assertEqual(stats["rounds"][2]["low_block_rate"], 1.0)

@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-
 import importlib.util
+import json
 
-from store import ROOT
+from store import ROOT, data_dir
 
 _spec = importlib.util.spec_from_file_location("kumite_analytics_stats", ROOT / "analytics" / "stats.py")
 analytics_stats = importlib.util.module_from_spec(_spec)
@@ -90,8 +90,18 @@ def learning(session):
                 detect[habit] = line["round"]
             if habit not in mastery and h.get("fixed"):
                 mastery[habit] = line["round"]
-    finetune = next((l["finetune"] for l in reversed(lines) if isinstance(l.get("finetune"), dict)), {"before": None, "after": None})
-    return {"session_id": session.id, "rounds": lines, "time_to_detect": detect, "time_to_mastery": mastery, "finetune": finetune}
+    return {"session_id": session.id, "rounds": lines, "time_to_detect": detect, "time_to_mastery": mastery, "finetune": finetune(session.id)}
+
+
+def finetune(sid):
+    path = data_dir() / "eval" / f"{sid}.json"
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"before": None, "after": None}
+    if not isinstance(value, dict):
+        return {"before": None, "after": None}
+    return {key: value.get(key) for key in ("before", "after")}
 
 
 def coach_text(summary):
