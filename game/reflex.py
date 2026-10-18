@@ -21,6 +21,7 @@ SKIP_SHARE = 0.5
 PUNISH_REACTION_SCALE = 0.5
 WAKEUP_PATH = Path(__file__).resolve().parent / "wakeup_fallback.json"
 LYING_STABLE = 2
+WAKE_RETRY = 40
 CLOSE_MM = 1600
 MID_MM = 2500
 RECOVERING_FRAMES = 15
@@ -107,6 +108,7 @@ class Reflex:
         self.wakeups = wakeups or {}
         self.rng = rng or random.Random()
         self.lying_run = 0
+        self.lying_mark = None
         self.wake = None
         self.handled = None
         self.prev_thrown = "none"
@@ -143,6 +145,7 @@ class Reflex:
 
     def reset(self):
         self.lying_run = 0
+        self.lying_mark = None
         self.wake = None
         self.handled = None
         self.prev_thrown = "none"
@@ -267,16 +270,30 @@ class Reflex:
         frame = state["frame"]
         if not bot["status"] & DOWNED_BIT:
             self.lying_run = 0
+            self.lying_mark = None
             self.wake = None
             return []
         ready = lying(bot)
-        self.lying_run = self.lying_run + 1 if ready else 0
+        mark = (bot["move_id"], bot["frame_in_move"])
+        frozen = ready and mark == self.lying_mark
+        self.lying_mark = mark if ready else None
+        if not ready:
+            self.lying_run = 0
+        elif not frozen:
+            self.lying_run += 1
+        retries = 0
         if self.wake is not None and self.wake["stage"] == "waiting" and not ready:
             self.wake = None
+        if self.wake is not None and self.wake["stage"] == "sent" and ready and not frozen:
+            self.wake["live"] += 1
+            if self.wake["live"] >= WAKE_RETRY:
+                retries = self.wake["retries"] + 1
+                self.wake = None
+                self.lying_run = LYING_STABLE
         if self.wake is None and self.lying_run >= LYING_STABLE:
             delay = self.difficulty.reaction(self.rng)
-            self.wake = {"stage": "waiting", "asked": frame, "delay": delay, "at": frame + self._press_offset(delay)}
-        if self.wake is None or self.wake["stage"] != "waiting" or frame < self.wake["at"]:
+            self.wake = {"stage": "waiting", "asked": frame, "delay": delay, "at": frame + self._press_offset(delay), "retries": retries}
+        if self.wake is None or self.wake["stage"] != "waiting" or frame < self.wake["at"] or frozen:
             return []
         face = FACES.get(bot["basic_state"], f"basic_{bot['basic_state']}")
         options = self.wakeups.get(face) or self.wakeups.get("face_up") or []
@@ -297,8 +314,9 @@ class Reflex:
         self._set_guard("n")
         self.seq.submit(chosen["notation"], force=True, frame=frame, reflex="wakeup")
         self.wake["stage"] = "sent"
+        self.wake["live"] = 0
         rec = self.record(state, "wakeup", self.wake["asked"], [o["notation"] for o in options], chosen["notation"],
-                          option=chosen["kind"], situation=situation, delay=self.wake["delay"], face=face,
+                          option=chosen["kind"], situation=situation, delay=self.wake["delay"], face=face, retry=self.wake["retries"],
                           verified=face in self.wakeups, distance=round(state["derived"]["distance_mm"]),
                           opp_move_id=opp["move_id"], opp_actionable_in=opp["frames_until_actionable"])
         rec["probabilities"] = {k: round(v, 4) for k, v in probs.items()}

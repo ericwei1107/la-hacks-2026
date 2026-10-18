@@ -9,6 +9,7 @@ from game.tests.test_state import EVENT_V, STATE_V
 SAMPLES = Path(__file__).resolve().parents[2] / "data" / "samples"
 PRACTICE = SAMPLES / "practice_djin_vs_kaz.jsonl"
 VERSUS = SAMPLES / "versus_djin_vs_kaz_l3.zip"
+NEUTRAL = SAMPLES / "versus_djin_vs_kaz_l3_neutral.zip"
 STATE_STRIDE = 25
 
 
@@ -55,6 +56,25 @@ class SampleTest(unittest.TestCase):
         for kind in ("block", "punish", "throw_break", "wakeup"):
             self.assertGreater(reflex[kind], 0, kind)
         self.assertTrue(all(t["source"] == "reflex" for t in tactical))
+
+    def test_neutral_sample(self):
+        meta, states, events, tactical = self.load(NEUTRAL)
+        self.check_contract(states, events)
+        self.check_replay(meta, states, events)
+        self.assertEqual((meta["mode"], meta["difficulty"], meta["result"]), ("versus", 3, "win 3-1"))
+        self.assertEqual([r["winner"] for r in meta["rounds"]], [0, 0, 1, 0])
+        decisions = [e for e in events if e["kind"] == "decision_point"]
+        situations = Counter(e["situation"] for e in decisions)
+        self.assertEqual(situations["low_defense"], 13)
+        self.assertEqual(situations["throw_break"], 9)
+        self.assertGreater(sum(n for s, n in situations.items() if s.startswith("after_block:")), 5)
+        self.assertTrue(all(e["actor"] == meta["human_slot"] and e["detail"]["state_text"] for e in decisions))
+        sources = Counter(t["source"] for t in tactical)
+        self.assertGreater(sources["default"], 100)
+        self.assertGreater(sources["reflex"], 50)
+        mix = Counter(t["chosen"] for t in tactical if t["source"] == "default")
+        for option in ("mid", "low", "throw", "approach"):
+            self.assertGreater(mix[option], 0, option)
 
 
 if __name__ == "__main__":
