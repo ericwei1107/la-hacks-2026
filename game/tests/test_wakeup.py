@@ -2,7 +2,7 @@ import random
 import unittest
 
 from game.difficulty import Difficulty
-from game.reflex import Reflex, WAKEUP_LOGITS, load_punishers, load_wakeups, softmax, wakeup_situation
+from game.reflex import WAKE_RETRY, Reflex, WAKEUP_LOGITS, load_punishers, load_wakeups, softmax, wakeup_situation
 from game.sequencer import Sequencer
 from game.state import Tracker, build_state
 from game.tests.test_pad import fake_pad
@@ -68,10 +68,11 @@ def knockdown(start=100, landing=20, lying=80, distance=3000, opp=None):
 
 class WakeupTimingTest(unittest.TestCase):
     def test_waits_for_lying_loop_then_reaction(self):
-        rig = Rig(FixedDelay(10)).run(knockdown())
+        rig = Rig(FixedDelay(10)).run(knockdown(lying=40))
         recs = rig.wakeups()
         self.assertEqual(len(recs), 1)
         rec = recs[0]
+        self.assertEqual(rec["reflex"]["retry"], 0)
         self.assertEqual(rec["frame_asked"], 121)
         self.assertEqual(rec["frame"], 121 + 10 - LATENCY)
         for f in range(98, rec["frame"]):
@@ -79,11 +80,33 @@ class WakeupTimingTest(unittest.TestCase):
         self.assertNotEqual(rig.pressed[rec["frame"]], set())
 
     def test_once_per_knockdown(self):
-        rig = Rig(FixedDelay(0)).run(knockdown(lying=200))
+        rig = Rig(FixedDelay(0)).run(knockdown(lying=40))
         self.assertEqual(len(rig.wakeups()), 1)
 
+    def test_retries_when_getup_is_ignored(self):
+        rig = Rig(FixedDelay(0)).run(knockdown(lying=200))
+        recs = rig.wakeups()
+        self.assertGreaterEqual(len(recs), 3)
+        self.assertEqual([r["reflex"]["retry"] for r in recs], list(range(len(recs))))
+        gaps = [b["frame"] - a["frame"] for a, b in zip(recs, recs[1:])]
+        self.assertTrue(all(g >= WAKE_RETRY for g in gaps), gaps)
+
+    def test_no_press_while_lying_loop_is_frozen(self):
+        frames = knockdown(lying=200)
+        for f, pair, _ in frames:
+            if 122 <= f < 200:
+                pair[1].update(frame_in_move=3)
+            elif f >= 200:
+                pair[1].update(frame_in_move=f - 196)
+        rig = Rig(FixedDelay(4)).run(frames)
+        recs = rig.wakeups()
+        self.assertGreaterEqual(len(recs), 1)
+        self.assertGreaterEqual(recs[0]["frame"], 200)
+        for f in range(98, 200):
+            self.assertEqual(rig.pressed[f], set(), f"frame {f}")
+
     def test_hit_off_the_ground_rearms(self):
-        frames = knockdown(lying=120)
+        frames = knockdown(lying=60)
         for f, pair, _ in frames:
             if 125 <= f < 135:
                 pair[1].update(move_id=0x1A6, move_total=40, status=0x7406, basic_state=14)
