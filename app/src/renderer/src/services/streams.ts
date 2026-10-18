@@ -15,6 +15,7 @@ type StreamRecord = Record<string, unknown> & { t: string }
 
 const FIRST_WAIT_MS = 500
 const LONGEST_WAIT_MS = 5_000
+const OPEN_TIMEOUT_MS = 3_000
 
 class BrainStream {
   readonly status: Store<StreamStatus>
@@ -48,10 +49,15 @@ class BrainStream {
     const onLost = (): void => {
       if (lost) return
       lost = true
+      window.clearTimeout(timer)
       socket.close()
       this.retry()
     }
+    const timer = window.setTimeout(() => {
+      if (socket.readyState === WebSocket.CONNECTING) onLost()
+    }, OPEN_TIMEOUT_MS)
     socket.onopen = () => {
+      window.clearTimeout(timer)
       this.opened = true
       this.wait = FIRST_WAIT_MS
       this.status.set('open')

@@ -11,7 +11,7 @@ The shell is the Electron main process plus the preload bridge that every app wi
 
 Two principles:
 
-- **The bridge carries an allow-list.** The main process reads the environment and `app/.env`, which also hold secrets such as the ElevenLabs key. A window receives the three resolved addresses and the platform name, named one by one, and nothing else from those sources. The voice calls carry text in and audio out; the key never crosses.
+- **The bridge carries an allow-list.** The main process reads the environment and `app/.env`, which also hold secrets such as the ElevenLabs key. A window receives the three resolved addresses, the overlay mode and the platform name, named one by one, and nothing else from those sources. The voice calls carry text in and audio out; the key never crosses.
 - **One app run, one set of addresses.** Addresses are resolved once when the main process starts. The overlay and the main window always point at the same services; pointing somewhere else means restarting the app.
 
 ## Service addresses
@@ -49,12 +49,15 @@ window.kumite = {
                  warning: 'KUMITE_REPLAY_URL in the environment is not an http(s) URL: "192.168.50.2:8766"' },
     analytics: { url: 'http://localhost:8767',    source: 'default' }
   },
+  overlay: 'demo',
   speak: (text) => Promise<SpeakResult>,
   transcribe: (recording, mimeType) => Promise<TranscribeResult>
 }
 ```
 
 The preload asks the main process for `services` over one synchronous IPC call while it runs, so the object is complete before any page script executes. The service clients can then build every URL at module load without waiting.
+
+`overlay` is the overlay mode resolved from `KUMITE_OVERLAY`: `always` when it is `1` or `on`, `demo` otherwise. The preload fetches it with the services, over one more synchronous IPC call.
 
 `speak` and `transcribe` carry the voice component's calls: the text or the recording goes to the main process over an asynchronous `ipcRenderer.invoke`, and the clip, the transcript or a failure reason comes back (voice design). Only the data and the result cross; the ElevenLabs settings stay in the main process. The main process also answers the windows' microphone permission requests (voice design).
 
@@ -66,7 +69,7 @@ The main process opens two windows from the same renderer build, both with the s
 
 **Main window.** 1440 × 900 by default, 1024 × 640 at least, titled "Kumite", shown once its first frame is ready. It loads the renderer's `index.html`. Background throttling is off: during a set the game covers it, and it still has to follow the round break and speak the coach's tip on time (voice design). Closing it quits the app on Windows and Linux, overlay included; on macOS the app stays in the dock and reopens the main window when activated.
 
-**Overlay window, off by default.** The game screen belongs to the game (HLD tenet), so the overlay opens only when `KUMITE_OVERLAY` is `1` or `on`, in the environment or `app/.env`. When on, it loads the renderer's `overlay.html` and is drawn over Tekken 8:
+**Overlay window.** It opens unless `KUMITE_OVERLAY` is `0` or `off`, in the environment or `app/.env`. It loads the renderer's `overlay.html` and is drawn over Tekken 8. The page itself draws only in demo mode (overlay design), so outside demo mode the window is present but empty. `KUMITE_OVERLAY` set to `1` or `on` makes the page draw regardless; the bridge carries this as the overlay mode.
 
 - It covers the full bounds of the primary display, frameless, transparent, without a shadow, and out of the taskbar.
 - It stays on top of other windows at the `screen-saver` level, and on macOS on every workspace, including full-screen ones.
@@ -86,7 +89,7 @@ The main process opens two windows from the same renderer build, both with the s
 | An unacceptable override | Skip it, fall through to the next source, keep it as a warning | Refuse to start; pass the bad value through so every request to that service fails | The app stays usable, and the status view still says what went wrong. A refusal to start is worse at a booth than a visible warning. |
 | Overlay window size | The primary display's full bounds, page zoomed from 1920 × 1080 | A window sized to the HUD and card only; the game window's bounds | A full-display window keeps the Paper coordinates valid at any resolution. Finding the game window would need native window enumeration, and the game runs borderless on the primary display. |
 | Overlay focus and input | Never focusable, ignores all mouse events | Forwarding mouse moves for hover effects | The overlay has nothing to click; any focus or input it took would leave the game mid-round. |
-| Turning on the overlay | Off by default; `KUMITE_OVERLAY=1` or `on` | On by default; a menu item | During a set the game screen belongs to the game, and the coach's tip is spoken by the main window. A variable read from the same sources as the addresses keeps the overlay one setting away for a demo that wants it. |
+| When the overlay draws | In the brain's demo mode; `KUMITE_OVERLAY=1` forces it on, `0` leaves the window out | Only with `KUMITE_OVERLAY=1`; always | The demo video needs the HUD and the card over the game, and demo mode is already a mode of the bot, so the overlay follows it and normal play keeps the game screen clean (HLD tenet). The window always exists, click-through and empty outside demo mode, so switching demo mode needs no restart. The variable still previews the overlay without the brain, or leaves it out on a development machine. |
 | Main window in the background | Background throttling off | Chromium's default throttling | Tekken covers the main window during a set. Throttled timers would delay the end of a round break and the voice that depends on it. |
 
 ## Open Questions & Future Decisions

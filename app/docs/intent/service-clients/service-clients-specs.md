@@ -67,6 +67,7 @@ Design: `service-clients-design.md`
 - [ ] **CLIENT-LIVE-013**: The client shall not clear a brain stream slot when the stream reconnects or when records from a different session arrive.
 - [ ] **CLIENT-LIVE-014**: The client shall not recover events the brain sent while a stream's socket was down.
 - [ ] **CLIENT-LIVE-015**: When a `plan` record arrives on the state stream, the client shall replace the latest-plan slot.
+- [ ] **CLIENT-LIVE-016**: If a brain stream's socket has not opened within 3 seconds of the attempt starting, then the client shall close it and treat the attempt as a failed open.
 
 ## Live set and round break
 
@@ -127,7 +128,7 @@ All paths are under `src/renderer/src/services/`.
 | CLIENT-HTTP-008 | `brain.ts` (`postConfig`) |
 | CLIENT-ERR-001 – CLIENT-ERR-006 | `http.ts` (`ServiceError`, `exchange`, `requestJson`) |
 | CLIENT-REC-001 – CLIENT-REC-008 | `recording.ts` (`getRecording`) |
-| CLIENT-LIVE-001 – CLIENT-LIVE-015 | `streams.ts` (`BrainStream` and the slots and channels it feeds) |
+| CLIENT-LIVE-001 – CLIENT-LIVE-016 | `streams.ts` (`BrainStream` and the slots and channels it feeds) |
 | CLIENT-STATUS-001 – CLIENT-STATUS-005, CLIENT-STATUS-009, CLIENT-STATUS-010 | `status.ts` (`serviceStatus`, `health`, `startHealthPolling`) |
 | CLIENT-STATUS-006 – CLIENT-STATUS-008 | `http.ts` (outcome reporting), applied in `status.ts` |
 | CLIENT-HOOK-001 – CLIENT-HOOK-015 | `hooks.tsx`; the provider wraps the root in `src/renderer/src/main.tsx` |

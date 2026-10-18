@@ -7,6 +7,7 @@ Design: `controls-design.md`
 - [ ] **MAIN-CONTROLS-001**: The Controls screen shall show five preset cards, 1 Rookie, 2 Novice, 3 Intermediate, 4 Advanced and 5 Tekken God, filling the card of the config's `difficulty` with `--color-primary`.
 - [ ] **MAIN-CONTROLS-002**: When the player chooses a preset, the Controls screen shall save that difficulty with the preset's reaction delay, punish accuracy and exploit weight: 30, 0.40, 0.20; 24, 0.60, 0.40; 18, 0.80, 0.60; 12, 0.92, 0.80; 6, 1.00, 1.00 for presets 1 to 5.
 - [ ] **MAIN-CONTROLS-003**: The Controls screen shall show sliders for reaction delay (30 frames at the left to 6 at the right, whole frames), punish accuracy (0 to 100%) and exploit weight (0 to 100%), each with its current value beside its label.
+- [ ] **MAIN-CONTROLS-006**: The Controls screen shall show beside the Difficulty heading, in muted text, "Presets set the three sliders below. Changes apply from the next match."
 - [ ] **MAIN-CONTROLS-004**: Each slider shall show the config's knob value, or the selected preset's value when the config has no such knob.
 - [ ] **MAIN-CONTROLS-005**: When the player releases a slider or moves it with the keyboard, the Controls screen shall save that knob and keep the config's other knobs.
 

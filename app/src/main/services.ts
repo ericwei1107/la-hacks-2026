@@ -87,7 +87,9 @@ export function resolveServiceAddresses(fileValues: EnvValues): ServiceAddresses
   ) as ServiceAddresses
 }
 
-export function overlayEnabled(fileValues: EnvValues): boolean {
+export function overlayMode(fileValues: EnvValues): 'always' | 'demo' | 'off' {
   const raw = (process.env.KUMITE_OVERLAY?.trim() || fileValues.KUMITE_OVERLAY?.trim() || '').toLowerCase()
-  return raw === '1' || raw === 'on'
+  if (raw === '1' || raw === 'on') return 'always'
+  if (raw === '0' || raw === 'off') return 'off'
+  return 'demo'
 }
