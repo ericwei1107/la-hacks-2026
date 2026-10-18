@@ -16,7 +16,7 @@ Field names below are v1 names. Internal-only names appear in brackets where the
 | `quality=invalid` [`quality.state`] | Suppress coaching recommendations and show a source-data problem | Continuing to display stale advice as current |
 | `focus.metric=null` | Use the supplied reason, e.g. “More observations needed” | Selecting another focus in TypeScript |
 | `focus.mode=manual` | “Selected focus”, with the metric's own state/fraction | Presenting a three-observation manual selection as automatic |
-| `focus.action_reviewed=false` [`action_status=draft_awaiting_Garrett_review`] | Neutral “Review these moments”; action prose is review-only | Showing unapproved mechanics as production advice |
+| `focus.action_reviewed` [`action_status`] | Show `focus.action` when true (Garrett approved the low/throw wording on October 18); neutral “Review these moments” only if false | Rewriting or inventing mechanics in the app |
 | `estimated=true` | “Estimated punish conversion”; retain provisional timing caveat | Claiming a mechanically guaranteed punish or enabling punish focus |
 | `freshness.latest_completed_round` [`completed_rounds`] | “Through completed round N”, or “No completed rounds yet” when null | Using a newer active `latest_recording_round` as completed learning |
 | `pending_learning_rounds` | “Learning for round 2 is still being saved” while defense counts remain valid | Replacing missing learning with zero or discarding valid recording metrics |

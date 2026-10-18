@@ -1,7 +1,7 @@
 {
   "focus": {
     "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
-    "action_reviewed": false,
+    "action_reviewed": true,
     "metric": "low_defense",
     "mode": "automatic",
     "reason": "0/7 successful observed opportunities; 7 failures",

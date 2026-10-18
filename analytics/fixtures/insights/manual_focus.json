@@ -2,7 +2,7 @@
   "calculation_version": 4,
   "focus": {
     "action": "Review these throws and practice the appropriate break against the recorded throw.",
-    "action_status": "draft_awaiting_Garrett_review",
+    "action_status": "reviewed",
     "metric": "throw_defense",
     "mode": "manual",
     "population": "completed_rounds",

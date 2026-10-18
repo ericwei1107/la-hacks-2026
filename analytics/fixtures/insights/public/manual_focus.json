@@ -1,7 +1,7 @@
 {
   "focus": {
     "action": "Review these throws and practice the appropriate break against the recorded throw.",
-    "action_reviewed": false,
+    "action_reviewed": true,
     "metric": "throw_defense",
     "mode": "manual",
     "reason": "0/3 successful observed opportunities; 3 failures",

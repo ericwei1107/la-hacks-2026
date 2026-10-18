@@ -78,7 +78,7 @@ The top-level files are full internal snapshots. `fixtures/insights/public/` hol
 
 Review examples contain at most five moments and three evidence rows per metric. The internal CLI defaults to ten moments; the public route defaults to five. Counts always cover the full completed-round population. `snapshot_id` identifies source revisions and implementation versions; changing limit or manual focus changes the view without changing that source identity. Bind a selected moment to its session and line, and clear it when the session changes or the location no longer appears.
 
-The action strings are marked `draft_awaiting_Garrett_review`. Until Garrett approves mechanical wording, a candidate card can show the metric fraction, the supplied reason and neutral “Review these moments” text. The fixture package records Eric's review; it does not imply Chloe or the other owners have accepted the interface.
+Garrett approved the low-defense and throw-defense action wording on October 18 and found the generic punish wording acceptable, so `action_status` is `reviewed` and the public `action_reviewed` is true whenever an action is present. Punishment still cannot be selected as a focus. The fixture package records Eric's review; it does not imply Chloe or the other owners have accepted the interface.
 
 ## TypeScript type for the public v1 view
 
@@ -168,4 +168,4 @@ interface InsightsV1 {
 }
 ```
 
-The public view drops internal habit details (`n`, `p`, `mastery`, `action`); the existing `/learning` route continues to serve them. `focus.action_reviewed` stays `false` until Garrett approves the wording; show neutral "Review these moments" text until then.
+The public view drops internal habit details (`n`, `p`, `mastery`, `action`); the existing `/learning` route continues to serve them. `focus.action_reviewed` is true when the action text has Garrett's approval (all current actions); show neutral "Review these moments" text only if it is false.

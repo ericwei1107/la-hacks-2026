@@ -2,7 +2,7 @@
   "calculation_version": 4,
   "focus": {
     "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
-    "action_status": "draft_awaiting_Garrett_review",
+    "action_status": "reviewed",
     "metric": "low_defense",
     "mode": "automatic",
     "population": "completed_rounds",

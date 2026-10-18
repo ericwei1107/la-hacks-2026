@@ -42,7 +42,7 @@ class InsightExamplesTest(unittest.TestCase):
             if name != 'real':
                 self.assertTrue(value['synthetic'], name)
             if value['focus']['action']:
-                self.assertEqual(value['focus']['action_status'], 'draft_awaiting_Garrett_review')
+                self.assertEqual(value['focus']['action_status'], 'reviewed')
 
     def test_public_views_keep_counts_states_and_focus(self):
         for name, value in self.examples.items():
@@ -53,7 +53,7 @@ class InsightExamplesTest(unittest.TestCase):
                 self.assertEqual(view['recording_sha256'], value['sources']['recording']['sha256'])
                 self.assertEqual(view['quality'], value['quality']['state'])
                 self.assertEqual(view['focus']['metric'], value['focus']['metric'])
-                self.assertFalse(view['focus']['action_reviewed'])
+                self.assertEqual(view['focus']['action_reviewed'], view['focus']['action'] is not None)
                 for key, metric in value['metrics'].items():
                     self.assertEqual((view['metrics'][key]['successes'], view['metrics'][key]['opportunities'], view['metrics'][key]['state']),
                                      (metric['successes'], metric['opportunities'], metric['state']))

@@ -7,7 +7,7 @@
 | Owner | Status |
 | --- | --- |
 | Sahil | **Approved with conditions** (October 18): the route is additive on :8767; it reads only files the brain already writes under `DATA_DIR` (recordings, sessions, learning, profiles, eval); nothing under `contracts/` changes. One point needs his confirmation, below |
-| Garrett | Pending |
+| Garrett | Wording and punish-audit review received October 18; explicit route approval still pending |
 | Chloe | Pending (asleep; Eric collects later) |
 | Eric | Proposer |
 
@@ -36,7 +36,7 @@ After the merge: the flag defaults on in real and mock analytics, the route test
 | Owner | What to check |
 | --- | --- |
 | Chloe | The fields cover the focus card, evidence list, moments and freshness states in [insights-ui.md](insights-ui.md); the [TypeScript type](../INSIGHTS_PROPOSAL.md#typescript-type-for-the-public-v1-view) is usable |
-| Garrett | `focus.action` stays draft (`action_reviewed: false`) until he approves wording; punishment focus stays disabled; `estimated: true` marks punish conversion as an estimate |
+| Garrett | Action wording approved (low and throw defense; generic punish text acceptable), so `action_reviewed` is true; punishment focus stays disabled until the corrected metric is verified; `estimated: true` marks punish conversion as an estimate |
 | Sahil | The route only reads files the brain already writes; no producer change or game-loop work is required |
 | Eric | Same builder for export, real and mock; counts cover all completed rounds regardless of `limit` |
 

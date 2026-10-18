@@ -423,7 +423,7 @@ def markdown(snapshot):
         lines.append(f"| {metric['label']} | {metric['successes']}/{metric['opportunities']} | {metric['state']} |")
     lines += ['', f"Focus: {snapshot['focus']['metric'] or snapshot['focus']['reason']}"]
     if snapshot['focus']['action']:
-        lines += ['', snapshot['focus']['action'], '', 'Action wording awaits Garrett review.']
+        lines += ['', snapshot['focus']['action']]
     lines += ['', '## Recorded learning', '', '| Habit | First fixed round | Latest fixed |', '| --- | --- | --- |']
     for name, row in sorted(snapshot['learning']['habits'].items()):
         current_fixed = row['current'].get('fixed')

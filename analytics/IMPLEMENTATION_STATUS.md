@@ -7,7 +7,7 @@ Implementation date: October 18, 2026. Work began at `dc1f90c`; Chloe's C1/C2 ar
 | B4 original intake | Complete, retained | Earlier local and explicitly approved cloud evidence; no fresh upload |
 | E1 metric counts/provenance | Implemented | Shared version-4 opportunity selection plus explained counts, original lines, anomalies and focus suppression |
 | E2 deterministic export | Implemented | Schema-validated JSON/Markdown, stable source capture, correction/deletion/tail tests and bounded evidence |
-| E3 focus/moments | Internal implementation complete | Five-observation ranking, manual override, distinct per-metric moment outcomes; action text awaits Garrett review |
+| E3 focus/moments | Internal implementation complete | Five-observation ranking, manual override, distinct per-metric moment outcomes; Garrett approved the action wording (October 18); punish focus disabled pending the corrected metric review |
 | Focus review handoff | Generated and reviewed by Eric | Eleven internal fixtures plus their public v1 views, drift tests, v1 display rules and a v1 TypeScript type checked with `tsc --strict`; Chloe's example/intent review remains pending |
 | New public insight transport | Implemented behind opt-in flags; agreement pending | Public v1 view and `GET /insights/{id}` on real analytics (`KUMITE_EXPERIMENTAL_INSIGHTS=1`) and mock (`--experimental-insights`), off by default, route/parity tests pass. Not in `contracts/`; app consumer stays off until all four owners agree |
 | Chloe C1 | Merged in PR #19; owner follow-up | All 15 existing checker tests pass; reproduced reset/late-learning false positive must be fixed before relying on advance-required acceptance |
