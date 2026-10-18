@@ -3,8 +3,9 @@
 Track C service: `GET /health`, `POST /coach/round`, `POST /analyze/{session_id}`
 and `GET /reports/{session_id}` on port 8766.
 The request is validated directly against the frozen round-summary JSON schema.
-Responses contain only `text` and `severity`, with 1–3 sentences and fewer than
-40 words. Post-set reports use Jev to rank character-generated candidates when
+Responses contain only `text` and `severity`, with 1–3 sentences and at most
+20 words to fit the between-round voice window. This is stricter than the frozen
+contract's under-40-word limit. Post-set reports use Jev to rank character-generated candidates when
 available. Chat is not implemented.
 
 ## Windows setup
@@ -43,7 +44,8 @@ summary. It cannot introduce moves, invented counts, or unverified frame-data
 advice. This intentionally avoids depending on character files while Claude
 finishes them. The SDK's structured parsing follows the
 [official OpenAI documentation](https://developers.openai.com/api/docs/guides/structured-outputs).
-Model calls have no retries and a 5-second overall deadline; missing keys,
+Single prepared tips return immediately without a model call. Optional model
+selection has no retries and a 1-second overall deadline; missing keys,
 timeouts, API errors, refusals, or invalid output use the local tip. A warning
 records fallback without logging provider errors or keys. Local mode makes no
 external calls. `p` is a probability estimate, not an observed hit count;
@@ -208,9 +210,15 @@ are not reliably equivalent to option IDs.
 Habits are the three most frequent recorded situation/action pairs. Their
 `count` is observed, and `p` is the empirical action frequency among labeled
 decisions in that situation, explicitly identified by `p_source`. These are
-observations, not proof of a weakness. Mastery, improvement, and counterfactual
-minimum changes are not inferred. The report explicitly marks learning data
-as unevaluated; the upcoming live sample does not block report generation.
+observations, not proof of a weakness. Mastery is read from the latest valid
+same-session snapshot in `DATA_DIR/learning/<session_id>.jsonl`, limited to
+rounds present in the analyzed recording. Each value retains path, round and
+line in `mastery_evidence`. It is a learner estimate, not observed success or
+proof of improvement. Missing latest values are omitted without carrying an
+older habit value forward. Missing files, invalid rows, a truncated final write
+and stale snapshots are identified in limitations; mixed session IDs prevent
+using the file. Invalid snapshots do not discard other valid snapshots.
+Counterfactual minimum changes are not inferred.
 Drills direct review of the cited decisions and comparison in practice.
 
 Configuration:
@@ -282,13 +290,61 @@ POST analysis. Its result reports actual scoring availability rather than
 promising all decisions will score. Automated tests always disable Jev or use
 HTTPX mock transports; the optional extracted-sample test also runs offline.
 
-## Follow-up after Jev
+## Learning and move-specific coaching
 
-Make the coach specific using recorded `biggest_moments[].move_id` and the bot's
-`characters/<bot>/moves.json`: resolve the move name, resolve the bot move in
-`after_block:<move>`, and retrieve the one-line fix from matchup notes. Have the
-LLM compose the sentence from those facts, validate every named move against the
-move list, and retain templates as the fallback. For a genuinely fixed low-defense
-habit, prefer spoken wording such as "You've fixed your low blocking. I'll test
-it again later." over "marked as improved". This is planned follow-up, not current
-endpoint behavior.
+Round tips now resolve matching `biggest_moments[].move_id` against the bot's
+character data, or resolve the bot move in `after_block:<move>`. Compact labels
+such as `b4` are matched only when a single stored command agrees. Unknown and
+shared IDs are not guessed. Moments from unrelated situations, explicit
+non-bot actors and non-throw moves labeled as throws cannot name a bot move.
+Move names come from Claude's lookup interface; those files remain unchanged.
+
+Verified lows produce a named crouch-blocking drill. Plus-on-block entries in
+the matchup notes produce a named guarding reminder. Other after-block tips
+name the bot move while preserving the uncertainty about punish range and
+timing; they do not invent a punish. Verified throws can name the recorded
+character-data break input. Missing data retains generic templates. The
+provider can select only a prepared grounded sentence, so it cannot introduce
+a move name or change the guidance. Round responses are capped at 20 words;
+optional model selection has a one-second deadline and a 0.9-second HTTP timeout.
+The frozen under-eight-second, under-40-word contract is unchanged. These are
+server-side budgets, not a guarantee about venue network or TTS latency.
+
+Fixed low-defense wording is now: "You've fixed your low blocking. Keep
+practicing; I'll test it again later." Praise requires the summary's fixed
+marker; a mastery estimate alone does not trigger it.
+
+When Sahil's live sample lands, start the service with its DATA_DIR layout:
+
+```powershell
+$env:DATA_DIR = './data/samples/live_learning'
+$env:KUMITE_JEV_MODE = 'local'
+$env:KUMITE_COACH_MODE = 'local'
+.\replay\.venv\Scripts\python.exe -m uvicorn replay.main:app --host 127.0.0.1 --port 8766
+```
+
+Then analyze the exact session Sahil supplies:
+
+```powershell
+$sessionId = (Get-ChildItem data/samples/live_learning/recordings -Filter *.jsonl | Select-Object -First 1).BaseName
+$report = Invoke-RestMethod -Method Post "http://127.0.0.1:8766/analyze/$sessionId"
+$report.habits | Select-Object situation, action, count, mastery, mastery_evidence
+Invoke-RestMethod "http://127.0.0.1:8766/reports/$sessionId"
+.\replay\.venv\Scripts\python.exe -m pytest replay/tests -q
+.\replay\.venv\Scripts\python.exe contracts/validate.py
+```
+
+Expect mastery only for situations present in the latest valid snapshot, with
+source evidence. The live sample was absent from main at `843dcb1`; this
+follow-up was verified offline against PR #8's explicitly synthetic DATA_DIR
+bundle (35 human decisions, round-3 mastery, and three round summaries), plus
+unit tests. Synthetic values are not measured player learning. The real
+`live_learning` recording still needs an integration check after it lands.
+
+## Coach chat handoff
+
+`POST /coach/chat` is not implemented yet. The planned app boundary accepts
+history entries with `role: user` or `role: coach`, each containing `text`, as
+allowed by `contracts/api.md`. When connecting model history, `coach` maps to
+the provider's `assistant` role. The round-tip word limit applies only to
+`POST /coach/round`; it does not define the future chat-answer length.
