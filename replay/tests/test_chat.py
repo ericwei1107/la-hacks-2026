@@ -347,3 +347,118 @@ def test_learning_questions_scope_local_estimates_to_requested_situation(client,
     assert str(value) in response.json()["text"]
     assert label.replace("_", " ") in response.json()["text"]
     assert "after block" not in response.json()["text"]
+
+
+def repeated_practice_decisions(client):
+    path = client.app.state.settings.data_dir / "recordings" / f"{SESSION}.jsonl"
+    state = json.loads(path.read_text().splitlines()[0])
+    rows = []
+    for frame, situation, action in [
+        (10, "low_defense", "hit"), (20, "low_defense", "hit"),
+        (30, "low_defense", "hit"), (40, "low_defense", "hit"),
+        (50, "low_defense", "blocked"),
+        (60, "throw_break", "none"), (70, "throw_break", "none"),
+        (80, "throw_break", "none"), (90, "throw_break", "none"),
+    ]:
+        rows.extend([{**copy.deepcopy(state), "frame": frame},
+                     {"t": "event", "session_id": SESSION, "round": 1, "frame": frame,
+                      "kind": "decision_point", "actor": 1, "situation": situation, "action": action}])
+    path.write_text("\n".join(map(json.dumps, rows)) + "\n")
+
+
+@pytest.mark.parametrize("question", [
+    "what should i do to improve", "How can I get better?", "What should I practice?",
+    "Give me advice", "Help me improve", "What should I work on?",
+    "How to improve?", "I want to improve", "I need to get better",
+])
+def test_practice_requests_lead_with_drill_and_real_evidence(client, question):
+    repeated_practice_decisions(client)
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(503))
+    response = client.post("/coach/chat", json={**QUESTION, "message": question})
+    assert response.status_code == 200
+    reply = response.json()
+    assert reply["text"].startswith("Start with low blocking.")
+    assert "4 of 5" in reply["text"]
+    assert "crouch-blocking" in reply["text"]
+    assert "throw" in reply["text"].lower()
+    assert "mastery" not in reply["text"].lower()
+    assert len(reply["text"].split()) <= 110
+    assert reply["citations"] == [{"round": 1, "frame": 10}, {"round": 1, "frame": 20},
+                                  {"round": 1, "frame": 60}, {"round": 1, "frame": 70}]
+
+
+@pytest.mark.parametrize("question", [
+    "How can I improve my throw breaks?", "How to improve my throw breaks?",
+    "I want to improve my throw breaks",
+])
+def test_practice_request_stays_on_requested_situation_and_overrides_progress_history(client, question):
+    repeated_practice_decisions(client)
+    response = client.post("/coach/chat", json={**QUESTION, "message": question,
+        "history": [{"role": "user", "text": "Have I improved my low blocking?"}]})
+    reply = response.json()
+    assert "throw" in reply["text"].lower() and "break" in reply["text"].lower()
+    assert "low" not in reply["text"].lower()
+    assert reply["citations"] == [{"round": 1, "frame": 60}, {"round": 1, "frame": 70}]
+
+
+def test_model_cannot_replace_practice_advice_with_raw_mastery(client):
+    repeated_practice_decisions(client)
+
+    async def provider(request, tools, initial):
+        irrelevant = tools.fact("Analytics mastery estimate 0.285. These estimates alone do not confirm improvement.")
+        return [irrelevant["id"]]
+
+    client.app.state.chat.provider = provider
+    response = client.post("/coach/chat", json={**QUESTION, "message": "What should I do to improve?"})
+    assert "crouch-blocking" in response.json()["text"]
+    assert "0.285" not in response.json()["text"]
+
+
+def test_sparse_practice_evidence_does_not_invent_a_weakness(client):
+    response = client.post("/coach/chat", json={**QUESTION, "message": "What should I practice?"})
+    text = response.json()["text"].lower()
+    assert "not enough" in text
+    assert "weakness" not in text
+    assert "crouch-blocking" not in text
+
+
+def test_progress_answer_keeps_one_copy_of_shared_caveat(client):
+    async def provider(request, tools, initial):
+        return [tools.fact(f"Round {index}: estimate {index / 10}. These estimates alone do not confirm improvement.")["id"]
+                for index in (1, 2, 3)]
+
+    client.app.state.chat.provider = provider
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(503))
+    response = client.post("/coach/chat", json={**QUESTION, "message": "Have I improved?"})
+    text = response.json()["text"]
+    assert text.count("These estimates alone do not confirm improvement.") == 1
+    assert all(f"Round {index}" in text for index in (1, 2, 3))
+
+
+def test_progress_question_mentioning_practice_still_checks_learning(client):
+    repeated_practice_decisions(client)
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(503))
+    response = client.post("/coach/chat", json={**QUESTION, "message": "Have I improved my low-blocking practice?"})
+    assert "unavailable" in response.json()["text"].lower() or "missing" in response.json()["text"].lower()
+    assert "Start with" not in response.json()["text"]
+
+
+def test_practice_question_about_named_move_keeps_verified_frame_lookup(client):
+    repeated_practice_decisions(client)
+    response = client.post("/coach/chat", json={**QUESTION, "message": "How should I practice my Hellsweep?"})
+    assert "Spinning Demon" in response.json()["text"]
+    assert "4 of 5" not in response.json()["text"]
+
+
+def test_uncertain_human_context_never_becomes_a_drill_recommendation(client):
+    repeated_practice_decisions(client)
+    path = client.app.state.settings.data_dir / "recordings" / f"{SESSION}.jsonl"
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    for row in rows:
+        if row["t"] == "event":
+            row["frame"] += 1
+    path.write_text("\n".join(map(json.dumps, rows)) + "\n")
+    response = client.post("/coach/chat", json={**QUESTION, "message": "What should I practice?"})
+    assert "not enough" in response.json()["text"].lower()
+    assert "crouch-blocking" not in response.json()["text"]
+    assert response.json()["citations"] == []
