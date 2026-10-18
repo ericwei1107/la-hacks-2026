@@ -23,7 +23,7 @@ The app is a view over other tracks' services. It renders what the brain (:8765)
 ## Goals
 
 - G1. During a set, the app takes no focus or input from the game. Outside demo mode it draws nothing over the game; in demo mode its overlay appears in an OBS capture.
-- G2. Between rounds, the coach's voice starts within the 8–10 second round-end screen and stops when the next round starts.
+- G2. The coach's voice starts a tip as soon as the brain sends it, within the 8–10 second round-end screen, and always finishes the line.
 - G3. After a set, a player can open the session, read its report and decision points, see the learning panel, and ask the coach a question by voice or text and hear the answer.
 - G4. The learning panel shows, in large numbers, that the bot learned: prediction accuracy by round, time to detect and time to mastery per habit, exploit hit rates, and player-changed markers. It is the video's closing shot and is never cut.
 - G5. The replay analysis screen shows every decision point with what happened, the best option, its probabilities and why. It is never cut.
@@ -85,7 +85,7 @@ flowchart LR
 
 ### Round break
 
-The **live set** is the `session_id` of the latest `state` record on the brain's state stream; a round is **live** while those records keep arriving, the latest less than 2 seconds old. A **round break** is Tekken's round-end screen as the app sees it. It starts at a `round_end` event for the live set and ends at the next `round_start` event, at a `state` record for a later round or another set, or when the round stops being live, which covers the end of a set. The between-round voice speaks only during a round break, and so does the overlay's card in demo mode. The service clients track the round break once for every window.
+The **live set** is the `session_id` of the latest `state` record on the brain's state stream; a round is **live** while those records keep arriving, the latest less than 2 seconds old. A **round break** is Tekken's round-end screen as the app sees it. It starts at a `round_end` event for the live set and ends at the next `round_start` event, at a `state` record for a later round or another set, or when the round stops being live, which covers the end of a set. The overlay's card in demo mode shows only during a round break; the coach's voice speaks each tip when it arrives and finishes it. The service clients track the round break once for every window.
 
 ### Where each surface gets its data
 
@@ -122,12 +122,12 @@ The **live set** is the `session_id` of the latest `state` record on the brain's
 
 - During a live set, the game keeps focus and receives every input; outside demo mode, nothing is drawn over it.
 - In demo mode, an OBS recording of a live round shows the HUD and the between-round card over the game, and the game received every click made over the overlay.
-- On a live round end, the coach's voice starts before the next round begins and stops when it begins.
+- On a live round end, the coach's voice starts before the next round begins and finishes the line; two tips close together both play fully, in order.
 - With the mock services running, every screen renders real contract-shaped data; with any one service stopped, every screen that depends on it shows its offline state and the rest of the app keeps working.
 - Switching from mocks to Sahil's laptop is done by setting three addresses.
 - A booth judge who has not seen the app goes from choosing a difficulty to reading the post-set report without help.
 
-Falsification signals: the app takes focus or a click from the game; the coach's voice is still playing after the next round starts; any screen goes blank or crashes when a service is down; a number the learning panel shows cannot be read in a 1080p recording.
+Falsification signals: the app takes focus or a click from the game; a coach line is cut off before its end; any screen goes blank or crashes when a service is down; a number the learning panel shows cannot be read in a 1080p recording.
 
 ## Open Questions
 

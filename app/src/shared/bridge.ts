@@ -15,7 +15,7 @@ export type ServiceAddresses = Record<ServiceName, ServiceAddress>
 export type VoiceFailure = 'not_configured' | 'rejected' | 'network' | 'timeout'
 
 export type SpeakResult =
-  | { ok: true; audio: Uint8Array<ArrayBuffer> }
+  | { ok: true }
   | { ok: false; reason: VoiceFailure; status?: number }
 
 export type TranscribeResult =
@@ -29,7 +29,7 @@ export interface KumiteApi {
   services: ServiceAddresses
   overlay: OverlayMode
   insights: boolean
-  speak: (text: string) => Promise<SpeakResult>
+  speak: (text: string, onChunk: (chunk: Uint8Array) => void) => Promise<SpeakResult>
   transcribe: (recording: Uint8Array<ArrayBuffer>, mimeType: string) => Promise<TranscribeResult>
 }
 
@@ -46,5 +46,7 @@ export const OVERLAY_CHANNEL = 'kumite:overlay'
 export const INSIGHTS_CHANNEL = 'kumite:insights'
 
 export const SPEAK_CHANNEL = 'kumite:speak'
+
+export const SPEAK_CHUNK_CHANNEL = 'kumite:speak-chunk'
 
 export const TRANSCRIBE_CHANNEL = 'kumite:transcribe'
