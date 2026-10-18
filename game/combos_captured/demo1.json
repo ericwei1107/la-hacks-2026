@@ -9,6 +9,7 @@
  "subject_slot": 0,
  "captured_at": "2026-10-18T01-36-19",
  "input_latency_frames": 2,
+ "start_round_frame": 43,
  "start_distance": 1774,
  "connect_distance": 846,
  "inputs": [

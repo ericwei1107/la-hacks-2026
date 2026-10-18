@@ -275,7 +275,7 @@ class ComboRunner:
 
     def _captured_step(self, frame, bot, target, prev):
         if self.move is None:
-            if not self._ready(bot):
+            if not self._ready(bot) or frame < self.captured.get("start_round_frame", 0):
                 return None
             return self._submit_opener(frame) if self.captured.get("launcher_inputs_replay") else self._submit(frame)
         if prev is None:

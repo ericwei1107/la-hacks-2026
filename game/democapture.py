@@ -109,6 +109,7 @@ def build_demo_route(name, rows, slot, names=None):
         "subject_slot": slot,
         "captured_at": time.strftime("%Y-%m-%dT%H-%M-%S"),
         "input_latency_frames": 2,
+        "start_round_frame": start["frame"],
         "start_distance": start["distance"],
         "connect_distance": connect_row["distance"],
         "inputs": events,
@@ -215,7 +216,8 @@ def main(argv=None):
             return 1
         if args.replay:
             route = load_captured(args.name, args.dir)
-            print(f"{route['guide']}; the demo opener started from {route['start_distance']} distance", flush=True)
+            print(f"{route['guide']}; the demo opener started at round frame {route.get('start_round_frame', 0)} from "
+                  f"{route['start_distance']} distance, and replay holds the opener until the same frame", flush=True)
             if args.wait_reset:
                 print("NOTHING STARTS UNTIL YOU RESET: press the practice position reset to start attempt 1, and reset "
                       "again after every attempt (use --no-wait-reset to start without resets)", flush=True)

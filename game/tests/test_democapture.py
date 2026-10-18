@@ -113,6 +113,16 @@ class DemoReplayTest(unittest.TestCase):
         seq.on_frame(100, bot)
         self.assertEqual(device.pressed, {"DPAD_DOWN"})
 
+    def test_opener_waits_for_the_demo_start_frame(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"})
+        self.assertEqual(route["start_round_frame"], 43)
+        runner = ComboRunner(route, Sequencer(fake_pad()[0], 2), 1, name="ws12")
+        bot, target = player(side=1), player()
+        for f in range(30, 43):
+            self.assertIsNone(runner.on_state({"frame": f, "players": [target, bot]}))
+        self.assertEqual(runner.on_state({"frame": 43, "players": [target, bot]}), "ws1,2")
+
 
 if __name__ == "__main__":
     unittest.main()
