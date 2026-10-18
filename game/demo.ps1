@@ -97,11 +97,14 @@ if (Test-Http $url) {
 
 $sparkReachable = $false
 if (-not $NoSpark) {
-    $ErrorActionPreference = "Continue"
-    & ssh -o BatchMode=yes -o ConnectTimeout=6 $Spark true 2>&1 | Out-Null
-    $sparkReachable = $LASTEXITCODE -eq 0
-    $ErrorActionPreference = "Stop"
-    if (-not $sparkReachable) { Write-Warning "$Spark did not answer ssh; the spark windows will retry on their own output" }
+    $probe = Start-Process ssh -ArgumentList "-n -o BatchMode=yes -o ConnectTimeout=6 $Spark true" -WindowStyle Hidden -PassThru
+    $null = $probe.Handle
+    if ($probe.WaitForExit(10000)) {
+        $sparkReachable = $probe.ExitCode -eq 0
+    } else {
+        Stop-Process -Id $probe.Id -Force -ErrorAction SilentlyContinue
+    }
+    if (-not $sparkReachable) { Write-Warning "$Spark did not answer ssh within 10 s; the spark windows will retry on their own output" }
 }
 
 $title = "Kumite laya watch"
