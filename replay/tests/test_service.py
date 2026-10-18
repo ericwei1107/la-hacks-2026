@@ -165,3 +165,49 @@ def test_real_sdk_parses_structured_selection_without_external_network(client, m
     response = client.post("/coach/round", json=EXAMPLE)
     assert response.status_code == 200
     assert response.json() == {"text": selected, "severity": "warn"}
+
+
+@pytest.mark.parametrize("situation,action,fixed", [
+    ("low_defense", "hit", False), ("throw_break", "none", False),
+    ("after_block:b4", "press", False), ("after_block:f4", "press", False),
+    ("unknown", "unknown", False), ("low_defense", "hit", True),
+])
+def test_round_tips_fit_twenty_word_voice_budget(client, situation, action, fixed):
+    summary = copy.deepcopy(EXAMPLE)
+    summary["top_habits"][0].update(situation=situation, action=action, fixed=fixed)
+    result = client.post("/coach/round", json=summary)
+    assert result.status_code == 200
+    assert 0 < len(result.json()["text"].split()) <= 20
+
+
+def test_optional_provider_deadline_leaves_time_for_speech(client):
+    from replay.coach import RoundCoach
+
+    async def slow_provider(summary, advice):
+        await asyncio.sleep(3)
+        return advice.tips[0].text
+
+    client.app.state.coach = RoundCoach(provider=slow_provider)
+    start = time.monotonic()
+    response = client.post("/coach/round", json=EXAMPLE)
+    assert time.monotonic() - start < 1.8
+    assert response.status_code == 200
+    assert len(response.json()["text"].split()) <= 20
+
+
+def test_single_grounded_tip_does_not_wait_for_model(client):
+    from replay.coach import RoundCoach
+
+    calls = []
+
+    async def provider(summary, advice):
+        calls.append(summary)
+        return advice.tips[0].text
+
+    client.app.state.coach = RoundCoach(provider=provider)
+    summary = copy.deepcopy(EXAMPLE)
+    summary["biggest_moments"][0]["move_id"] = 0x6DB
+    response = client.post("/coach/round", json=summary)
+    assert response.status_code == 200
+    assert "Crouch Shin Kick" in response.json()["text"]
+    assert calls == []

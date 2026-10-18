@@ -175,6 +175,76 @@ def test_local_jev_mode_does_not_use_environment_key(monkeypatch):
     assert JevScorer.from_env().api_key == ""
 
 
+def write_learning(client, rows, tail=""):
+    path = client.app.state.settings.data_dir / "learning/test_session.jsonl"
+    path.parent.mkdir(exist_ok=True)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows) + tail)
+    return path
+
+
+def learning_row(round=1, mastery=0.22, **fields):
+    return {"t": "learning_round", "session_id": "test_session", "round": round,
+            "prediction_accuracy": None,
+            "habits": {"low_defense": {"p": 0.8, "n": 5, "mastery": mastery}}, **fields}
+
+
+def test_mastery_uses_latest_snapshot_with_source_evidence(client):
+    write_learning(client, [learning_row(mastery=0.22), learning_row(mastery=0.67)])
+    report = client.post("/analyze/test_session").json()
+    habit, = report["habits"]
+    assert habit["mastery"] == 0.67
+    assert habit["mastery_evidence"] == {"path": "learning/test_session.jsonl", "round": 1, "line": 2}
+    assert habit["count"] == 1 and habit["p"] == 1
+    Draft202012Validator(SCHEMA).validate(report)
+
+
+@pytest.mark.parametrize("value", [-0.1, 1.1, None, True, float("nan"), float("inf")])
+def test_invalid_mastery_is_not_fabricated(client, value):
+    write_learning(client, [learning_row(mastery=value)])
+    report = client.post("/analyze/test_session").json()
+    assert "mastery" not in report["habits"][0]
+    assert "invalid" in " ".join(report["limitations"]).lower()
+
+
+def test_mixed_session_learning_file_is_not_used(client):
+    write_learning(client, [learning_row(), learning_row(session_id="wrong")])
+    report = client.post("/analyze/test_session").json()
+    assert "mastery" not in report["habits"][0]
+    assert "session" in " ".join(report["limitations"]).lower()
+
+
+def test_latest_missing_mastery_does_not_resurrect_old_estimate(client):
+    latest = learning_row()
+    del latest["habits"]["low_defense"]["mastery"]
+    write_learning(client, [learning_row(mastery=0.9), latest])
+    report = client.post("/analyze/test_session").json()
+    assert "mastery" not in report["habits"][0]
+    assert "mastery" in " ".join(report["limitations"]).lower()
+
+
+def test_future_learning_round_excluded_and_truncated_tail_marked(client):
+    write_learning(client, [learning_row(mastery=0.3), learning_row(round=2, mastery=0.99)],
+                   tail='{"t":"learning_round","round":')
+    report = client.post("/analyze/test_session").json()
+    assert report["habits"][0]["mastery"] == 0.3
+    assert "truncated" in " ".join(report["limitations"]).lower()
+
+
+def test_missing_learning_file_omits_mastery(client):
+    report = client.post("/analyze/test_session").json()
+    assert "mastery" not in report["habits"][0]
+    assert "learning" in " ".join(report["limitations"]).lower()
+
+
+@pytest.mark.parametrize("invalid_round", [1, 2])
+def test_invalid_snapshot_does_not_discard_other_valid_mastery(client, invalid_round):
+    write_learning(client, [learning_row(mastery=0.3), learning_row(round=invalid_round, mastery=float("nan"))])
+    report = client.post("/analyze/test_session").json()
+    assert report["habits"][0]["mastery"] == 0.3
+    assert report["habits"][0]["mastery_evidence"]["line"] == 1
+    assert "invalid" in " ".join(report["limitations"]).lower()
+
+
 def test_sample_discovery_labels_synthetic_and_checks_metadata(client):
     root = client.app.state.settings.data_dir
     sample = root / "samples/synthetic/friendly.jsonl"

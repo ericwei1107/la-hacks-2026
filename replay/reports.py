@@ -13,6 +13,7 @@ from jsonschema.exceptions import ValidationError
 
 from replay.config import ROOT
 from replay.inspection import build_inspection
+from replay.learning import latest_mastery
 from replay.reader import read_recording
 from replay.scoring import JevScorer
 
@@ -116,7 +117,7 @@ class ReportService:
         if not recording.counts["round_summary"]:
             limitations.append("No round_summary records are available")
         limitations.extend([
-            "Learning/mastery data is not evaluated in this report; no improvement claim is inferred.",
+            "Mastery, when present, is the recorded learner estimate, not observed success or proof of improvement.",
             "Only explicit human decision-point events are scored. Observed hits, inputs and bot tactical choices are not inferred human intent.",
             "Jev probabilities are model preference estimates among supplied candidates, not success or win probabilities or proof of optimality.",
             "Snapshots at labeled decisions may already reflect the action's outcome; a pre-action state is not established.",
@@ -176,6 +177,18 @@ class ReportService:
                    "evidence": [{"round": point["round"], "frame": point["frame"], "line": point["evidence"][0]["line"]}
                                 for point in points if (point["situation"], point["actual"]) == (situation, action)]}
                   for (situation, action), count in counts.most_common(3)]
+        learning_path = within(self.data_dir, self.data_dir / "learning" / f"{session_id}.jsonl")
+        mastery, learning_warnings = await asyncio.to_thread(
+            latest_mastery, learning_path, session_id, max(record.data["round"] for record in recording.records))
+        limitations.extend(learning_warnings)
+        for habit in habits:
+            estimate = mastery.get(habit["situation"])
+            if estimate is None:
+                limitations.append(f"No latest mastery value for {habit['situation']}; mastery is omitted")
+                continue
+            habit["mastery"] = estimate["mastery"]
+            habit["mastery_evidence"] = {"path": str(learning_path.relative_to(self.data_dir)).replace("\\", "/"),
+                                        "round": estimate["round"], "line": estimate["line"]}
         if not points:
             limitations.append("No attributable human decision-point events are available")
         highlights = []
