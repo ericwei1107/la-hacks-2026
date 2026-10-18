@@ -66,8 +66,23 @@ Playback advances at 60 game frames per second, preserving frame gaps and source
 - `--host 0.0.0.0`: allow LAN clients; default is loopback only.
 - `--rate N`: positive game frames per second; default 60.
 - `--no-loop`: end WebSockets at EOF. Connections after EOF close immediately; restart to replay again.
+- `--experimental-insights`: add the unapproved `GET /insights/{id}` (public v1 view) to mock analytics, read from `DATA_DIR` with the same builder as real analytics. Off by default; sessions loaded only through `--recording` outside `DATA_DIR` return 404. Not a frozen contract.
+- `--live-dir DIR`: write the default streamed session into `DIR` as it plays, so the real analytics service sees a growing session. Metadata omits end time/result; state/event lines flush once a second like the recorder; each round summary is written once and flushed; that round's original learning record follows after `--learning-delay` seconds (default 3, 0–120). Streams once (no loop). Refuses `data/samples` and the source file. Requires `--services brain,replay` with the real analytics service on `DIR`.
+- `--duplicate-summaries`: send every round summary twice on `/ws/coach`, to check that clients coalesce them.
+- `--drop-after-summary`: close brain sockets with code 1013 after each round's coach line, to exercise reconnects.
 
 WebSockets accept `?session=<id>` to select another loaded session. Unknown ids close with code 1008. Slow clients close with code 1013.
+
+## Live refresh scenario
+
+For testing refresh without the game, in two terminals from the repo root:
+
+```sh
+DATA_DIR=./data/samples/live_learning SENTRY_DSN= .venv/bin/python tools/mock/serve.py --services brain,replay --live-dir /tmp/kumite-live --learning-delay 3
+DATA_DIR=/tmp/kumite-live KUMITE_EXPERIMENTAL_INSIGHTS=1 DATABASE_URL= SENTRY_DSN= .venv/bin/python -m uvicorn analytics.main:app --port 8767
+```
+
+Expected: the brain streams the real session once at 60 frames per second (about 40 seconds per round; add `--rate 120` to halve that). `/stats` grows during each round. At each round end `/insights/<id>` reports `quality: "pending"` with that round in `pending_learning_rounds` for about three seconds, then `observed`, finishing at 0/16 lows with low-defense focus. Add `--duplicate-summaries` or `--drop-after-summary` to the first command for those cases. Restart the first command to replay; it resets the live folder. The brain's `/sessions/{id}/recording` still serves the full original file.
 
 ## Verification
 

@@ -18,7 +18,7 @@ The above is a shape example, not a usable credential. Keep the real value out o
 
 Eric confirms he has already sent the complete value to Sahil by **private DM**. Delivery is complete by owner report; no duplicate send is needed. Process configuration and runtime evidence remain pending. Do not copy the value into the tracker or a shared handoff.
 
-Sahil reports (about 03:40 PT, October 18) that instrumentation is going in now and the trace URL, waterfall screenshot, full SHA release, `demo-laptop` environment and off/on p50/p95 with sample counts will follow within the hour. Not yet received or verified.
+Sahil's instrumentation landed on main as `e8f134f`. Trace, release, environment, sampling and off/on timings were received and the trace was verified by Track D on October 18 ([record](../../../analytics/evidence/brain-decision-2026-10-18.md)). The screenshot is retained and Sahil accepted the overhead provided timing is unaffected (identical missed-frame counts off and on). Complete.
 
 For PowerShell, from the repo root (replace the placeholder privately):
 

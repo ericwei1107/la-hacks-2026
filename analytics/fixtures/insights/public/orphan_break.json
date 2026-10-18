@@ -1,0 +1,61 @@
+{
+  "focus": {
+    "action": null,
+    "action_reviewed": false,
+    "metric": null,
+    "mode": "automatic",
+    "reason": "More observations needed",
+    "state": null
+  },
+  "format_version": 1,
+  "freshness": {
+    "latest_completed_round": 1,
+    "latest_learning_round": 1,
+    "latest_recording_round": 1,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "habits": {},
+  "metrics": {
+    "low_defense": {
+      "estimated": false,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Low defense",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    },
+    "punish_conversion": {
+      "estimated": true,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Estimated punish conversion",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    },
+    "throw_defense": {
+      "estimated": false,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": null,
+      "label": "Throw defense",
+      "opportunities": 0,
+      "state": "invalid",
+      "successes": 1,
+      "value": null
+    }
+  },
+  "moments": [],
+  "moments_total": 0,
+  "quality": "observed",
+  "recording_sha256": "5f5637b80e3307f6c3674e0f7f88eff771bcbabc4e014b7f55bd8d7721a1ab62",
+  "session_id": "insight-example",
+  "snapshot_id": "0d72e49b7ac26bb73f58706960097cda2bd860634e0c09b9e280668a0b05c926",
+  "synthetic": true
+}

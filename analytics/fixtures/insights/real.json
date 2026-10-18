@@ -2,7 +2,7 @@
   "calculation_version": 4,
   "focus": {
     "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
-    "action_status": "draft_awaiting_Garrett_review",
+    "action_status": "reviewed",
     "metric": "low_defense",
     "mode": "automatic",
     "population": "completed_rounds",
@@ -388,6 +388,15 @@
       "estimated": false,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "damage": 12,
+            "frame_advantage": -6,
+            "hit_level": "low",
+            "kind": "counter_hit",
+            "move_id": 1754,
+            "target": 0
+          },
           "opportunity": {
             "frame": 460,
             "line": 2777,
@@ -400,6 +409,15 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 8,
+            "frame_advantage": 7,
+            "hit_level": "low",
+            "kind": "hit",
+            "move_id": 192,
+            "target": 0
+          },
           "opportunity": {
             "frame": 1223,
             "line": 3589,
@@ -412,6 +430,15 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 12,
+            "frame_advantage": -6,
+            "hit_level": "low",
+            "kind": "counter_hit",
+            "move_id": 251,
+            "target": 0
+          },
           "opportunity": {
             "frame": 1268,
             "line": 3638,
@@ -438,6 +465,15 @@
       "estimated": true,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "damage": 0,
+            "frame_advantage": -10,
+            "hit_level": "high",
+            "kind": "block",
+            "move_id": 1794,
+            "target": 0
+          },
           "opportunity": {
             "frame": 864,
             "line": 698,
@@ -450,6 +486,15 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 0,
+            "frame_advantage": -12,
+            "hit_level": "mid",
+            "kind": "block",
+            "move_id": 1711,
+            "target": 0
+          },
           "opportunity": {
             "frame": 1492,
             "line": 1361,
@@ -462,6 +507,15 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 0,
+            "frame_advantage": -12,
+            "hit_level": "mid",
+            "kind": "block",
+            "move_id": 1711,
+            "target": 0
+          },
           "opportunity": {
             "frame": 544,
             "line": 2866,
@@ -488,6 +542,13 @@
       "estimated": false,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "hit_level": "throw",
+            "kind": "throw",
+            "move_id": 2068,
+            "target": 0
+          },
           "opportunity": {
             "frame": 667,
             "line": 492,
@@ -500,6 +561,13 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "hit_level": "throw",
+            "kind": "throw",
+            "move_id": 2068,
+            "target": 0
+          },
           "opportunity": {
             "frame": 1815,
             "line": 1708,
@@ -512,6 +580,13 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "hit_level": "throw",
+            "kind": "throw",
+            "move_id": 2068,
+            "target": 0
+          },
           "opportunity": {
             "frame": 1531,
             "line": 3923,

@@ -2,7 +2,7 @@
   "calculation_version": 4,
   "focus": {
     "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
-    "action_status": "draft_awaiting_Garrett_review",
+    "action_status": "reviewed",
     "metric": "low_defense",
     "mode": "automatic",
     "population": "completed_rounds",
@@ -50,6 +50,13 @@
       "estimated": false,
       "evidence": [
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
           "opportunity": {
             "frame": 1,
             "line": 1,
@@ -62,6 +69,13 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
           "opportunity": {
             "frame": 2,
             "line": 2,
@@ -74,6 +88,13 @@
           "response": null
         },
         {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
           "opportunity": {
             "frame": 3,
             "line": 3,

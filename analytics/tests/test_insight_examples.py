@@ -1,8 +1,8 @@
 import json
 import unittest
 
-from analytics.insight_examples import FIXTURES, build_examples, serialized_examples
-from analytics.insights import SNAPSHOT_VALIDATOR
+from analytics.insight_examples import FIXTURES, PUBLIC_FIXTURES, build_examples, serialized_examples, serialized_public
+from analytics.insights import PUBLIC_VALIDATOR, SNAPSHOT_VALIDATOR, public
 
 
 class InsightExamplesTest(unittest.TestCase):
@@ -42,7 +42,39 @@ class InsightExamplesTest(unittest.TestCase):
             if name != 'real':
                 self.assertTrue(value['synthetic'], name)
             if value['focus']['action']:
-                self.assertEqual(value['focus']['action_status'], 'draft_awaiting_Garrett_review')
+                self.assertEqual(value['focus']['action_status'], 'reviewed')
+
+    def test_public_views_keep_counts_states_and_focus(self):
+        for name, value in self.examples.items():
+            with self.subTest(name=name):
+                view = public(value)
+                PUBLIC_VALIDATOR.validate(view)
+                self.assertEqual(view['snapshot_id'], value['snapshot_id'])
+                self.assertEqual(view['recording_sha256'], value['sources']['recording']['sha256'])
+                self.assertEqual(view['quality'], value['quality']['state'])
+                self.assertEqual(view['focus']['metric'], value['focus']['metric'])
+                self.assertEqual(view['focus']['action_reviewed'], view['focus']['action'] is not None)
+                for key, metric in value['metrics'].items():
+                    self.assertEqual((view['metrics'][key]['successes'], view['metrics'][key]['opportunities'], view['metrics'][key]['state']),
+                                     (metric['successes'], metric['opportunities'], metric['state']))
+                    self.assertTrue(all('kind' in item['event'] for item in view['metrics'][key]['evidence']))
+        real = public(self.examples['real'])
+        self.assertEqual(real['freshness']['latest_completed_round'], 4)
+        self.assertEqual(real['habits']['after_block:any'], {'first_detected_round': 2, 'first_fixed_round': 2, 'current_round': 4,
+                                                             'fixed': False, 'regressed': False, 'last_regressed_round': 3})
+        self.assertIsNone(real['habits']['low_defense']['first_fixed_round'])
+        self.assertEqual(real['metrics']['low_defense']['evidence'][0]['event']['hit_level'], 'low')
+        mixed = public(self.examples['mixed_outcomes'])['moments'][0]
+        self.assertEqual(mixed['outcome'], 'mixed')
+        self.assertEqual({k: v['outcome'] for k, v in mixed['metric_outcomes'].items()}, {'low_defense': 'success', 'punish_conversion': 'failure'})
+        self.assertEqual(public(self.examples['pending_learning'])['quality'], 'pending')
+
+    def test_committed_public_fixtures_have_no_drift(self):
+        expected = serialized_public(self.examples)
+        self.assertEqual({p.name for p in PUBLIC_FIXTURES.glob('*.json')}, set(expected))
+        for name, content in expected.items():
+            with self.subTest(name=name):
+                self.assertEqual((PUBLIC_FIXTURES / name).read_text(encoding='utf-8'), content)
 
     def test_committed_fixtures_have_no_drift(self):
         expected = serialized_examples()

@@ -21,6 +21,9 @@ from analytics.stats import CALCULATION_VERSION
 FORMAT_VERSION = 1
 HISTORY_LIMIT = 50
 SNAPSHOT_VALIDATOR = Draft202012Validator(json.loads(Path(__file__).with_name('insights.schema.json').read_text()))
+PUBLIC_FORMAT_VERSION = 1
+PUBLIC_LIMIT = 5
+PUBLIC_VALIDATOR = Draft202012Validator(json.loads(Path(__file__).with_name('insights_v1.schema.json').read_text()))
 
 
 def encoded(value):
@@ -164,6 +167,21 @@ def habit_history(rounds, summaries):
     return result
 
 
+EVENT_FIELDS = ('kind', 'actor', 'target', 'damage', 'hit_level', 'move_id', 'frame_advantage')
+
+
+def event_summary(event):
+    return {key: event[key] for key in EVENT_FIELDS if key in event}
+
+
+def with_events(metrics, entries):
+    by_line = dict(entries)
+    for metric in metrics.values():
+        for item in metric['evidence']:
+            item['event'] = event_summary(by_line[item['opportunity']['line']])
+    return metrics
+
+
 def moments(entries, metrics, human, sid, source_hash, completed, limit):
     candidates = {}
     for key in METRIC_ORDER:
@@ -186,14 +204,15 @@ def moments(entries, metrics, human, sid, source_hash, completed, limit):
     for line in sorted(ranked):
         row = candidates[line]
         event = by_line[line]
-        row['event'] = {key: event[key] for key in ('kind', 'actor', 'target', 'damage', 'hit_level', 'move_id', 'frame_advantage') if key in event}
+        row['event'] = event_summary(event)
         selected.append(row)
     return selected, len(candidates)
 
 
 class InsightRepository:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, brain_files_only=False):
         self.root = Path(data_dir).resolve()
+        self.brain_files_only = brain_files_only
         self.files = FileRepository(self.root)
         self.lock = threading.RLock()
         self.cache = {}
@@ -207,10 +226,13 @@ class InsightRepository:
                 if session is None:
                     return None
                 meta_path, _, expected_meta, recording = session
+                if self.brain_files_only and not (recording.is_relative_to(self.root) and meta_path.resolve().is_relative_to(self.root)):
+                    raise DataError('Insight source is outside DATA_DIR')
                 paths = {'metadata': meta_path, 'recording': recording,
                          'learning': self.root / 'learning' / f'{sid}.jsonl',
-                         'evaluation': self.root / 'eval' / f'{sid}.json',
-                         'report': self.root / 'reports' / f'{sid}.json'}
+                         'evaluation': self.root / 'eval' / f'{sid}.json'}
+                if not self.brain_files_only:
+                    paths['report'] = self.root / 'reports' / f'{sid}.json'
                 captured = {key: read_bytes(path, optional=key not in ('metadata', 'recording')) for key, path in paths.items()}
                 if any(stamp(path) != captured[key][0] for key, path in paths.items()):
                     raise DataError('Insight source changed during capture; retry')
@@ -221,6 +243,7 @@ class InsightRepository:
                     self.files.parsed.pop((meta_path, 'json'), None)
                     raise DataError('Metadata changed during capture; retry')
                 raw = {key: value[1] for key, value in captured.items()}
+                raw.setdefault('report', None)
                 recording_prefix, recording_pending = prefix(raw['recording'], recording=True)
                 learning_prefix, learning_pending = prefix(raw['learning'])
                 sources = {key: describe(value) for key, value in raw.items()}
@@ -290,7 +313,7 @@ class InsightRepository:
                 'quality': {'state': 'invalid' if invalid else 'pending' if waiting or ahead or any(s['pending_tail'] for s in sources.values()) else 'observed',
                             'skipped_recording_lines': len(invalid), 'invalid_line_positions': invalid[:50],
                             'unsupported_records': unsupported, 'deliberate_retests': 'unavailable'},
-                'metrics': bounded_metrics(metrics, limit),
+                'metrics': with_events(bounded_metrics(metrics, limit), completed_entries),
                 'rounds': [{'round': number, 'metrics': bounded_metrics(analyze([(line, r) for line, r in completed_entries if r['round'] == number], meta['human_slot'], sid, sources['recording']['sha256'], bool(invalid)), limit)} for number in completed[-HISTORY_LIMIT:]],
                 'rounds_total': len(completed), 'focus': select(metrics, focus),
                 'learning': {'habits': habit_history(completed_learning, summaries),
@@ -331,6 +354,65 @@ class InsightRepository:
                     'record': copy.deepcopy(found), 'context': {'line': context[0], 'record': copy.deepcopy(context[1])} if context else None}
 
 
+def location(ref):
+    return None if ref is None else {'line': ref['line'], 'round': ref['round'], 'frame': ref['frame']}
+
+
+def public(snapshot):
+    completed = snapshot['freshness']['completed_rounds']
+    focus = snapshot['focus']
+    result = {
+        'format_version': PUBLIC_FORMAT_VERSION, 'snapshot_id': snapshot['snapshot_id'],
+        'session_id': snapshot['session_id'], 'synthetic': snapshot['synthetic'],
+        'recording_sha256': snapshot['sources']['recording']['sha256'],
+        'freshness': {'latest_completed_round': completed[-1] if completed else None,
+                      'latest_recording_round': snapshot['freshness']['latest_recording_round'],
+                      'latest_learning_round': snapshot['freshness']['latest_learning_round'],
+                      'pending_learning_rounds': list(snapshot['freshness']['pending_learning_rounds']),
+                      'learning_ahead_rounds': list(snapshot['freshness']['learning_ahead_rounds'])},
+        'quality': snapshot['quality']['state'],
+        'metrics': {key: {**{name: metric[name] for name in ('label', 'successes', 'opportunities', 'failures', 'value', 'state', 'estimated', 'evidence_total')},
+                          'evidence': [{'opportunity': location(item['opportunity']), 'response': location(item['response']), 'outcome': item['outcome'],
+                                        'event': copy.deepcopy(item['event'])} for item in metric['evidence']]}
+                    for key, metric in snapshot['metrics'].items()},
+        'focus': {'mode': focus['mode'], 'metric': focus['metric'], 'state': focus.get('state'), 'reason': focus['reason'],
+                  'action': focus['action'], 'action_reviewed': focus['action'] is not None and focus.get('action_status') == 'reviewed'},
+        'habits': {name: {'first_detected_round': row['first_detected_round'], 'first_fixed_round': row['first_fixed_round'],
+                          'current_round': row['current']['round'], 'fixed': row['current'].get('fixed'), 'regressed': row['current']['regressed'],
+                          'last_regressed_round': max((item['round'] for item in row['history'] if item['regressed']), default=None)}
+                   for name, row in sorted(snapshot['learning']['habits'].items())},
+        'moments': [{'reference': location(moment['reference']), 'metrics': list(moment['metrics']), 'outcome': moment['outcome'],
+                     'response': location(moment['response']), 'event': copy.deepcopy(moment['event']),
+                     'metric_outcomes': {key: {'outcome': value['outcome'], 'response': location(value['response'])}
+                                         for key, value in moment['metric_outcomes'].items()}} for moment in snapshot['moments']],
+        'moments_total': snapshot['moments_total'],
+    }
+    validate(result, PUBLIC_VALIDATOR, 'public insight snapshot')
+    return result
+
+
+def register(app, data_dir):
+    from fastapi import HTTPException
+
+    repository = InsightRepository(data_dir, brain_files_only=True)
+
+    @app.get('/insights/{session_id}')
+    def insights(session_id: str, limit: int = PUBLIC_LIMIT):
+        if not 1 <= limit <= 50:
+            raise HTTPException(422, 'limit must be between 1 and 50')
+        try:
+            snapshot = repository.snapshot(session_id, limit)
+        except ValueError:
+            raise HTTPException(422, 'Invalid session id')
+        except DataError:
+            raise HTTPException(503, 'Insight sources are unavailable, invalid or still changing; retry')
+        if snapshot is None:
+            raise HTTPException(404, 'Unknown session')
+        return public(snapshot)
+
+    return repository
+
+
 def markdown(snapshot):
     source_kind = 'unknown mode' if snapshot['synthetic'] is None else 'synthetic' if snapshot['synthetic'] else 'recorded'
     lines = [f"# Session insights: {snapshot['session_id']}", '',
@@ -341,7 +423,7 @@ def markdown(snapshot):
         lines.append(f"| {metric['label']} | {metric['successes']}/{metric['opportunities']} | {metric['state']} |")
     lines += ['', f"Focus: {snapshot['focus']['metric'] or snapshot['focus']['reason']}"]
     if snapshot['focus']['action']:
-        lines += ['', snapshot['focus']['action'], '', 'Action wording awaits Garrett review.']
+        lines += ['', snapshot['focus']['action']]
     lines += ['', '## Recorded learning', '', '| Habit | First fixed round | Latest fixed |', '| --- | --- | --- |']
     for name, row in sorted(snapshot['learning']['habits'].items()):
         current_fixed = row['current'].get('fixed')
@@ -397,11 +479,15 @@ def main(argv=None):
     parser.add_argument('--output-dir')
     parser.add_argument('--limit', type=int, default=10)
     parser.add_argument('--focus', choices=METRIC_ORDER)
+    parser.add_argument('--public', action='store_true', help='print the proposed public v1 JSON instead of writing exports')
     args = parser.parse_args(argv)
     try:
         snapshot = InsightRepository(args.data_dir).snapshot(args.session_id, args.limit, args.focus)
         if snapshot is None:
             parser.exit(1, 'Unknown session\n')
+        if args.public:
+            print(json.dumps(public(snapshot), indent=2, sort_keys=True, ensure_ascii=False))
+            return
         paths = write_export(snapshot, args.output_dir or Path(args.data_dir) / 'analytics')
     except (DataError, ValueError, OSError):
         parser.exit(1, 'Cannot export insights: invalid/unavailable input or output; check the session, source files and output directory\n')

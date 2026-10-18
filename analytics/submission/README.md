@@ -23,8 +23,9 @@ Keep generated JSON/Markdown local. Each contains the snapshot ID, source-prefix
 | Local fallback preserves a coaching path | Owner replay evidence plus Eric/Chloe decision | Does not establish native spoken timing; Chloe's rehearsal pending |
 | Internal insights work without model/database | Export tests with invalid DSN/DB values and no SDK initialization | New shared route and app consumer are not approved/delivered |
 | Cached internal snapshots are fast locally | Twenty final local Mac captures: p50 14.925 ms, p95 15.502 ms, max 17.335 ms; ignored benchmark receipt retains code/source hashes | Not HTTP, Windows or full gameplay performance |
-| Full brain decision monitoring | Pending owner trace/waterfall/on-off measurements | Do not claim B5 complete yet |
-| Human learning, retention or fine-tune benefit | Unavailable | Do not claim from current recording |
+| Full brain decision monitoring | Trace `c5e0b584` verified, waterfall retained, owner on/off timings and acceptance in `evidence/brain-decision-2026-10-18.md` | Per-service traces only; no cross-service propagation claim; transport-unavailable behavior unreported |
+| Held-out Laya fine-tune improvement | Owner-reported (Oct 18, code `561bcb0`): held-out session `2026-10-18T07-30-06_sahil_djin_vs_kaz`, balanced accuracy 45.0% base → 50.0% fine-tuned vs 40.0% majority baseline; plain accuracy 83.9% → 87.5% vs 80.4%. Eval file format verified compatible with `/learning` | Track D has not seen the file itself (it is on the demo laptop); one held-out session, model prediction accuracy, not human improvement |
+| Human learning or retention | Unavailable | Do not claim from current recording |
 
 Before publication, retain the exact export snapshot/command, current implementation commit and actual verification results. Check all numerical text against the generated artifact; screenshots must refer to the same session/source. Do not include secrets, raw environment dumps or a screenshot of another service as brain evidence.
 

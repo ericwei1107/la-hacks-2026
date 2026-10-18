@@ -2,7 +2,7 @@
 
 ## Status and ownership
 
-Track D can verify local files, exports, mock streams and the published report API. Native Windows/game writes, brain Sentry evidence, actual spoken timing and Chloe's UI review require their owners on the demo host. Record those as pending until the run actually happens. The proposed insights route is not available; current app/checker integrations use frozen APIs.
+Track D can verify local files, exports, mock streams and the published report API. Native Windows/game writes, brain Sentry evidence, actual spoken timing and Chloe's UI review require their owners on the demo host. Record those as pending until the run actually happens. The proposed insights route exists only behind `KUMITE_EXPERIMENTAL_INSIGHTS=1` (real) or `--experimental-insights` (mock) and is not agreed; current app/checker integrations use frozen APIs.
 
 Use one authoritative `DATA_DIR` on Sahil's host for real recording, metadata and learning files. Tailscale access to the brain does not provide analytics access to those files. Share a working copy explicitly if services are split across hosts; verify source/session identity before interpreting freshness.
 
@@ -21,6 +21,15 @@ SENTRY_DSN= DATABASE_URL= .venv/bin/python -m unittest discover -s tools/mock/te
 ```
 
 Expect passing offline suites, a separately identified opt-in cloud skip, valid frozen examples, and two smoke PASS lines with clean shutdown. A static mock loop is playback, not proof of new completed-round writes.
+
+Rehearse a growing session and the opt-in insights route without the game, in two terminals:
+
+```sh
+DATA_DIR=./data/samples/live_learning SENTRY_DSN= .venv/bin/python tools/mock/serve.py --services brain,replay --live-dir /tmp/kumite-live --learning-delay 3
+DATA_DIR=/tmp/kumite-live KUMITE_EXPERIMENTAL_INSIGHTS=1 DATABASE_URL= SENTRY_DSN= .venv/bin/python -m uvicorn analytics.main:app --port 8767
+```
+
+Expect each round to show pending learning for about three seconds after its summary, then current, ending at 0/16 lows. This is scripted playback of a recorded set, not a native observation; see the [mock README](../tools/mock/README.md#live-refresh-scenario) for reconnect and duplicate-summary options.
 
 Export the real evidence without cloud/model calls:
 
@@ -42,7 +51,7 @@ $env:SENTRY_ENVIRONMENT = 'demo'
 
 Expect `Analytics DATA_DIR=C:\Users\sahil\la-hacks-2026\data`, followed by Uvicorn on port 8767. `demo_host` exists only on the PR #22 branch until it merges; until then, keep the existing analytics launch command with `DATA_DIR` set to the same folder. `--file-only` disables database access; cloud-backed trends remain a separate configured check. The brain entry point does not itself guarantee `.env` loading, so set Sentry variables in the launch terminal.
 
-Chloe's app reaches the services at `127.0.0.1` when it runs on the laptop. If it runs on another computer, it needs the laptop's reachable address for all three services, and the services must be bound to that interface by their owners; this has not been confirmed.
+Chloe's app runs on the laptop too (confirmed by Sahil), so every service address stays `127.0.0.1`.
 
 ```powershell
 $demoHost = '127.0.0.1'
