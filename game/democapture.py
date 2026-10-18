@@ -1,5 +1,6 @@
 import argparse
 import math
+import random
 import sys
 import time
 from collections import Counter
@@ -12,13 +13,17 @@ from game.combos import CAPTURED_DIR, COUNTER_HIT_REACTIONS, load_captured
 from game.difficulty import Difficulty
 from game.hotloop import frames
 from game.pacer import Pacer
-from game.pad import KillSwitch, connect_pad
+from game.notation import Timing
+from game.pad import KillSwitch, connect_pad, load_config
+from game.sequencer import Sequencer
 from game.reader import DEFAULT_OFFSETS, Reader
 from game.readout import run_gate
 
 MAX_LOOP_FRAMES = 1800
 START_SLACK = 5
 MIN_PRESS = 2
+TRACE_BEFORE = 3
+TRACE_AFTER = 70
 VOTED = ("move_id", "frame_in_move", "dir", "hit_level", "free", "side", "target_move", "target_basic_state",
          "target_status", "target_health", "target_reaction", "distance")
 
@@ -221,10 +226,59 @@ def replay_demo(reader, args):
         print("the opener waits for the same round frame as the demo", flush=True)
     pad = connect_pad()
     try:
+        if args.trace:
+            return traced_run(reader, pad, route, args)
         return combotest.run(reader, pad, route, args.name, args.attempts, Difficulty.preset(args.difficulty),
                              args.wait_reset)
     finally:
         pad.release_all()
+
+
+def fmt_pad(mask):
+    if mask is None:
+        return "-"
+    return mask[0] + ("+" + "+".join(mask[1]) if mask[1] else "")
+
+
+def compare(runner, route, after=TRACE_AFTER, log=print):
+    connect = runner.connect_frame
+    if connect is None:
+        log("  trace: the opener never connected", flush=True)
+        return
+    demo = {r["offset"]: r for r in route["frames"]}
+    log("  offset | replay: pad bot_move free target_move distance reaction | demo: input bot_move free target_move "
+        "distance reaction", flush=True)
+    for r in runner.trace or []:
+        off = r["frame"] - connect
+        if not -TRACE_BEFORE <= off <= after:
+            continue
+        d = demo.get(off)
+        demo_text = "-" if d is None else (
+            f"{d['dir']}{'+' + '+'.join(d['pressed']) if d['pressed'] else ''} 0x{d['move_id']:04X} {int(d['free'])} "
+            f"0x{d['target_move']:04X} {d['distance']:>5} {d['target_reaction']}")
+        log(f"  {off:+4d} | {fmt_pad(r.get('pad')):>6} 0x{r['bot_move']:04X} {int(r['bot_free'])} 0x{r['target_move']:04X} "
+            f"{r['distance']:>5} {r['reaction']:>2} | {demo_text}", flush=True)
+
+
+def traced_run(reader, pad, route, args):
+    config = load_config()
+    difficulty = Difficulty.preset(args.difficulty)
+    seq = Sequencer(pad, config["input_latency_frames"], difficulty, random.Random(),
+                    Timing.from_config(config.get("timing")))
+    gs_iter = combotest.states(frames(reader, Pacer(), pad.check_kill))
+    bot = 1 - next(gs_iter)["human_slot"]
+    traced = 0
+    done = 0
+    for i in range(1, args.attempts + 1):
+        gs = combotest.wait_settled(gs_iter, bot, args.wait_reset)
+        runner = combotest.attempt(gs_iter, seq, route, args.name, bot, difficulty, gs, trace=True)
+        combotest.report(i, args.attempts, runner)
+        done += runner.status == "done"
+        if runner.status != "done" and traced < args.trace:
+            traced += 1
+            compare(runner, route)
+    print(f"\n{args.name}: completed {done}/{args.attempts}", flush=True)
+    return 0
 
 
 def main(argv=None):
@@ -242,9 +296,14 @@ def main(argv=None):
     parser.add_argument("--counter-hit", action="store_true",
                         help="fire the opener when you Ki charge (1+2+3+4) so it counter hits; on by default for routes "
                              "whose demo opener counter hit")
+    parser.add_argument("--trace", type=int, default=0, metavar="N",
+                        help="print the first N failed attempts frame by frame next to the demo")
     parser.add_argument("--dir", default=str(CAPTURED_DIR))
     parser.add_argument("--offsets", default=str(DEFAULT_OFFSETS))
+    parser.add_argument("--out", help="also write everything printed to this file")
     args = parser.parse_args(argv)
+    if args.out:
+        sys.stdout = combotest.Tee(sys.stdout, args.out)
     reader = Reader(args.offsets)
     try:
         if not run_gate(reader, args.offsets):

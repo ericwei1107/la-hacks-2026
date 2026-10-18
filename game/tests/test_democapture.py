@@ -2,7 +2,7 @@ import random
 import unittest
 
 from game.combos import ComboRunner, captured_frames
-from game.democapture import build_demo_route, consensus, loops, replay_route, signature, widen
+from game.democapture import build_demo_route, compare, consensus, loops, replay_route, signature, widen
 from game.sequencer import Sequencer
 from game.tests.test_combocapture import player
 from game.tests.test_pad import fake_pad
@@ -132,6 +132,25 @@ class DemoReplayTest(unittest.TestCase):
             self.assertIsNone(runner.on_state({"frame": f, "players": [target, bot]}))
         charging = player(buttons_pressed=["1", "2", "3", "4"], buttons_held=["1", "2", "3", "4"])
         self.assertEqual(runner.on_state({"frame": 200, "players": [charging, bot]}), "ws1,2")
+
+    def test_trace_lines_up_replay_and_demo_by_offset(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = build_demo_route("ws12", rows, SUBJECT)
+
+        class Run:
+            connect_frame = 500
+            trace = [{"frame": 500 + k, "pad": ("n", ("1",)) if k == 0 else None, "bot_move": 0x696, "bot_free": False,
+                      "target_move": 0x773, "distance": 900, "reaction": 12} for k in range(-5, 3)]
+
+        lines = []
+        compare(Run(), route, after=2, log=lambda m, **_: lines.append(m))
+        self.assertEqual(len(lines), 7)
+        self.assertIn("+0 |    n+1 0x0696", lines[4])
+        self.assertTrue(lines[4].endswith("| n 0x0696 0 0x0773  1000 12"), lines[4])
+        lines.clear()
+        Run.connect_frame = None
+        compare(Run(), route, log=lambda m, **_: lines.append(m))
+        self.assertEqual(lines, ["  trace: the opener never connected"])
 
     def test_counter_hit_opener_marks_route(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
