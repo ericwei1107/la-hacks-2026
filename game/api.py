@@ -159,6 +159,15 @@ def load_config(root=None):
     return copy.deepcopy(DEFAULT_CONFIG)
 
 
+def update_config(patch, root=None):
+    base = Path(root) if root else data_dir()
+    merged = merge(load_config(base), patch)
+    errors = config_errors(merged)
+    if not errors:
+        write_json(base / "config.json", merged)
+    return merged, errors
+
+
 def create_app(root=None, hub=None):
     hub = hub or HUB
     version = git_sha()
@@ -238,11 +247,9 @@ def create_app(root=None, hub=None):
         if not isinstance(patch, dict):
             return JSONResponse({"errors": ["body must be a JSON object"]}, status_code=422)
         with config_lock:
-            merged = merge(load_config(base()), patch)
-            errors = config_errors(merged)
-            if errors:
-                return JSONResponse({"errors": errors}, status_code=422)
-            write_json(base() / "config.json", merged)
+            merged, errors = update_config(patch, base())
+        if errors:
+            return JSONResponse({"errors": errors}, status_code=422)
         return merged
 
     async def stream(ws, channel):

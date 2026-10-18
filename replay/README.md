@@ -441,3 +441,18 @@ against the real live-learning sample: recorded low-defense decisions cite
 round 2/frame 462 and round 2/frame 1225, and low-blocking/throw-breaking questions
 return the appropriate latest estimates with no invented frame citations or
 claims of improvement.
+
+Questions such as `What should I do to improve?` or `What should I practice?`
+now lead with up to two practice priorities, the recorded reason and a concrete
+drill, with citations to actual decisions. Repeated low hits can support a
+low-blocking drill; repeated recorded non-breaks can support throw-break
+practice. Each requires at least four matching actions and a frequency of at
+least 60% among the relevant labeled decisions with unambiguous exact state
+context. This is a practice suggestion, not proof of avoidable damage or a
+guaranteed different outcome. Sparse or uncertain evidence stays explicit.
+
+`Have I improved?` remains a learning-data question. Explicit move/frame
+questions retain their verified lookups. The optional model cannot replace an
+advice request with unrelated mastery facts; provider failures use the same
+grounded local advice. Shared identical learning caveats appear once per reply.
+The API still returns only `{text, citations}`, and the app requires no changes.

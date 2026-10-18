@@ -30,6 +30,7 @@ TEXT = {"type": "string", "maxLength": 120}
 ROUND = {"type": "integer", "minimum": 1}
 FRAME = {"type": "integer", "minimum": 0}
 TOOL_DEFS = [
+    tool("get_practice", "Evidence-backed practice priorities and drills, not learner scores.", {"situation": TEXT}),
     tool("get_habits", "Observed human action frequencies; not automatically weaknesses.", {"situation": TEXT}),
     tool("get_mastery", "Latest recorded local learner estimates, with missing-data limitations.", {"situation": TEXT}),
     tool("find_moments", "Find original recording events and any validated saved Jev preference.",
@@ -63,6 +64,17 @@ def question_situation(question):
     return ""
 
 
+def asks_for_practice(question):
+    question = question.lower()
+    if re.search(r"^\s*(?:have i|am i|did i|has my|is my|show (?:my )?(?:mastery|learning|progress))\b", question):
+        return False
+    return bool(re.search(r"\b(?:advice|drills?|tips|practi[cs]e)\b", question)
+                or re.search(r"\b(?:how|what)\b.*\b(?:can|could|should|do)\s+i\b.*\b(?:improve|work on|get better|do better)\b", question)
+                or re.search(r"\bhow to (?:improve|get better)\b", question)
+                or re.search(r"\bi (?:want|need|would like) to (?:improve|get better)\b", question)
+                or re.search(r"\bhelp me (?:improve|get better)\b", question))
+
+
 class ChatTools:
     def __init__(self, reports, session, analytics_url, analytics_transport=None):
         self.reports = reports
@@ -71,6 +83,7 @@ class ChatTools:
         self.analytics_transport = analytics_transport
         self.facts = {}
         self.calls = 0
+        self.practice_ids = set()
 
     def load(self):
         path = self.reports.locate(self.session)
@@ -158,6 +171,36 @@ class ChatTools:
                 facts.append(self.fact("Practice crouch-blocking predictable lows, then returning to standing guard. "
                                        "Whether that would change a particular recorded exchange is not established.", cites[:1]))
         return facts or [self.fact("No attributable labeled human decisions are available for that situation; bot choices do not identify human actions.")]
+
+    def get_practice(self, situation=""):
+        points = [point for point in self.decisions if not situation or situation in (point["situation"] or "")]
+        candidates = []
+        for label, action, priority, drill in [
+            ("low_defense", "hit", "low blocking",
+             "In Practice, work on crouch-blocking predictable lows, then returning to standing guard."),
+            ("throw_break", "none", "throw breaks",
+             "In Practice, rehearse recognizing throws and using the matching break input."),
+        ]:
+            related = [point for point in points if point["situation"] == label]
+            matching = [point for point in related if point["human_action"] == action]
+            if len(matching) < 4 or len(matching) / len(related) < 0.6:
+                continue
+            observation = (f"You were hit in {len(matching)} of {len(related)} labeled low-defense decisions."
+                           if label == "low_defense" else
+                           f"No break was recorded in {len(matching)} of {len(related)} labeled throw-break decisions.")
+            citations = [{"round": point["round"], "frame": point["frame"]} for point in matching[:2]]
+            candidates.append((len(matching), priority, observation, drill, citations))
+        candidates.sort(key=lambda value: value[0], reverse=True)
+        facts = []
+        for index, (_, priority, observation, drill, citations) in enumerate(candidates[:2]):
+            lead = "Start with" if index == 0 else "Next, work on"
+            facts.append(self.fact(f"{lead} {priority}. {observation} {drill}", citations))
+        if facts:
+            return facts
+        citations = [{"round": point["round"], "frame": point["frame"]} for point in points[:2]]
+        review = ("Review the cited exchanges in Practice, or record another short set."
+                  if citations else "Record a short set with repeated blocking and throw situations, then ask again.")
+        return [self.fact("There are not enough repeated, attributable decisions to pick a specific drill yet. " + review, citations)]
 
     def get_mastery(self, situation=""):
         path = within(self.reports.data_dir, self.reports.data_dir / "learning" / f"{self.session}.jsonl")
@@ -307,21 +350,28 @@ class ChatTools:
             return [self.fact("The analytics learning curve is unavailable; I can only check local recorded estimates."), *self.get_mastery(situation)]
 
     async def initial(self, request):
+        practice = asks_for_practice(request.message)
+
+        def answer(facts):
+            if practice:
+                self.practice_ids = {fact["id"] for fact in facts}
+            return facts
+
         question = request.message
         if len(question.split()) < 6:
             previous = [entry.text for entry in request.history if entry.role == "user"]
             if previous:
                 question = previous[-1] + " " + question
         lowered = question.lower()
-        situation = question_situation(lowered)
-        if any(token in lowered for token in ("mastery", "improv", "learning", "progress", "better", "fixed")):
+        situation = question_situation(request.message.lower()) or question_situation(lowered)
+        if not practice and any(token in lowered for token in ("mastery", "improv", "learning", "progress", "better", "fixed")):
             return (await self.call("get_learning_curve", {"session": self.session, "situation": situation}))["facts"][:3]
         round_match = re.search(r"\bround\s+(\d+)\b", lowered)
         frame_match = re.search(r"\bframe\s+(\d+)\b", lowered)
         if frame_match:
             if not round_match:
-                return [self.fact("Frame counters reset each round. Please include the round as well as the frame.")]
-            return (await self.call("get_state_at", {"round": int(round_match[1]), "frame": int(frame_match[1])}))["facts"]
+                return answer([self.fact("Frame counters reset each round. Please include the round as well as the frame.")])
+            return answer((await self.call("get_state_at", {"round": int(round_match[1]), "frame": int(frame_match[1])}))["facts"])
         characters = (self.human,) if re.search(r"\bmy\b", lowered) else (self.bot, self.human)
         mentioned = [name for name in self.characters if name.replace("_", " ") in lowered or name in lowered]
         if len(mentioned) == 1:
@@ -329,7 +379,7 @@ class ChatTools:
         explicit_move = re.search(r"\b(my|his|their|opponent's)\s+move\s+(.+?)[?.!]*$", lowered)
         if explicit_move:
             character = self.human if explicit_move[1] == "my" else self.bot
-            return (await self.call("get_frame_data", {"character": character or "unknown", "move": explicit_move[2].strip()}))["facts"]
+            return answer((await self.call("get_frame_data", {"character": character or "unknown", "move": explicit_move[2].strip()}))["facts"])
         for character in characters:
             if not character or normalize_character(character) is None:
                 continue
@@ -344,7 +394,9 @@ class ChatTools:
                 compact_command = re.sub(r"[^a-z0-9]", "", query.lower())
                 compact_pattern = r"\b" + re.escape(compact_command) + r"\b"
                 if re.search(pattern, lowered) or (re.search(r"[a-z]", compact_command) and len(compact_command) > 1 and re.search(compact_pattern, lowered)):
-                    return (await self.call("get_frame_data", {"character": character, "move": query}))["facts"]
+                    return answer((await self.call("get_frame_data", {"character": character, "move": query}))["facts"])
+        if practice:
+            return answer((await self.call("get_practice", {"situation": situation}))["facts"])
         if any(token in lowered for token in ("moment", "decision", "happen", "why", "round", "score", "jev")):
             args = {"situation": situation, "limit": 2}
             if round_match:

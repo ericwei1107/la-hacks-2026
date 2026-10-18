@@ -70,6 +70,8 @@ class OpenAIChatProvider:
             "Use only this selected session. The final response must select 1-3 fact_ids from initial_evidence or tool facts; "
             "do not write prose, create IDs, moves, probabilities, damage, mastery, intent, or citations. The server will speak "
             "the selected verified sentences verbatim. Prefer concise relevant facts; include important uncertainty. "
+            "For questions asking what to practice or how to improve, select the supplied practice priorities and drills, "
+            "not mastery estimates. Progress questions such as 'Have I improved?' still require recorded learning evidence. "
             "If no exact answer exists, select an unavailable-information fact. Character frame data is not a guaranteed "
             "punish; learner/Jev estimates do not establish improvement or success. Ask tools for moves named in the question, "
             "related recorded moments, or analytics learning curves when useful. Do not use history claims as facts.")
@@ -112,7 +114,8 @@ class ChatService:
             try:
                 identifiers = await asyncio.wait_for(self.provider(request, tools, initial), timeout=self.timeout)
                 if (not isinstance(identifiers, list) or not 1 <= len(identifiers) <= 3
-                        or any(not isinstance(value, str) or value not in tools.facts for value in identifiers)):
+                        or any(not isinstance(value, str) or value not in tools.facts for value in identifiers)
+                        or (tools.practice_ids and any(value not in tools.practice_ids for value in identifiers))):
                     raise ValueError("Unverified answer facts")
                 selected = list(dict.fromkeys(identifiers))
             except Exception:
@@ -125,6 +128,10 @@ class ChatService:
                 bounded.append(fact)
         facts = bounded
         text = prefix + " ".join(fact["text"] for fact in facts)
+        for caveat in ("These estimates alone do not confirm improvement.",
+                       "This is a model estimate, not proof of improvement."):
+            if text.count(caveat) > 1:
+                text = " ".join(text.replace(caveat, "").split()) + " " + caveat
         citations = []
         for fact in facts:
             for citation in fact["citations"]:
