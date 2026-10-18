@@ -1,0 +1,22 @@
+{
+  "session_id": "2026-10-17T21-13-10_sahil_djin_vs_kaz",
+  "started_at": "2026-10-17T21:13:10Z",
+  "ended_at": "2026-10-17T21:13:24Z",
+  "game_version": "3.02.02",
+  "mode": "practice",
+  "player": "sahil",
+  "human_slot": 0,
+  "human_character": "devil_jin",
+  "bot_character": "kazuya",
+  "difficulty": 1,
+  "rounds": [
+    {
+      "round": 1,
+      "winner": null,
+      "start_frame": 4375,
+      "end_frame": 4960
+    }
+  ],
+  "result": "",
+  "recording": "data/samples/practice_djin_vs_kaz.jsonl"
+}

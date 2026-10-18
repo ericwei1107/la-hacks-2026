@@ -1,0 +1,275 @@
+import argparse
+import copy
+import json
+import sys
+import zipfile
+from collections import Counter
+from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker
+
+from game.detect import Detector
+from game.hotloop import fmt_event, fmt_record
+from game.options import load_options
+from game.recorder import data_dir
+from game.state import Tracker
+
+CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
+JABS = {"devil_jin": 0x643}
+CONNECT_KINDS = ("block", "hit", "counter_hit")
+OUTCOME_WINDOW = 60
+BREAK_WINDOW = 60
+
+
+def zip_members(path):
+    with zipfile.ZipFile(path) as z:
+        return {name: z.read(name).decode("utf-8") for name in z.namelist()}
+
+
+def recording_text(path):
+    if str(path).endswith(".zip"):
+        members = zip_members(path)
+        return next(text for name, text in members.items() if name.endswith(".jsonl") and not name.endswith(".learning.jsonl"))
+    return Path(path).read_text(encoding="utf-8")
+
+
+def load_jsonl(path):
+    records = []
+    lines = recording_text(path).splitlines()
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            if i != len(lines) - 1:
+                raise
+    return records
+
+
+def find_session(path, sid):
+    path = Path(path)
+    if path.suffix == ".zip":
+        for name, text in zip_members(path).items():
+            if name.endswith(".session.json"):
+                return f"{path.as_posix()}:{name}", text
+    for candidate in (path.with_name(f"{path.stem}.session.json"), data_dir() / "sessions" / f"{sid}.json"):
+        if candidate.exists():
+            return str(candidate), candidate.read_text(encoding="utf-8")
+    return None
+
+
+def check_session(text):
+    schema = json.loads((CONTRACTS / "session.schema.json").read_text())
+    meta = json.loads(text)
+    errors = list(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(meta))
+    return meta, errors
+
+
+def event_key(ev):
+    detail = ev.get("detail") or {}
+    keys = ("round", "frame", "kind", "actor", "target", "move_id", "hit_level", "frame_advantage", "damage", "situation", "action")
+    return tuple(ev.get(k) for k in keys) + (detail.get("reason"), detail.get("winner"))
+
+
+def replay(states, mode="practice", rounds_to_win=3, detect=True):
+    versus = mode == "versus"
+    tracker = Tracker(states[0]["session_id"] if states else "", timeouts=versus, rounds_to_win=rounds_to_win if versus else None)
+    detector = None
+    events = []
+    for s in states:
+        if tracker.match_over and tracker.prev is not None and s["frame"] < tracker.prev["frame"]:
+            break
+        state = copy.deepcopy(s)
+        evs = tracker.step(state)
+        if detect and detector is None:
+            human = state["human_slot"]
+            detector = Detector(human, load_options(state["players"][1 - human]["character"])[0])
+        events.extend(evs)
+        if detector is not None:
+            events.extend(detector.step(state, evs))
+    events.extend(tracker.finish())
+    return events
+
+
+def decision_section(events):
+    decisions = [e for e in events if e["kind"] == "decision_point"]
+    if not decisions:
+        print("decision points: none")
+        return
+    print(f"decision points: {len(decisions)} (human responses by situation)")
+    rows = {}
+    for ev in decisions:
+        row = rows.setdefault(ev.get("situation", "?"), {"n": 0, "correct": 0, "actions": Counter()})
+        row["n"] += 1
+        row["correct"] += bool((ev.get("detail") or {}).get("correct"))
+        row["actions"][ev.get("action")] += 1
+    for situation in sorted(rows):
+        row = rows[situation]
+        acts = ", ".join(f"{a} {n}" for a, n in row["actions"].most_common())
+        print(f"  {situation:<24} n={row['n']:<4} correct {row['correct'] / row['n']:.0%}  actions: {acts}")
+
+
+def first_event(events, frame, rnd, window, test):
+    for ev in events:
+        if ev["round"] == rnd and frame <= ev["frame"] <= frame + window and test(ev):
+            return ev
+    return None
+
+
+def outcome(rec, events, bot):
+    kind = rec["reflex"]["kind"]
+    rnd = rec["round"]
+    if kind == "block":
+        ev = first_event(events, rec["frame_asked"], rnd, OUTCOME_WINDOW,
+                         lambda e: e.get("target") == bot and e["kind"] in CONNECT_KINDS + ("throw",))
+        return ev["kind"] if ev else "no contact"
+    if kind == "punish":
+        if rec["chosen"] == "none":
+            return "not attempted"
+        ev = first_event(events, rec["frame"], rnd, OUTCOME_WINDOW,
+                         lambda e: e.get("actor") == bot and e["kind"] in CONNECT_KINDS + ("whiff",))
+        return f"{ev['kind']} mv 0x{ev['move_id']:04X}" if ev else "no result"
+    if kind == "wakeup":
+        ev = first_event(events, rec["frame"], rnd, OUTCOME_WINDOW,
+                         lambda e: e.get("target") == bot and e["kind"] in CONNECT_KINDS + ("throw",))
+        if ev is None:
+            return "clean getup"
+        return f"{ev['kind']} by mv 0x{ev['move_id']:04X} +{ev['frame'] - rec['frame']}"
+    if kind == "throw_break":
+        ev = first_event(events, rec["frame"], rnd, BREAK_WINDOW, lambda e: e["kind"] == "throw_break" and e.get("actor") == bot)
+        return "broke" if ev else "thrown"
+    return ""
+
+
+def tactical_outcome(rec, events, bot):
+    detail = rec.get("tactical") or {}
+    if rec["chosen"] not in ("mid", "low", "throw", "launcher"):
+        return "movement"
+    ev = first_event(events, rec["frame"], rec["round"], OUTCOME_WINDOW,
+                     lambda e: e.get("actor") == bot and e["kind"] in CONNECT_KINDS + ("whiff", "throw"))
+    if ev is None:
+        return "no result"
+    broke = ev["kind"] == "throw" and first_event(events, ev["frame"], rec["round"], BREAK_WINDOW,
+                                                  lambda e: e["kind"] == "throw_break" and e.get("target") == bot)
+    return "throw broken" if broke else ev["kind"]
+
+
+def tactical_section(records, events, human):
+    decisions = [r for r in records if r.get("t") == "tactical" and r.get("source") in ("default", "habit")]
+    plans = [r for r in records if r.get("t") == "plan"]
+    for plan in plans:
+        print("plan: " + fmt_record(plan))
+    if not decisions:
+        print("tactical decisions: none")
+        return
+    bot = 1 - human
+    sources = Counter(r["source"] for r in decisions)
+    print(f"tactical decisions: {len(decisions)} (" + ", ".join(f"{k} {n}" for k, n in sources.most_common()) + ")")
+    mix = Counter(r["chosen"] for r in decisions)
+    print("  option mix: " + ", ".join(f"{k} {n} ({n / len(decisions):.0%})" for k, n in mix.most_common()))
+    by_bucket = {}
+    for r in decisions:
+        by_bucket.setdefault((r.get("tactical") or {}).get("distance_bucket", "?"), Counter())[r["chosen"]] += 1
+    for bucket in ("point_blank", "close", "mid", "far", "very_far"):
+        if bucket in by_bucket:
+            print(f"  at {bucket}: " + ", ".join(f"{k} {n}" for k, n in by_bucket[bucket].most_common()))
+    rounds = {}
+    for r in decisions:
+        rounds.setdefault(r["round"], Counter())[r["chosen"]] += 1
+    for rnd in sorted(rounds):
+        print(f"  round {rnd}: " + ", ".join(f"{k} {n}" for k, n in rounds[rnd].most_common()))
+    moves = Counter((r.get("tactical") or {}).get("move") for r in decisions)
+    print("  moves: " + ", ".join(f"{k} {n}" for k, n in moves.most_common(12)))
+    outcomes = Counter(tactical_outcome(r, events, bot) for r in decisions)
+    print("  attack outcomes: " + ", ".join(f"{k} {n}" for k, n in outcomes.most_common() if k != "movement"))
+
+
+def reflex_section(records, events, human):
+    decisions = [r for r in records if r.get("t") == "tactical" and r.get("source") == "reflex"]
+    if not decisions:
+        print("reflex decisions: none")
+        return
+    bot = 1 - human
+    print("reflex decisions (=> what happened next):")
+    totals = {}
+    for rec in decisions:
+        result = outcome(rec, events, bot)
+        print(f"  {fmt_record(rec)}  => {result}")
+        kind = rec["reflex"]["kind"]
+        key = "rolled miss" if rec["reflex"].get("rolled_miss") else result.split(" ")[0]
+        totals.setdefault(kind, Counter())[key] += 1
+    for kind, counts in sorted(totals.items()):
+        print(f"  {kind}: {sum(counts.values())} decisions, " + ", ".join(f"{k} {n}" for k, n in counts.most_common()))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Summarize a Kumite recording: session check, events, frame advantage")
+    parser.add_argument("recording")
+    args = parser.parse_args(argv)
+
+    records = load_jsonl(args.recording)
+    states = [r for r in records if r.get("t") == "state"]
+    events = [r for r in records if r.get("t") == "event"]
+    sid = records[0]["session_id"] if records else ""
+    print(f"{args.recording}: {len(states)} states, {len(events)} events, rounds {sorted({r['round'] for r in records})}")
+
+    failures = 0
+    found = find_session(args.recording, sid)
+    if found is None:
+        print("session: FAIL no session JSON found")
+        failures += 1
+        meta = {}
+    else:
+        session_path, session_text = found
+        meta, errors = check_session(session_text)
+        for e in errors:
+            print(f"session: FAIL {'/'.join(map(str, e.absolute_path)) or '(root)'}: {e.message}")
+        failures += len(errors)
+        if not errors:
+            print(f"session: ok {session_path} human P{meta['human_slot'] + 1} {meta['human_character']} vs {meta['bot_character']}, rounds {meta['rounds']}")
+
+    replayed = replay(states, meta.get("mode", "practice"))
+    has_decisions = any(e["kind"] == "decision_point" for e in events)
+    recorded_keys = Counter(event_key(e) for e in events)
+    replayed_keys = Counter(event_key(e) for e in replayed if has_decisions or e["kind"] != "decision_point")
+    if recorded_keys == replayed_keys:
+        print(f"replay: ok, re-running the tracker on the states reproduces all {len(replayed)} events")
+    else:
+        print("replay: MISMATCH between recorded events and the current tracker")
+        for key in sorted((recorded_keys - replayed_keys).elements(), key=str):
+            print(f"  only recorded: {key}")
+        for key in sorted((replayed_keys - recorded_keys).elements(), key=str):
+            print(f"  only replayed: {key}")
+        failures += 1
+
+    print("events:")
+    for ev in events:
+        if ev["kind"] != "decision_point":
+            print("  " + fmt_event(ev))
+    decision_section(replayed)
+
+    human = meta.get("human_slot", states[0]["human_slot"] if states else 0)
+    human_char = meta.get("human_character")
+    jab = JABS.get(human_char)
+    print("frame advantage on connection (attacker's perspective):")
+    for ev in events:
+        if ev["kind"] in CONNECT_KINDS:
+            who = "human" if ev.get("actor") == human else "bot"
+            tag = "  <- jab (1)" if jab is not None and ev.get("actor") == human and ev.get("move_id") == jab else ""
+            print(f"  r{ev['round']} f{ev['frame']} {who} {ev['kind']} mv 0x{ev['move_id']:04X} {ev.get('hit_level')} adv {'string' if ev['frame_advantage'] is None else format(ev['frame_advantage'], '+d')} dmg {ev.get('damage', 0)}{tag}")
+    if jab is not None:
+        blocked = [ev for ev in events if ev["kind"] == "block" and ev.get("actor") == human and ev.get("move_id") == jab]
+        if blocked:
+            advs = ", ".join("string" if ev["frame_advantage"] is None else f"{ev['frame_advantage']:+d}" for ev in blocked)
+            print(f"blocked jab 0x{jab:X}: {advs} (tekkendocs: +1)")
+        else:
+            print(f"blocked jab 0x{jab:X}: none found in this recording")
+    reflex_section(records, replayed, human)
+    tactical_section(records, replayed, human)
+    print("PASS" if failures == 0 else f"{failures} failure(s)")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

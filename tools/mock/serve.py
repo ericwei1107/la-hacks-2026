@@ -1,0 +1,106 @@
+import argparse
+from contextlib import contextmanager
+import asyncio
+import signal
+import socket
+import sys
+
+import uvicorn
+
+import analytics
+import brain
+import replay
+from store import Store
+
+PORTS = {"brain": 8765, "replay": 8766, "analytics": 8767}
+
+
+class Server(uvicorn.Server):
+    @contextmanager
+    def capture_signals(self):
+        yield
+
+
+def parse(argv):
+    ap = argparse.ArgumentParser(description="Kumite recording-backed mock APIs")
+    ap.add_argument("--recording", action="append", help="select a recording (repeatable; first is streamed)")
+    ap.add_argument("--rate", type=int, default=60)
+    ap.add_argument("--no-loop", action="store_true")
+    ap.add_argument("--services", default="brain,replay,analytics")
+    ap.add_argument("--skip", action="append", default=[], choices=sorted(PORTS))
+    ap.add_argument("--host", default="127.0.0.1")
+    args = ap.parse_args(argv)
+    args.services = args.services.split(",")
+    if args.rate <= 0 or not args.services or any(s not in PORTS for s in args.services):
+        ap.error("use a positive --rate and comma-separated --services brain,replay,analytics")
+    args.services = list(dict.fromkeys(s for s in args.services if s not in args.skip))
+    if not args.services:
+        ap.error("select at least one service")
+    return args
+
+
+async def main(argv=None):
+    a = parse(argv)
+    store = Store(a.recording)
+    if not store.sessions:
+        raise ValueError("No recordings loaded; pass --recording PATH with companion session metadata")
+    apps = {
+        "brain": lambda: brain.create(store, rate=a.rate, loop=not a.no_loop),
+        "replay": lambda: replay.create(store),
+        "analytics": lambda: analytics.create(store),
+    }
+    sockets, servers, tasks = [], [], []
+    loop = asyncio.get_running_loop()
+    stop = asyncio.Event()
+    try:
+        for name in a.services:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sockets.append(sock)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                sock.bind((a.host, PORTS[name]))
+                sock.listen(128)
+                sock.setblocking(False)
+            except OSError as exc:
+                raise OSError(f"Cannot start {name} on {a.host}:{PORTS[name]}: {exc}") from exc
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, stop.set)
+        print(f"{len(store.sessions)} session(s) loaded; default stream: {store.default().id}", flush=True)
+        for name, sock in zip(a.services, sockets):
+            server = Server(uvicorn.Config(apps[name](), host=a.host, port=PORTS[name], log_level="warning"))
+            server.install_signal_handlers = lambda: None
+            servers.append(server)
+            tasks.append(asyncio.create_task(server.serve(sockets=[sock])))
+            print(f"{name:<9} http://{a.host}:{PORTS[name]}", flush=True)
+        stopped = asyncio.create_task(stop.wait())
+        done, _ = await asyncio.wait([*tasks, stopped], return_when=asyncio.FIRST_COMPLETED)
+        stopped.cancel()
+        await asyncio.gather(stopped, return_exceptions=True)
+        for task in done:
+            if task is not stopped:
+                task.result()
+        return 0 if stop.is_set() else 1
+    finally:
+        for server in servers:
+            server.should_exit = True
+        if tasks:
+            try:
+                await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=5)
+            except asyncio.TimeoutError:
+                for task in tasks:
+                    task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+        for sock in sockets:
+            sock.close()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.remove_signal_handler(sig)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(asyncio.run(main()))
+    except (OSError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        pass
