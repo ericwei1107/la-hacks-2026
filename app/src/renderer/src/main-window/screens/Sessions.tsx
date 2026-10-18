@@ -140,7 +140,7 @@ function Totals({ session, recording }: { session: SessionMeta; recording: Recor
     [String(dealt), 'Damage dealt'],
     [String(taken), 'Damage taken'],
     [score(yours, theirs), 'Knockdowns'],
-    [`${throws.broken} of ${throws.total}`, 'Throws broken']
+    [throws.total > 0 ? `${throws.broken} of ${throws.total}` : '—', 'Throws broken']
   ]
   return (
     <div className="flex gap-6 border-t border-solid border-t-[#1D1B161F] pt-[20px]">

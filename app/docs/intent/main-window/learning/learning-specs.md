@@ -5,6 +5,7 @@ Design: `learning-design.md`
 ## Hero and chart
 
 - [ ] **MAIN-LEARNING-001**: The Learning screen shall show, in the display face, the prediction accuracy of the last round of the selected set that has a non-null accuracy, followed by "of your next moves predicted in round <n>." and "Round 1: <first accuracy>."
+- [ ] **MAIN-LEARNING-006**: The hero accuracy shall fit within its 380 px column, at 140 px for one or two digits and 120 px for 100%.
 - [ ] **MAIN-LEARNING-002**: The Learning screen shall frame in `--color-primary` a line chart titled "Prediction accuracy by round" with one point per round that has an accuracy, rounds labelled R1 to Rn in mono, and gridlines every 10 percentage points spanning the data.
 - [ ] **MAIN-LEARNING-003**: The accuracy chart shall fill and label the last point with its value.
 - [ ] **MAIN-LEARNING-004**: The accuracy chart shall mark each round flagged `player_changed` with a dashed `--color-bot` line labelled "you adapted".
@@ -21,6 +22,8 @@ Design: `learning-design.md`
 - [ ] **MAIN-LEARNING-020**: The habits table shall show one row per habit of the last round, with its belt, its name, its rank name, a belt square per round for the last six rounds, its rounds to detect, and its rounds to master, writing an em dash where a value is missing.
 - [ ] **MAIN-LEARNING-021**: When a habit's situation appears in the `exploited` list of the selected set's last round summary, its row shall add ". The bot's target." to the rank name and draw that line in `--color-bot`.
 - [ ] **MAIN-LEARNING-022**: The habits table shall order rows with targeted habits first, then by mastery from lowest.
+- [ ] **MAIN-LEARNING-024**: Each habits table row shall be at least 56 px tall and grow to fit a rank line that wraps.
+- [ ] **MAIN-LEARNING-023**: When a habit has a `time_to_mastery` but is not `fixed` in the last round, its row shall add "Fixed in round <time to mastery>, slipped since." to the rank line and show its to-master value in `--color-text-muted`.
 
 ## States
 
@@ -28,6 +31,7 @@ Design: `learning-design.md`
 - [ ] **MAIN-LEARNING-031**: While the brain lists no sets, the Learning screen shall show the empty state "Nothing to learn from yet." with "Play a set against Kumite and the learning panel fills in round by round."
 - [ ] **MAIN-LEARNING-032**: When the learning metrics have no rounds, the Learning screen shall show the empty state "Round 1 is still going." with "Learning shows up when the round ends."
 - [ ] **MAIN-LEARNING-033**: While analytics is offline, the Learning screen shall show the offline banner for analytics above any metrics it already holds.
+- [ ] **MAIN-LEARNING-035**: While the frame is waiting for round <n> of the selected set and the learning metrics do not yet include round <n>, the Learning screen shall show "Round <n> is still being saved." in muted text under the page header, in place of the "Round 1 is still going." empty state when the metrics have no rounds.
 - [ ] **MAIN-LEARNING-034**: While the brain is offline and analytics is not, the Learning screen shall show "Can't reach the brain." with "This is your last saved set. Live learning picks up when it reconnects." above the metrics.
 
 ## Implemented in

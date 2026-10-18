@@ -25,6 +25,15 @@ A select drawn as the bordered Paper picker. Its options are the brain's sets, n
 
 When the brain's set list cannot be loaded but a set is still selected from earlier, the picker reads "Last saved set" and offers no other options. When there are no sets, the picker is not shown.
 
+## Keeping sets fresh
+
+The frame refetches what the brain and analytics hold about a set when it changes during play, whichever set is selected:
+
+- A round summary for any set refetches the set list, and that set's session, recording, stats, learning metrics, report and the trends.
+- A new live set on the state stream (a match starting) refetches the set list, so the new set appears without waiting for its first round to end.
+- When the round stops being live (states stop for 2 seconds, as at the end of a set), the frame refetches the set list and the live set's session, recording, stats and learning, which picks up the end time and result the brain writes as the set closes.
+- After a round summary for round n, the brain and analytics may still be writing that round to disk. While that set's stats or learning lack round n, the frame refetches them every 2 seconds for up to 20 seconds, and screens can show that round as still being saved.
+
 ## Moving between screens
 
 - The Sessions screen's "Replay analysis" button selects that set and opens Replay analysis.

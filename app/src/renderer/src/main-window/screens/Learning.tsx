@@ -1,6 +1,6 @@
 import { Belt, BeltSquares, beltFor, beltName, EmptyState, habitName, habitShort, Meter, optionName, Skeleton } from '../../design'
 import { useLearning, useRecording, type LearningMetrics, type LearningRound } from '../../services'
-import { useFrame } from '../frame'
+import { SavingNote, useFrame, useSavingRound } from '../frame'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
 import { isExploited, lastSummary } from '../setData'
 
@@ -165,8 +165,9 @@ function HabitsTable({ metrics, rounds, exploited }: { metrics: LearningMetrics;
         const level = beltFor(habit.mastery, habit.fixed)
         const detect = metrics.time_to_detect?.[key]
         const master = metrics.time_to_mastery?.[key]
+        const slipped = master !== undefined && !habit.fixed
         return (
-          <div key={key} className="flex h-[56px] shrink-0 items-center gap-4 border-t border-solid border-t-[#1D1B161F]">
+          <div key={key} className="flex min-h-[56px] shrink-0 items-center gap-4 border-t border-solid border-t-[#1D1B161F] py-2">
             <span className="flex w-16 shrink-0">
               <Belt level={level} />
             </span>
@@ -175,7 +176,8 @@ function HabitsTable({ metrics, rounds, exploited }: { metrics: LearningMetrics;
               <span className={`text-sm/sm ${target ? 'font-bold text-bot' : 'text-text-muted'}`}>
                 {beltName(level)}
                 {level.rank === 'black' ? ', fixed' : ''}
-                {target ? ". The bot's target." : ''}
+                {slipped ? `. Fixed in round ${master}, slipped since` : ''}
+                {target ? ". The bot's target." : slipped ? '.' : ''}
               </span>
             </span>
             <span className="w-[118px] shrink-0">
@@ -184,7 +186,7 @@ function HabitsTable({ metrics, rounds, exploited }: { metrics: LearningMetrics;
             <span className={`w-[76px] shrink-0 text-right font-mono text-lg/base font-[600] ${detect === undefined ? 'text-text-muted' : 'text-text'}`}>
               {detect ?? '—'}
             </span>
-            <span className={`w-[76px] shrink-0 text-right font-mono text-lg/base font-[600] ${master === undefined ? 'text-text-muted' : 'text-text'}`}>
+            <span className={`w-[76px] shrink-0 text-right font-mono text-lg/base font-[600] ${master === undefined || slipped ? 'text-text-muted' : 'text-text'}`}>
               {master ?? '—'}
             </span>
           </div>
@@ -238,22 +240,26 @@ function LearningSkeleton() {
 function LearningBody({ sessionId }: { sessionId: string }) {
   const learning = useLearning(sessionId)
   const recording = useRecording(sessionId)
+  const saving = useSavingRound(sessionId, learning.data?.rounds)
   const exploited = lastSummary(recording.data)?.exploited
   if (learning.isPending) return <LearningSkeleton />
   if (!learning.data) return null
   const rounds = [...learning.data.rounds].sort((a, b) => a.round - b.round)
   const withAccuracy = rounds.filter((round) => round.prediction_accuracy !== null)
   if (rounds.length === 0 || withAccuracy.length === 0) {
+    if (saving !== null) return <SavingNote sessionId={sessionId} rounds={learning.data.rounds} />
     return <EmptyState headline="Round 1 is still going." line="Learning shows up when the round ends." />
   }
   const hero = withAccuracy[withAccuracy.length - 1]
+  const heroPercent = Math.round((hero.prediction_accuracy as number) * 100)
   const first = withAccuracy[0]
   return (
     <>
+      <SavingNote sessionId={sessionId} rounds={learning.data.rounds} />
       <div className="flex gap-12">
         <div className="flex w-[380px] shrink-0 flex-col justify-center gap-2">
-          <span className="w-max font-display text-[140px] leading-[136px] tracking-[-0.03em] text-text">
-            {Math.round((hero.prediction_accuracy as number) * 100)}%
+          <span className={`w-max font-display ${heroPercent >= 100 ? 'text-[120px]' : 'text-[140px]'} leading-[136px] tracking-[-0.03em] text-text`}>
+            {heroPercent}%
           </span>
           <span className="text-[22px] leading-[30px] font-bold text-text">
             of your next moves predicted
