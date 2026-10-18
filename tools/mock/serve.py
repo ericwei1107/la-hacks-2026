@@ -9,6 +9,7 @@ import uvicorn
 
 import analytics_mock
 import brain
+from live import LiveWriter
 import replay_mock
 from store import Store
 
@@ -49,6 +50,10 @@ def parse(argv):
     ap.add_argument("--skip", action="append", default=[], choices=sorted(PORTS))
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--experimental-insights", action="store_true", help="serve the unapproved GET /insights/{id} from DATA_DIR on mock analytics")
+    ap.add_argument("--live-dir", help="write the streamed session into this DATA_DIR as it plays, for the real analytics service")
+    ap.add_argument("--learning-delay", type=float, default=3.0, help="seconds between a round summary and its learning record in --live-dir")
+    ap.add_argument("--duplicate-summaries", action="store_true", help="send every round summary twice on /ws/coach")
+    ap.add_argument("--drop-after-summary", action="store_true", help="close brain sockets with 1013 after each round's coach line")
     args = ap.parse_args(argv)
     args.services = args.services.split(",")
     if args.rate <= 0 or not args.services or any(s not in PORTS for s in args.services):
@@ -56,6 +61,10 @@ def parse(argv):
     args.services = list(dict.fromkeys(s for s in args.services if s not in args.skip))
     if not args.services:
         ap.error("select at least one service")
+    if not 0 <= args.learning_delay <= 120:
+        ap.error("use a --learning-delay between 0 and 120 seconds")
+    if args.live_dir and ("analytics" in args.services or "brain" not in args.services):
+        ap.error("--live-dir needs the mock brain and the real analytics service: use --services brain,replay and run analytics with DATA_DIR set to the live directory")
     return args
 
 
@@ -64,8 +73,12 @@ async def main(argv=None):
     store = Store(a.recording)
     if not store.sessions:
         raise ValueError("No recordings loaded; pass --recording PATH with companion session metadata")
+    writer = LiveWriter(store.default(), a.live_dir, a.learning_delay) if a.live_dir else None
+    if writer:
+        print(f"live session {writer.session_id} -> {writer.root}; streams once", flush=True)
     apps = {
-        "brain": lambda: brain.create(store, rate=a.rate, loop=not a.no_loop),
+        "brain": lambda: brain.create(store, rate=a.rate, loop=not a.no_loop and writer is None, observer=writer,
+                                      duplicate_summaries=a.duplicate_summaries, drop_after_coach=a.drop_after_summary),
         "replay": lambda: replay_mock.create(store),
         "analytics": lambda: analytics_mock.create(store, insights=a.experimental_insights),
     }
