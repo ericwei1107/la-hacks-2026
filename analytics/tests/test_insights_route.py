@@ -1,7 +1,10 @@
 import io
 import json
 import os
+import shutil
+import tempfile
 import unittest
+from pathlib import Path
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
@@ -16,6 +19,8 @@ from analytics.main import create_app
 from analytics.repository import ROOT, DataError
 
 REAL = ROOT / 'data/samples/live_learning'
+SYNTHETIC = ROOT / 'data/samples/synthetic'
+SYNTHETIC_ID = '2026-10-17T13-05-00_synth_djin_vs_kaz'
 
 
 class InsightsRouteTest(unittest.TestCase):
@@ -70,6 +75,50 @@ class InsightsRouteTest(unittest.TestCase):
         for path in (f'/stats/{REAL_ID}', f'/learning/{REAL_ID}', '/trends/sahil/devil_jin', '/health'):
             with self.subTest(path=path):
                 self.assertEqual(self.on.get(path).json(), self.off.get(path).json())
+
+    def synthetic_copy(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / 'data'
+        shutil.copytree(SYNTHETIC, root)
+        meta = root / 'sessions' / f'{SYNTHETIC_ID}.json'
+        value = json.loads(meta.read_text())
+        value['recording'] = str(root / 'recordings' / f'{SYNTHETIC_ID}.jsonl')
+        meta.write_text(json.dumps(value))
+        return root, meta
+
+    def client(self, root):
+        with patch.dict(os.environ, {'DATABASE_URL': ''}):
+            return TestClient(create_app(root, experimental_insights=True))
+
+    def test_route_reads_only_brain_files_under_data_dir(self):
+        root, _ = self.synthetic_copy()
+        (root / 'reports').mkdir()
+        (root / 'reports' / f'{SYNTHETIC_ID}.json').write_text('{"not": "read"}')
+        opened = []
+        original = insights.read_bytes
+        def spy(path, optional=False):
+            opened.append(Path(path).resolve())
+            return original(path, optional)
+        with patch.object(insights, 'read_bytes', side_effect=spy):
+            response = self.client(root).get(f'/insights/{SYNTHETIC_ID}')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('report', response.json())
+        self.assertTrue(opened)
+        self.assertTrue(all(path.is_relative_to(root.resolve()) for path in opened), opened)
+        self.assertEqual({path.parent.name for path in opened} - {'sessions', 'recordings', 'learning', 'eval'}, set())
+        internal = InsightRepository(root).snapshot(SYNTHETIC_ID, 5)
+        self.assertEqual(internal['report']['status'], 'invalid')
+
+    def test_route_refuses_a_recording_outside_data_dir(self):
+        root, meta = self.synthetic_copy()
+        value = json.loads(meta.read_text())
+        value['recording'] = str(SYNTHETIC / 'recordings' / f'{SYNTHETIC_ID}.jsonl')
+        meta.write_text(json.dumps(value))
+        (root / 'recordings' / f'{SYNTHETIC_ID}.jsonl').unlink()
+        response = self.client(root).get(f'/insights/{SYNTHETIC_ID}')
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn(str(SYNTHETIC), response.text)
 
     def test_cli_public_output_matches_the_route(self):
         out = io.StringIO()

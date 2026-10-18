@@ -6,7 +6,7 @@
 
 | Owner | Status |
 | --- | --- |
-| Sahil | **Approved with conditions** (October 18): the route is additive on :8767; it reads only files the brain already writes under `DATA_DIR` (recordings, sessions, learning, profiles, eval); nothing under `contracts/` changes. Two points need his confirmation, below |
+| Sahil | **Approved with conditions** (October 18): the route is additive on :8767; it reads only files the brain already writes under `DATA_DIR` (recordings, sessions, learning, profiles, eval); nothing under `contracts/` changes. One point needs his confirmation, below |
 | Garrett | Pending |
 | Chloe | Pending (asleep; Eric collects later) |
 | Eric | Proposer |
@@ -14,7 +14,7 @@
 Against Sahil's conditions:
 
 - **Additive on :8767:** met. No existing route changes.
-- **Reads only brain-written files under `DATA_DIR`:** not fully met as built. The route also reads `DATA_DIR/reports/<session_id>.json`, which Garrett's replay service writes, to fill `report`. It also follows the metadata `recording` path; on the laptop that path is inside `DATA_DIR`, but the code does not enforce it. Fix options: stop reading reports in the route and drop `report` from v1, and refuse recordings outside `DATA_DIR`; or Sahil extends the condition to cover replay reports.
+- **Reads only brain-written files under `DATA_DIR`:** met. The route reads only `sessions/`, `recordings/`, `learning/` and `eval/` under `DATA_DIR`. `report` was removed from v1 and the route no longer opens replay reports; a session whose recording resolves outside `DATA_DIR` returns 503. Both are tested (`test_route_reads_only_brain_files_under_data_dir`, `test_route_refuses_a_recording_outside_data_dir`).
 - **Nothing under `contracts/` changes:** conflicts with registering the route after approval, which adds `contracts/insights.schema.json`, `contracts/examples/insights.json` and one row to `contracts/api.md`. Needs Sahil to say whether additions are acceptable, or whether the route stays documented only in `analytics/`.
 
 ## What the contracts PR would contain

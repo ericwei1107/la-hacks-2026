@@ -180,7 +180,6 @@
   "moments_total": 3,
   "quality": "observed",
   "recording_sha256": "de15a12e7adb24c435de7b31d3fef5e49da85d26935f4dd2504e3cadee5f8fcb",
-  "report": "unavailable",
   "session_id": "insight-example",
   "snapshot_id": "aa2558a4cd43c76ceb5724aa50fef42d1892342f0959568c191c1b5a169b49e7",
   "synthetic": true

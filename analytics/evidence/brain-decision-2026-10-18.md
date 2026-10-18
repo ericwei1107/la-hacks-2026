@@ -36,11 +36,14 @@ Same `--timing` measurement in both runs: `perf_counter` around every complete f
 
 Difference: p50 +0.18 ms, p95 +0.56 ms. Both percentiles stay far below the 16.7 ms frame budget, and frames over budget and missed frames are equal in both runs. This is one practice round each way, not a general timing benchmark.
 
+## Owner acceptance
+
+Sahil (October 18): the overhead is acceptable **as long as it does not impact timing**, because timing is sensitive in the app. On this measurement that condition holds: frames over 16.7 ms (1) and missed frames (2) are identical with tracing off and on. Keep sampling at 5% and the current five spans; repeat the same `--timing` off/on comparison before raising the sample rate or adding spans.
+
 ## Still open
 
-- Sahil's explicit overhead-acceptance statement; he reported the numbers but did not state a judgment.
-- Behavior when Sentry is unreachable (does transport ever block the hot loop?) was not reported.
+- Behavior when Sentry is unreachable (does transport ever block the hot loop?) was not reported. Not required for B5.
 
 ## Status
 
-Brain decision trace **verified**: structure, release, environment and configured sampling. Timing comparison **received** (owner-measured). Waterfall screenshot **retained**. B5 closes once Sahil confirms the overhead is acceptable. Independent per-service traces still do not establish cross-service propagation.
+Brain decision trace **verified**: structure, release, environment and configured sampling. Timing comparison **received** (owner-measured). Waterfall screenshot **retained**. Overhead **accepted by Sahil** on the condition that timing is unaffected, which the measurement shows. **Brain B5 evidence complete.** Independent per-service traces still do not establish cross-service propagation.

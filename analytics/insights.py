@@ -210,8 +210,9 @@ def moments(entries, metrics, human, sid, source_hash, completed, limit):
 
 
 class InsightRepository:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, brain_files_only=False):
         self.root = Path(data_dir).resolve()
+        self.brain_files_only = brain_files_only
         self.files = FileRepository(self.root)
         self.lock = threading.RLock()
         self.cache = {}
@@ -225,10 +226,13 @@ class InsightRepository:
                 if session is None:
                     return None
                 meta_path, _, expected_meta, recording = session
+                if self.brain_files_only and not (recording.is_relative_to(self.root) and meta_path.resolve().is_relative_to(self.root)):
+                    raise DataError('Insight source is outside DATA_DIR')
                 paths = {'metadata': meta_path, 'recording': recording,
                          'learning': self.root / 'learning' / f'{sid}.jsonl',
-                         'evaluation': self.root / 'eval' / f'{sid}.json',
-                         'report': self.root / 'reports' / f'{sid}.json'}
+                         'evaluation': self.root / 'eval' / f'{sid}.json'}
+                if not self.brain_files_only:
+                    paths['report'] = self.root / 'reports' / f'{sid}.json'
                 captured = {key: read_bytes(path, optional=key not in ('metadata', 'recording')) for key, path in paths.items()}
                 if any(stamp(path) != captured[key][0] for key, path in paths.items()):
                     raise DataError('Insight source changed during capture; retry')
@@ -239,6 +243,7 @@ class InsightRepository:
                     self.files.parsed.pop((meta_path, 'json'), None)
                     raise DataError('Metadata changed during capture; retry')
                 raw = {key: value[1] for key, value in captured.items()}
+                raw.setdefault('report', None)
                 recording_prefix, recording_pending = prefix(raw['recording'], recording=True)
                 learning_prefix, learning_pending = prefix(raw['learning'])
                 sources = {key: describe(value) for key, value in raw.items()}
@@ -380,7 +385,7 @@ def public(snapshot):
                      'response': location(moment['response']), 'event': copy.deepcopy(moment['event']),
                      'metric_outcomes': {key: {'outcome': value['outcome'], 'response': location(value['response'])}
                                          for key, value in moment['metric_outcomes'].items()}} for moment in snapshot['moments']],
-        'moments_total': snapshot['moments_total'], 'report': snapshot['report']['status'],
+        'moments_total': snapshot['moments_total'],
     }
     validate(result, PUBLIC_VALIDATOR, 'public insight snapshot')
     return result
@@ -389,7 +394,7 @@ def public(snapshot):
 def register(app, data_dir):
     from fastapi import HTTPException
 
-    repository = InsightRepository(data_dir)
+    repository = InsightRepository(data_dir, brain_files_only=True)
 
     @app.get('/insights/{session_id}')
     def insights(session_id: str, limit: int = PUBLIC_LIMIT):

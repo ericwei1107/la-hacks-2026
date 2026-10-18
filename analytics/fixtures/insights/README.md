@@ -16,7 +16,7 @@ These are full internal snapshots produced by `analytics/insight_examples.py` th
 | [current_learning.json](current_learning.json) | Same recording after learning catches up; source snapshot changes, counts remain unchanged |
 | [mixed_outcomes.json](mixed_outcomes.json) | One low was blocked but its punish opportunity was missed; use the separate per-metric outcomes |
 
-All action wording remains a draft awaiting Garrett. Chloe can review the card with neutral “Review these moments” text while mechanics are pending. Report unavailable is the normal event-only fallback; a report marked `available_unverified_revision` still does not prove it matches the current recording.
+All action wording remains a draft awaiting Garrett. Chloe can review the card with neutral “Review these moments” text while mechanics are pending. The public v1 view has no report field; moment detail is event-only. In the internal snapshots, report unavailable is the normal state; a report marked `available_unverified_revision` still does not prove it matches the current recording.
 
 ```sh
 .venv/bin/python -m analytics.insight_examples --check

@@ -23,8 +23,7 @@ Field names below are v1 names. Internal-only names appear in brackets where the
 | `learning_ahead_rounds` | Indicate recording/learning mismatch and await convergence | Mixing an ahead learning observation into completed-round focus |
 | `habits.*.first_fixed_round`, `fixed`, `last_regressed_round` [`learning.habits.*.current`] | “First fixed in round 2; slipped in round 3; currently not fixed” for the real after-block habit | Treating first-fixed history as current success; current-round `regressed=false` does not undo an earlier regression |
 | `synthetic=true` / null | Persistent “Synthetic example” / “Source type unknown” | Calling synthetic data recorded human improvement, or unknown mode real |
-| `report=unavailable` or `invalid` [`report.status`] | Event-only detail using the moment's or evidence row's embedded `event` and location | Requiring a report to view evidence |
-| `available_unverified_revision` | Explain that report revision is unverified | Using the report to change the recommendation or asserting source alignment |
+| Moment or evidence detail | Event-only detail from the embedded `event` and location; v1 carries no report field, so never wait for a report | Requiring a report to view evidence |
 | Mixed moment | Show each `metric_outcomes` entry: low block success and punish failure can coexist | One success badge that conceals the missed punish |
 
 The real fixture's 1/4 throw-break rate is an early signal under the five-observation focus policy. It is still the correct measured fraction. The synthetic fixture's automatic low-defense focus reflects all completed rounds, even though the final planted round shows improvement; first/current learning is a separate producer observation.
@@ -44,7 +43,7 @@ For Chloe's bounded first pass:
 1. Review the fixture/state table and return ambiguous fields before changing app code. C3 in the revised plan (estimated-effectiveness wording/accessibility) is independent of these examples.
 2. Following `app/AGENTS.md`, render the approved subset from fixtures with live insights disabled until the shared interface is agreed.
 3. At 1920×1080, capture real, early/no opportunities, invalid, manual, pending/current and synthetic states. Check that fractions and pending labels are readable, long reasons wrap, and selection works by keyboard with visible focus. Use text or icons alongside color for status.
-4. Select a mixed moment and verify its two outcomes. Select an event while report is unavailable. Change session/snapshot and verify selection is cleared appropriately.
+4. Select a mixed moment and verify its two outcomes. Select an event and confirm the event-only detail. Change session/snapshot and verify selection is cleared appropriately.
 5. Run app typecheck/build and record which states were actually observed. Growing-session/reconnect/voice acceptance requires the host run in [INTEGRATION.md](../INTEGRATION.md).
 
 ```sh

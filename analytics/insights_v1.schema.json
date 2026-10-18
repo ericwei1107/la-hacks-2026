@@ -16,8 +16,7 @@
     "focus",
     "habits",
     "moments",
-    "moments_total",
-    "report"
+    "moments_total"
   ],
   "properties": {
     "format_version": {
@@ -290,13 +289,6 @@
     "moments_total": {
       "type": "integer",
       "minimum": 0
-    },
-    "report": {
-      "enum": [
-        "unavailable",
-        "invalid",
-        "available_unverified_revision"
-      ]
     }
   },
   "$defs": {
