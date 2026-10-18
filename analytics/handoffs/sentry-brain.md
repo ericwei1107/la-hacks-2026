@@ -47,4 +47,6 @@ Source presence alone does not close this handoff. No fake read or input spans s
 
 Use the [brain evidence template](../evidence/brain-decision-template.md) for the return handoff. Sahil has committed to sending the 5% decision trace URL, waterfall screenshot and on/off timings after setting the corrected DSN; those artifacts have not yet been received or verified.
 
+**Evidence received and checked, October 18 (~05:30 PT):** see [the filled record](../evidence/brain-decision-2026-10-18.md). Trace `c5e0b584…` verified in Sentry (five-operation parentage, release `e8f134fb…` on main, `demo-laptop`, sample rate 0.05); off/on timings received. Remaining: save the screenshot under `analytics/evidence/` and Sahil's acceptance statement.
+
 **Sahil update, about 03:40 PT on October 18:** instrumentation is going in now. Within the hour he will send the trace URL, the waterfall screenshot, the full SHA used as release, environment `demo-laptop`, and tracing off/on p50/p95 with sample counts. Nothing has been received or verified yet; B5 stays open until those artifacts are checked against the template.

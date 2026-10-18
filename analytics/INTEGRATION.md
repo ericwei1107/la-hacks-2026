@@ -51,7 +51,7 @@ $env:SENTRY_ENVIRONMENT = 'demo'
 
 Expect `Analytics DATA_DIR=C:\Users\sahil\la-hacks-2026\data`, followed by Uvicorn on port 8767. `demo_host` exists only on the PR #22 branch until it merges; until then, keep the existing analytics launch command with `DATA_DIR` set to the same folder. `--file-only` disables database access; cloud-backed trends remain a separate configured check. The brain entry point does not itself guarantee `.env` loading, so set Sentry variables in the launch terminal.
 
-Chloe's app reaches the services at `127.0.0.1` when it runs on the laptop. If it runs on another computer, it needs the laptop's reachable address for all three services, and the services must be bound to that interface by their owners; this has not been confirmed.
+Chloe's app runs on the laptop too (confirmed by Sahil), so every service address stays `127.0.0.1`.
 
 ```powershell
 $demoHost = '127.0.0.1'

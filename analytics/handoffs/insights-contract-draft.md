@@ -2,6 +2,21 @@
 
 **Status: draft for four-owner review. Nothing here is in `contracts/`.** Eric sends the request below; the contracts PR is opened only after Sahil, Garrett, Chloe and Eric have each approved. Until then the route stays behind `KUMITE_EXPERIMENTAL_INSIGHTS=1` (real analytics) and `--experimental-insights` (mock), and the app keeps its insights source off.
 
+## Approvals
+
+| Owner | Status |
+| --- | --- |
+| Sahil | **Approved with conditions** (October 18): the route is additive on :8767; it reads only files the brain already writes under `DATA_DIR` (recordings, sessions, learning, profiles, eval); nothing under `contracts/` changes. Two points need his confirmation, below |
+| Garrett | Pending |
+| Chloe | Pending (asleep; Eric collects later) |
+| Eric | Proposer |
+
+Against Sahil's conditions:
+
+- **Additive on :8767:** met. No existing route changes.
+- **Reads only brain-written files under `DATA_DIR`:** not fully met as built. The route also reads `DATA_DIR/reports/<session_id>.json`, which Garrett's replay service writes, to fill `report`. It also follows the metadata `recording` path; on the laptop that path is inside `DATA_DIR`, but the code does not enforce it. Fix options: stop reading reports in the route and drop `report` from v1, and refuse recordings outside `DATA_DIR`; or Sahil extends the condition to cover replay reports.
+- **Nothing under `contracts/` changes:** conflicts with registering the route after approval, which adds `contracts/insights.schema.json`, `contracts/examples/insights.json` and one row to `contracts/api.md`. Needs Sahil to say whether additions are acceptable, or whether the route stays documented only in `analytics/`.
+
 ## What the contracts PR would contain
 
 1. `contracts/insights.schema.json`: a copy of [`analytics/insights_v1.schema.json`](../insights_v1.schema.json), with title `SessionInsights` and description `GET /insights/{session_id} response (analytics :8767).` No other change.
