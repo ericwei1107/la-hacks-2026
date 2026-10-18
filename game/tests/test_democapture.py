@@ -166,14 +166,18 @@ class DemoReplayTest(unittest.TestCase):
         self.assertEqual(device.pressed, {"DPAD_RIGHT"})
         self.assertIsNone(runner.on_state({"frame": 101, "players": [player(x=1600.0), bot]}))
         seq.on_frame(101, bot)
-        for f in (102, 103):
+        stepping = dict(bot, move_id=0x5C4)
+        for f in range(102, 106):
+            self.assertIsNone(runner.on_state({"frame": f, "players": [player(x=1550.0), stepping]}))
+            seq.on_frame(f, stepping)
+            self.assertEqual(device.pressed, set())
+        for f in range(106, 111):
             self.assertIsNone(runner.on_state({"frame": f, "players": [player(x=1550.0), bot]}))
             seq.on_frame(f, bot)
-            self.assertEqual(device.pressed, set())
-        self.assertEqual(runner.on_state({"frame": 104, "players": [player(x=1550.0), bot]}), "ws1,2")
+        self.assertEqual(runner.on_state({"frame": 111, "players": [player(x=1550.0), bot]}), "ws1,2")
         self.assertEqual(runner.opener_distance, 1550)
-        seq.on_frame(104, bot)
-        for f in range(105, 120):
+        seq.on_frame(111, bot)
+        for f in range(112, 120):
             runner.on_state({"frame": f, "players": [player(x=1000.0), dict(bot, free_movement=False)]})
             seq.on_frame(f, bot)
         runner.on_state({"frame": 120, "players": [player(x=800.0, health=180, hit_reaction=10),
@@ -207,10 +211,10 @@ class DemoReplayTest(unittest.TestCase):
         runner = ComboRunner(route, seq, 1, name="ws12")
         bot = player(side=0, x=0.0)
         self.assertIsNone(runner.on_state({"frame": 50, "players": [player(x=1774.0), bot]}))
-        for f in (51, 52):
+        for f in range(51, 56):
             self.assertIsNone(runner.on_state({"frame": f, "players": [player(x=1400.0), bot]}))
-        self.assertEqual(runner.on_state({"frame": 53, "players": [player(x=1400.0), bot]}), "ws1,2")
-        seq.on_frame(53, bot)
+        self.assertEqual(runner.on_state({"frame": 56, "players": [player(x=1400.0), bot]}), "ws1,2")
+        seq.on_frame(56, bot)
         busy = dict(bot, free_movement=False, move_id=0x697)
         runner.on_state({"frame": 60, "players": [player(x=1100.0), busy]})
         seq.on_frame(60, busy)

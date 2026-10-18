@@ -17,6 +17,8 @@ KI_CHARGE = ("1", "2", "3", "4")
 COUNTER_HIT_REACTIONS = (10, 11)
 MAX_APPROACH_FRAMES = 40
 RELEASE_FRAMES = 2
+IDLE_FRAMES = 6
+MAX_SETTLE_FRAMES = 60
 OPENER_HIT_WINDOW = 1
 CONNECT_TOLERANCE = 60
 FIRST_DIRECTION = re.compile(r"^([udfb]{1,2})(?=\+)")
@@ -160,6 +162,7 @@ class ComboRunner:
             self.approach_start = None
             self.release_frame = None
             self.walked = False
+            self.idle_run = 0
             self.opener_distance = None
             self.reach = None
         else:
@@ -396,7 +399,13 @@ class ComboRunner:
                 return True
             self.release_frame = frame
         self.seq.hold("n")
-        return self.walked and frame - self.release_frame < RELEASE_FRAMES
+        if not self.walked:
+            return False
+        frames = self.captured.get("frames") or []
+        idle = frames[0]["move_id"] if frames else bot["move_id"]
+        self.idle_run = self.idle_run + 1 if bot["move_id"] == idle and bot["free_movement"] else 0
+        settled = self.idle_run >= IDLE_FRAMES or frame - self.release_frame >= MAX_SETTLE_FRAMES
+        return frame - self.release_frame < RELEASE_FRAMES or not settled
 
     def _submit_opener(self, frame):
         frames, _ = captured_frames(self.captured["launcher_inputs"])
