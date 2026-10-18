@@ -8,8 +8,8 @@ The roadmap's first implementation task is already behind us. Plan from this bas
 
 | Item | State | Evidence |
 | --- | --- | --- |
-| Chloe C1: read-only readiness checker | **Merged into `Eric`** (`914fc5e`, PR #19), not yet on main | `analytics/integration_check.py`, 15 stub-server tests |
-| Chloe C2: Stats/Learning correctness | **Merged into `Eric`** (`6e66871`, PR #20), not yet on main | Throw denominator 1/4, first-fixed vs current habit, round-flush re-poll (2 s for up to 20 s), fine-tune hidden; `app/docs/acceptance/2026-10-18-stats-learning.md` |
+| Chloe C1: read-only readiness checker | **Merged into `Eric`** (`914fc5e`, PR #19) | `analytics/integration_check.py`, 15 stub-server tests |
+| Chloe C2: Stats/Learning correctness | **Merged into `Eric` and main** (`6e66871`, PRs #20/#21) | Throw denominator 1/4, first-fixed vs current habit, round-flush re-poll (2 s for up to 20 s), fine-tune hidden; `app/docs/acceptance/2026-10-18-stats-learning.md` |
 | Eric DA1: counts and source evidence | **Implemented; included in the isolated review package** | `analytics/evidence.py`, `stats.opportunities`, [METRICS.md](METRICS.md) |
 | Eric DA2: deterministic export | **Implemented; included in the isolated review package** | `analytics/insights.py`, internal `analytics/insights.schema.json`, [INSIGHTS_PROPOSAL.md](INSIGHTS_PROPOSAL.md) |
 | Eric DA3 backend: focus and moments | **Implemented in the review package; action text still a draft** | `analytics/focus.py`, five-observation rule, manual override, punishment focus disabled |

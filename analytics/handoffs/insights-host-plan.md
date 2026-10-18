@@ -4,7 +4,7 @@ Requested October 18, 2026. Scope: publish Eric's existing implementation and co
 
 ## Context checked
 
-Refreshed `origin/chloe` at `6e66871` and `origin/chloe-eric` at `914fc5e`. Both contributions are already present on Eric at `c87dcbe`; neither branch has newer work. Chloe's static acceptance note confirms throw/history display behavior, and explicitly leaves growing-session flushes and live refresh unobserved. The current main branch does not yet contain these Eric-branch merges.
+Refreshed `origin/chloe` at `6e66871` and `origin/chloe-eric` at `914fc5e`. Both contributions are already present on Eric at `c87dcbe`; neither branch has newer work. Chloe's static acceptance note confirms throw/history display behavior, and explicitly leaves growing-session flushes and live refresh unobserved. C2 also reached main in PR #21 while this handoff was being published, with the same `6e66871` head; the C1 contribution remains part of the Eric baseline used here.
 
 ## Implementation sequence and acceptance
 
@@ -25,3 +25,5 @@ Host-specific inputs requested from Eric: absolute brain `DATA_DIR`, Tailscale h
 ## Publication isolation
 
 Another writer changed the shared builder/schema and added experimental API files after the passing regression run. The tested builder and schema were recovered into an isolated checkout, with SHA-256 hashes exactly matching the verified originals. Later API changes and their new schema/generator remain intact in the original workspace. This handoff branch includes the internal export and examples, launcher and source proof; it changes no existing HTTP handler. The isolated tree is revalidated before publication.
+
+Published review entry point: [PR #22](https://github.com/ericwei1107/la-hacks-2026/pull/22), branch `track-d-insights-host-handoff`, based on Eric. Chloe can fetch the implementation/examples from that branch now. Native data-folder/access inputs and the actual host run remain pending.

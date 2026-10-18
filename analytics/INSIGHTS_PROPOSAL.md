@@ -2,6 +2,8 @@
 
 **Status: implemented internal export; shared HTTP contract not approved or registered.** Sahil, Chloe, Garrett and Eric must agree before any app/shared-sidecar consumption or public route is added. The schema beside the implementation is an internal draft, outside frozen `contracts/`.
 
+The implementation, generated fixtures and review guide are fetchable from [PR #22](https://github.com/ericwei1107/la-hacks-2026/pull/22), branch `track-d-insights-host-handoff`.
+
 ## Reproduce the reviewable result
 
 ```sh

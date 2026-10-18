@@ -4,7 +4,7 @@ Verified October 18, 2026 on Eric's Mac with Python 3.12.1. Base `c87dcbe` plus 
 
 | Check | Result |
 | --- | --- |
-| Chloe branch context | Refreshed `origin/chloe=6e66871`, `origin/chloe-eric=914fc5e`; both are already included on Eric and have no newer commits |
+| Chloe branch context | Refreshed `origin/chloe=6e66871`, `origin/chloe-eric=914fc5e`; both are included on Eric; C2 subsequently reached main in PR #21 at merge `f702d13`, with the same head |
 | Generated examples | Eleven full internal snapshots from the production builder; schema/state checks and exact regeneration drift test pass |
 | TypeScript sketch | Extracted from the proposal; TypeScript strict/no-emit check passed |
 | Full analytics suite | 152 cases: 151 passed, one opt-in cloud skip |
