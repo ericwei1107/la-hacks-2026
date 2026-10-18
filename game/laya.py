@@ -9,15 +9,67 @@ from game.finetune import QUESTIONS
 MODEL = "convaiinnovations/laya"
 WARMUP_TEXT = "The opponent is standing at close range. The bot is healthy. It is early in the round. The stage is open."
 LATENCY_KEEP = 500
+FINETUNED_NAME = "laya-ft"
+BENCH_ROUNDS = 50
 
 
 def question_set(keys=None):
     return {k: {"type": "noul", "instructions": QUESTIONS[k]} for k in (keys or QUESTIONS)}
 
 
+def hub_home():
+    return Path(os.environ.get("HF_HUB_CACHE") or Path(os.environ.get("HF_HOME") or Path.home() / ".cache" / "huggingface") / "hub")
+
+
 def hub_cached(model=MODEL):
-    home = Path(os.environ.get("HF_HUB_CACHE") or Path(os.environ.get("HF_HOME") or Path.home() / ".cache" / "huggingface") / "hub")
-    return (home / ("models--" + model.replace("/", "--"))).exists()
+    return (hub_home() / ("models--" + model.replace("/", "--"))).exists()
+
+
+def has_weights(path):
+    path = Path(path)
+    return (path / "model.safetensors").exists() and (path / "rl_agent_config.json").exists()
+
+
+def hub_snapshot(model=MODEL):
+    repo = hub_home() / ("models--" + model.replace("/", "--"))
+    ref = repo / "refs" / "main"
+    if ref.exists():
+        snap = repo / "snapshots" / ref.read_text(encoding="utf-8").strip()
+        if has_weights(snap):
+            return snap
+    return None
+
+
+def finetuned_dir():
+    from game.recorder import data_dir
+    return data_dir() / "models" / FINETUNED_NAME
+
+
+def resolve_model():
+    path = finetuned_dir()
+    if has_weights(path):
+        return str(path), "fine-tuned"
+    return MODEL, "base"
+
+
+def startup(log=print, rounds=BENCH_ROUNDS, factory=None):
+    model, kind = resolve_model()
+    log(f"laya: loading {kind} weights from {model}", flush=True)
+    try:
+        laya = (factory or Laya)(model)
+        stats = laya.bench([WARMUP_TEXT], rounds)
+    except (SystemExit, Exception) as e:
+        log(f"laya: not loaded ({e}); the bot plays without it", flush=True)
+        return None
+    log(f"laya: {kind} weights loaded in {laya.load_seconds or 0.0:.1f} s; {len(QUESTIONS)}-question batch over {stats['n']} calls: "
+        f"p50 {stats['p50_ms']} ms, p95 {stats['p95_ms']} ms", flush=True)
+    return laya
+
+
+def start_background(log=print, rounds=BENCH_ROUNDS, factory=None):
+    thread = threading.Thread(target=startup, kwargs={"log": log, "rounds": rounds, "factory": factory}, name="laya-load", daemon=True)
+    thread.start()
+    return thread
 
 
 def percentile(values, q):
@@ -133,6 +185,15 @@ class Laya:
             else:
                 results = [self.agent.predict(s, questions) for s in states]
         return [self._answers(r, questions) for r in results]
+
+    def release(self):
+        self.agent = None
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
 
     def latency(self):
         ms = [v * 1000 for v in self.latencies]
