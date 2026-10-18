@@ -14,6 +14,7 @@ SHORT_HITS = 2
 FINISHED = ("done", "dropped", "interrupted", "aborted")
 KI_CHARGE = ("1", "2", "3", "4")
 COUNTER_HIT_REACTIONS = (10, 11)
+MAX_APPROACH_FRAMES = 40
 FIRST_DIRECTION = re.compile(r"^([udfb]{1,2})(?=\+)")
 
 
@@ -113,6 +114,10 @@ def captured_frames(inputs, cut=None):
     return frames, start
 
 
+def distance(a, b):
+    return math.hypot(b.get("x", 0) - a.get("x", 0), b.get("z", 0) - a.get("z", 0))
+
+
 def ki_charging(player):
     return set(KI_CHARGE) <= set(player.get("buttons_held", [])) | set(player.get("buttons_pressed", []))
 
@@ -148,6 +153,9 @@ class ComboRunner:
             self.attack_index = 0
             self.pending_attack = False
             self.charged = False
+            self.approach_start = None
+            self.opener_distance = None
+            self.reach = None
         else:
             self.links = plan(route, hit_limit(self.difficulty))
         self.listed_damage = listed_damage(self.links)
@@ -282,7 +290,8 @@ class ComboRunner:
 
     def _captured_step(self, frame, bot, target, prev):
         if self.move is None:
-            if self.captured.get("trigger") == "ki_charge":
+            ki = self.captured.get("trigger") == "ki_charge"
+            if ki:
                 self.charged = self.charged or ki_charging(target)
                 if not self.charged:
                     return None
@@ -290,6 +299,10 @@ class ComboRunner:
                 return None
             if not self._ready(bot):
                 return None
+            if ki:
+                if self._approach(frame, bot, target):
+                    return None
+                self.opener_distance = distance(bot, target)
             return self._submit_opener(frame) if self.captured.get("launcher_inputs_replay") else self._submit(frame)
         if prev is None:
             return None
@@ -302,6 +315,9 @@ class ComboRunner:
             if self.move.start_frame is not None and connect_signal(prev_target, target):
                 self.connect_frame = frame
                 self.connects[0] = frame
+                if self.opener_distance is not None:
+                    self.reach = round(self.opener_distance - distance(bot, target))
+                    self.captured["learned_reach"] = self.reach
                 self.index = 1
                 self._schedule(frame)
             elif self.move.done_frame is not None and bot["free_movement"]:
@@ -341,6 +357,23 @@ class ComboRunner:
         self.seq.queue.append(move)
         self.replay = move
         self.submitted.append({"frame": connect, "link": 1, "notation": move.notation, "error": error})
+
+    def fire_distance(self):
+        reach = self.captured.get("learned_reach", self.captured.get("opener_reach"))
+        want = self.captured.get("connect_distance")
+        return None if reach is None or want is None else want + reach
+
+    def _approach(self, frame, bot, target):
+        fire = self.fire_distance()
+        if fire is None:
+            return False
+        if self.approach_start is None:
+            self.approach_start = frame
+        if distance(bot, target) > fire and frame - self.approach_start < MAX_APPROACH_FRAMES:
+            self.seq.hold("f")
+            return True
+        self.seq.hold("n")
+        return False
 
     def _submit_opener(self, frame):
         frames, _ = captured_frames(self.captured["launcher_inputs"])

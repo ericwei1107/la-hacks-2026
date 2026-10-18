@@ -221,7 +221,8 @@ def replay_demo(reader, args):
               "after every attempt (use --no-wait-reset to start without resets)", flush=True)
     if route.get("trigger") == "ki_charge":
         print("COUNTER HIT ROUTE: after each reset, stand still for half a second, then Ki charge (press 1+2+3+4 "
-              "together); the opener fires the moment the charge is read", flush=True)
+              "together); Kazuya walks in until df+2 will connect at the demo's distance "
+              f"({route.get('connect_distance')}), then fires", flush=True)
     else:
         print("the opener waits for the same round frame as the demo", flush=True)
     pad = connect_pad()
@@ -273,6 +274,10 @@ def traced_run(reader, pad, route, args):
         gs = combotest.wait_settled(gs_iter, bot, args.wait_reset)
         runner = combotest.attempt(gs_iter, seq, route, args.name, bot, difficulty, gs, trace=True)
         combotest.report(i, args.attempts, runner)
+        if runner.reach is not None:
+            print(f"  opener fired from {round(runner.opener_distance)} and connected at "
+                  f"{round(runner.opener_distance - runner.reach)} (demo {route['connect_distance']}); "
+                  f"next attempt fires from {runner.fire_distance()}", flush=True)
         done += runner.status == "done"
         if runner.status != "done" and traced < args.trace:
             traced += 1

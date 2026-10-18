@@ -152,6 +152,30 @@ class DemoReplayTest(unittest.TestCase):
         compare(Run(), route, log=lambda m, **_: lines.append(m))
         self.assertEqual(lines, ["  trace: the opener never connected"])
 
+    def test_counter_hit_opener_walks_in_to_the_demo_spacing(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = replay_route(build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"}), counter_hit=True)
+        route.update(connect_distance=962, opener_reach=590)
+        pad, device = fake_pad()
+        seq = Sequencer(pad, 2)
+        runner = ComboRunner(route, seq, 1, name="ws12")
+        bot = player(side=0, x=0.0)
+        charging = player(x=1800.0, buttons_pressed=["1", "2", "3", "4"], buttons_held=["1", "2", "3", "4"])
+        self.assertIsNone(runner.on_state({"frame": 100, "players": [charging, bot]}))
+        seq.on_frame(100, bot)
+        self.assertEqual(device.pressed, {"DPAD_RIGHT"})
+        self.assertIsNone(runner.on_state({"frame": 101, "players": [player(x=1600.0), bot]}))
+        self.assertEqual(runner.on_state({"frame": 102, "players": [player(x=1550.0), bot]}), "ws1,2")
+        self.assertEqual(runner.opener_distance, 1550)
+        seq.on_frame(102, bot)
+        for f in range(103, 120):
+            runner.on_state({"frame": f, "players": [player(x=1000.0), dict(bot, free_movement=False)]})
+            seq.on_frame(f, bot)
+        runner.on_state({"frame": 120, "players": [player(x=1000.0, health=180, hit_reaction=10), dict(bot, free_movement=False)]})
+        self.assertEqual(runner.connect_frame, 120)
+        self.assertEqual(route["learned_reach"], 550)
+        self.assertEqual(runner.fire_distance(), 962 + 550)
+
     def test_counter_hit_opener_marks_route(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
         for r in rows:
