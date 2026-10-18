@@ -20,3 +20,5 @@ Offline modes only. The game is read with read-only memory access; nothing is wr
 
 Memory layout research informed by Irony (tomislav-ivankovic). Frame data from TekkenDocs (RBNorway) and Wavu Wiki. Laya by Convai Innovations (Apache 2.0). Jev by TypeSafe. River for online learning.
 
+Kazuya combo routes and punishers in `game/combos_kazuya.json` come from Applay's Tekken 8 Library.
+

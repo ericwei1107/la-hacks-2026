@@ -1,0 +1,213 @@
+{
+  "character": "kazuya",
+  "character_id": 8,
+  "game_version": "3.02.02",
+  "source": "Applay's Tekken 8 Library, Kazuya tab (Season 2)",
+  "notation_note": "Each route is a list of links (the guide's arrow). A link's input is its lead (a short dash is f,F) followed by the command of its last planned hit; a hit's command is the full string up to that hit, so cutting a route keeps a valid prefix. T! is the tornado property of the hit marked tornado, not an input. f,f+3 is f,F+3 (tap, then hold forward with 3). Hits marked optional are the guide's bracketed hits.",
+  "damage_note": "damage is the per-hit base damage from characters/kazuya/moves.json (Wavu Wiki and TekkenDocs) before combo scaling; the guide lists none. move_id is from characters/kazuya/moves.json or prep/ids.md, null where unknown.",
+  "routes": {
+    "ewgf_reliable": {
+      "guide": "EWGF ⏵ (short dash) b+2,2 ⏵ df+1,df+2 T! ⏵ b+2,2,1+2",
+      "launcher": "f,n,d,df+2",
+      "requires": null,
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {"command": "f,n,d,df+2", "move_id": "0x701", "damage": 23, "note": "electric; 0x702 and 20 damage if not electric"}
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {"command": "b+2", "move_id": "0x685", "damage": 12},
+            {"command": "b+2,2", "move_id": null, "damage": 14}
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {"command": "df+1", "move_id": "0x6A6", "damage": 11},
+            {"command": "df+1,df+2", "move_id": null, "damage": 20, "tornado": true}
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {"command": "b+2", "move_id": "0x685", "damage": 12},
+            {"command": "b+2,2", "move_id": null, "damage": 14},
+            {"command": "b+2,2,1+2", "move_id": null, "damage": 20}
+          ]
+        }
+      ],
+      "listed_damage": 126
+    },
+    "ff3": {
+      "guide": "f,f+3 ⏵ f,n,d,df+1+2 T! ⏵ (1,2),4,3 ⏵ (short dash) b+2,2,1+2",
+      "launcher": "f,F+3",
+      "requires": null,
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {"command": "f,F+3", "move_id": null, "damage": 21}
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {"command": "f,n,d,df+1+2", "move_id": null, "damage": 33, "tornado": true}
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {"command": "1", "move_id": "0x659", "damage": 5, "optional": true},
+            {"command": "1,2", "move_id": null, "damage": 8, "optional": true},
+            {"command": "1,2,4", "move_id": null, "damage": 18},
+            {"command": "1,2,4,3", "move_id": null, "damage": 25}
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {"command": "b+2", "move_id": "0x685", "damage": 12},
+            {"command": "b+2,2", "move_id": null, "damage": 14},
+            {"command": "b+2,2,1+2", "move_id": null, "damage": 20}
+          ]
+        }
+      ],
+      "listed_damage": 156
+    },
+    "ch_df2": {
+      "guide": "CH (df+1),df+2 ⏵ EWGF ⏵ (short dash) b+2,2 ⏵ df+1,df+2 T! ⏵ b+2,2,1+2",
+      "launcher": "df+2",
+      "requires": "counter_hit",
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {"command": "df+2", "move_id": "0x6AF", "damage": 22, "note": "crumple on counter hit only"}
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {"command": "f,n,d,df+2", "move_id": "0x701", "damage": 23, "note": "electric; 0x702 and 20 damage if not electric"}
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {"command": "b+2", "move_id": "0x685", "damage": 12},
+            {"command": "b+2,2", "move_id": null, "damage": 14}
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {"command": "df+1", "move_id": "0x6A6", "damage": 11},
+            {"command": "df+1,df+2", "move_id": null, "damage": 20, "tornado": true}
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {"command": "b+2", "move_id": "0x685", "damage": 12},
+            {"command": "b+2,2", "move_id": null, "damage": 14},
+            {"command": "b+2,2,1+2", "move_id": null, "damage": 20}
+          ]
+        }
+      ],
+      "listed_damage": 148
+    }
+  },
+  "punishers": {
+    "note": "From the guide's PUNISHERS startup table. EWGF speed depends on execution; it punishes -13 in theory and is practical against -15.",
+    "standing": [
+      {
+        "startup": 10,
+        "command": "1,1,2",
+        "hits": [
+          {"command": "1", "move_id": "0x659", "damage": 5},
+          {"command": "1,1", "move_id": "0x639", "damage": 6},
+          {"command": "1,1,2", "move_id": "0x63A", "damage": 14}
+        ],
+        "listed_damage": 25
+      },
+      {
+        "startup": 12,
+        "command": "1+2",
+        "hits": [
+          {"command": "1+2", "move_id": "0x64A", "damage": 5},
+          {"command": "1+2", "move_id": "0x64B", "damage": 20}
+        ],
+        "listed_damage": 25
+      },
+      {
+        "startup": 14,
+        "command": "df+2",
+        "note": "range",
+        "hits": [
+          {"command": "df+2", "move_id": "0x6AF", "damage": 22}
+        ],
+        "listed_damage": 22
+      },
+      {
+        "startup": 15,
+        "command": "f,n,d,df+2",
+        "note": "EWGF",
+        "hits": [
+          {"command": "f,n,d,df+2", "move_id": "0x701", "damage": 23}
+        ],
+        "listed_damage": 23
+      },
+      {
+        "startup": 15,
+        "command": "df+1,4",
+        "hits": [
+          {"command": "df+1", "move_id": "0x6A6", "damage": 11},
+          {"command": "df+1,4", "move_id": null, "damage": 20}
+        ],
+        "listed_damage": 31
+      }
+    ],
+    "crouching": [
+      {
+        "startup": 10,
+        "command": "d+1",
+        "note": "FC d+1",
+        "hits": [
+          {"command": "d+1", "move_id": "0x6D5", "damage": 5}
+        ],
+        "listed_damage": 5
+      },
+      {
+        "startup": 11,
+        "command": "ws+4,4",
+        "hits": [
+          {"command": "ws+4", "move_id": null, "damage": 13},
+          {"command": "ws+4,4", "move_id": null, "damage": 16}
+        ],
+        "listed_damage": 29
+      },
+      {
+        "startup": 13,
+        "command": "ws+1,2",
+        "hits": [
+          {"command": "ws+1", "move_id": "0x696", "damage": 10},
+          {"command": "ws+1,2", "move_id": null, "damage": 12}
+        ],
+        "listed_damage": 22
+      },
+      {
+        "startup": 16,
+        "command": "ws+2",
+        "hits": [
+          {"command": "ws+2", "move_id": "0x698", "damage": 25}
+        ],
+        "listed_damage": 25
+      }
+    ]
+  }
+}
