@@ -48,6 +48,7 @@ def parse(argv):
     ap.add_argument("--services", default="brain,replay,analytics")
     ap.add_argument("--skip", action="append", default=[], choices=sorted(PORTS))
     ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--experimental-insights", action="store_true", help="serve the unapproved GET /insights/{id} from DATA_DIR on mock analytics")
     args = ap.parse_args(argv)
     args.services = args.services.split(",")
     if args.rate <= 0 or not args.services or any(s not in PORTS for s in args.services):
@@ -66,7 +67,7 @@ async def main(argv=None):
     apps = {
         "brain": lambda: brain.create(store, rate=a.rate, loop=not a.no_loop),
         "replay": lambda: replay_mock.create(store),
-        "analytics": lambda: analytics_mock.create(store),
+        "analytics": lambda: analytics_mock.create(store, insights=a.experimental_insights),
     }
     sockets, servers, tasks = [], [], []
     loop = asyncio.get_running_loop()
