@@ -6,10 +6,11 @@ from game import api
 from game.coach import Outlet, replay_url
 from game.detect import Detector
 from game.difficulty import Difficulty
-from game.hotloop import Hooks, run_session
+from game.hotloop import MATCH_OVER, Hooks, run_session, wait_for_match
 from game.learning import Learning
 from game.notation import Timing
 from game.options import CLASSES, load_options
+from game.pacer import Pacer
 from game.pad import KillSwitch, connect_pad, load_config
 from game.reader import Reader
 from game.readout import run_gate
@@ -106,17 +107,54 @@ def resolve_player(args, root=None):
 def parse_args(argv=None, root=None):
     parser = argparse.ArgumentParser(description="Kumite bot: reflex layer (block, punish, throw break, wakeup) and neutral play on the virtual 2P pad, recording the session")
     add_session_args(parser, player_required=False)
+    parser.set_defaults(difficulty=None)
     parser.add_argument("--demo", action="store_true", help="start from a fresh profile (player guest unless --player is given)")
+    parser.add_argument("--loop", action="store_true", help="after a match ends, wait for the next match's round 1 and start a new session with the current config")
     parser.add_argument("--no-api", action="store_true", help="do not serve the brain API on :8765")
     parser.add_argument("--host", default=api.HOST, help="address the brain API listens on, e.g. this laptop's Tailscale IP for remote clients")
     parser.add_argument("--seed", type=int)
     args = parser.parse_args(argv)
+    args.player_flag = args.player
     args.player = resolve_player(args, root)
     return args
 
 
+def cli_patch(args):
+    patch = {}
+    if args.difficulty is not None:
+        patch["difficulty"] = args.difficulty
+    if args.player_flag:
+        patch["player"] = args.player_flag
+    return patch
+
+
+def apply_cli(args, root=None):
+    patch = cli_patch(args)
+    if not patch:
+        return api.load_config(root), []
+    return api.update_config(patch, root)
+
+
+def settings(args, root=None):
+    cfg = api.load_config(root)
+    difficulty = Difficulty.preset(cfg["difficulty"], cfg.get("knobs"))
+    fresh = bool(args.demo or cfg.get("demo_mode"))
+    player = DEMO_PLAYER if fresh and not args.player_flag else cfg["player"]
+    return cfg, difficulty, player, fresh
+
+
+def describe(cfg, difficulty, player, fresh, root=None):
+    knobs = cfg.get("knobs") or {}
+    knob_text = " with knobs " + " ".join(f"{k}={v}" for k, v in sorted(knobs.items())) if knobs else ""
+    return (f"config {(root or data_dir()) / 'config.json'}: difficulty {difficulty.level}{knob_text}, player {player}, "
+            f"demo {'on' if fresh else 'off'}")
+
+
 def main(argv=None):
     args = parse_args(argv)
+    cfg, errors = apply_cli(args)
+    for error in errors:
+        print(f"warning: config.json not updated from the command line: {error}", flush=True)
     outlet = None
     if not args.no_api:
         if api.start(host=args.host) is None:
@@ -131,11 +169,23 @@ def main(argv=None):
         if not run_gate(reader, args.offsets):
             return 1
         pad = connect_pad()
-        run_session(reader, args, BotHooks(pad, Difficulty.preset(args.difficulty), args.seed, player=args.player, fresh=args.demo), outlet)
-        return 0
+        pacer = Pacer()
+        while True:
+            cfg, difficulty, player, fresh = settings(args)
+            args.difficulty = difficulty.level
+            args.player = player
+            print(describe(cfg, difficulty, player, fresh) + (" (--loop: re-read before every match)" if args.loop else ""), flush=True)
+            reason = run_session(reader, args, BotHooks(pad, difficulty, args.seed, player=player, fresh=fresh), outlet)
+            if not args.loop or reason != MATCH_OVER:
+                return 0
+            print("loop: waiting for the next match's round 1; POST /config now to change the next session (Ctrl+C to quit)", flush=True)
+            wait_for_match(reader, pacer, pad.check_kill)
     except KillSwitch as e:
         print(f"stopped: {e}", flush=True)
         return 1
+    except KeyboardInterrupt:
+        print("stopped: Ctrl+C while waiting for the next match", flush=True)
+        return 0
     finally:
         if pad is not None:
             pad.release_all()
