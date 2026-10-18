@@ -29,6 +29,9 @@ class AnalyticsTest(unittest.TestCase):
         self.meta.pop('recording', None)
         self.write_meta(self.meta)
         self.write_records([])
+        patcher = patch.dict(os.environ, {'DATABASE_URL': ''})
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.app = create_app(self.root)
         self.client = TestClient(self.app)
 

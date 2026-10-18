@@ -1,4 +1,5 @@
 import json
+import time
 import os
 import tempfile
 import unittest
@@ -121,6 +122,7 @@ class TigerTrendsTest(unittest.TestCase):
             self.assertEqual(self.fetch(), self.expected())
             self.assertEqual(self.fetch(), self.expected())
             self.assertEqual(connect.call_count, 1)
+        self.assertGreater(self.repository.retry_at - time.monotonic(), 20)
         self.assertNotIn('secret-url', '\n'.join(logs.output))
         with patch('analytics.tigerdata.repository.time.monotonic', return_value=self.repository.retry_at + 1), patch('analytics.tigerdata.repository.connection'), patch.object(Database, 'trends', return_value=self.stored()), patch('analytics.tigerdata.repository.trend_values', side_effect=AssertionError):
             self.assertEqual(self.fetch(), self.expected())
