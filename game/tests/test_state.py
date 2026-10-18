@@ -8,7 +8,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 from game.reader import decode_health, rotl64
 from game.recorder import Recorder, result_text, session_meta
-from game.state import Tracker, advantage, build_player, build_state, derive, session_id
+from game.state import Tracker, advantage, build_player, build_state, derive, lying, session_id
 
 CONTRACTS = Path(__file__).resolve().parents[2] / "contracts"
 SID = "2026-10-17T13-05-00_sahil_djin_vs_kaz"
@@ -262,6 +262,154 @@ class FrameAdvantageTest(Base):
         self.assertEqual(self.at(states, c + 2)["derived"]["situation"], "punish_window")
         ev, states, c = self.check_exchange("hit", 9, reaction=12, def_move=0x600, def_total=26)
         self.assertEqual(self.at(states, c + 2)["derived"]["situation"], "pressure")
+
+
+def string_frames(second_level_code=HIGH, second_level="high", second_active=15):
+    seq = []
+    for f in range(97, 150):
+        a, d = idle(0, f), idle(1, f)
+        if 100 <= f < 110:
+            a.update(move_id=0x644, frame_in_move=f - 99, move_total=27, free_movement=0, hit_level=HIGH,
+                     hit_level_name="high", first_active=10, last_active=10)
+        elif 110 <= f < 144:
+            a.update(move_id=0x605, frame_in_move=f - 109, move_total=34, free_movement=0, hit_level=second_level_code,
+                     hit_level_name=second_level, first_active=second_active, last_active=second_active)
+        if f == 109:
+            d.update(move_id=0x5C6, frame_in_move=8, move_total=22, hit_reaction=1)
+        elif 110 <= f < 125:
+            d.update(move_id=0x604, frame_in_move=f - 109, move_total=18, free_movement=0, hit_reaction=1)
+        elif 125 <= f < 143:
+            d.update(move_id=0x718, frame_in_move=f - 124, move_total=18, free_movement=0, hit_reaction=1)
+        seq.append((f, [a, d]))
+    return seq
+
+
+class LyingTest(unittest.TestCase):
+    def player(self, **overrides):
+        return build_player(1, dict(idle(1, 0), **overrides))
+
+    def test_lying_loop_is_ready(self):
+        self.assertTrue(lying(self.player(status=0x6084, move_id=0x8007, move_total=60)))
+        self.assertTrue(lying(self.player(status=0x6A84, move_id=0x800A, move_total=60)))
+
+    def test_landing_throw_and_standing_are_not(self):
+        self.assertFalse(lying(self.player(status=0x6084, move_id=0x8006, move_total=1)))
+        self.assertFalse(lying(self.player(status=0x6084, move_id=0x7E0, move_total=60, being_thrown=0xE000001F)))
+        self.assertFalse(lying(self.player(move_id=0x8001, move_total=88)))
+        self.assertFalse(lying(self.player(status=0x6084, move_id=0x0092, move_total=5)))
+
+
+def round_frames(frames, healths=(190, 190), start=0):
+    seq = []
+    for f in range(start, start + frames):
+        a, d = idle(0, f, health=healths[0]), idle(1, f, health=healths[1])
+        seq.append((f, [a, d]))
+    return seq
+
+
+def ko_frames(winner, start=0, frames=20):
+    seq = round_frames(frames, start=start)
+    loser = 1 - winner
+    for f, pair in seq[frames // 2:]:
+        pair[loser]["health"] = 0
+    return seq
+
+
+def command_throw_frames(landed=False, escaped=False):
+    seq = []
+    for f in range(97, 200):
+        a, d = idle(0, f), idle(1, f)
+        if 100 <= f < 130:
+            a.update(move_id=0x895, frame_in_move=f - 99, move_total=60, free_movement=0)
+            d.update(move_id=0x896, frame_in_move=f - 99, move_total=60, free_movement=0, status=0x6084)
+            if f < 103:
+                d.update(being_thrown=0xD000001C)
+            if escaped and 102 <= f < 103:
+                d.update(throw_escape_flags=0x800)
+            if landed and f >= 120:
+                d.update(health=155)
+        elif f >= 130 and landed:
+            d.update(health=155, move_id=0x8007, move_total=60, free_movement=0, status=0x6084, basic_state=12)
+        seq.append((f, [a, d]))
+    return seq
+
+
+class CommandThrowBreakTest(Base):
+    def test_break_without_escape_flag_counts_when_no_damage(self):
+        _, _, events = self.run_frames(command_throw_frames())
+        brk = self.only(events, "throw_break")
+        self.assertEqual(brk["frame"], 130)
+        self.assertEqual(brk["actor"], 1)
+        self.assertEqual(brk["move_id"], 0x895)
+        self.assertEqual(brk["detail"], {"input": "press_1", "evidence": "no_damage", "connect_frame": 100})
+
+    def test_escape_flag_break_is_not_double_counted(self):
+        _, _, events = self.run_frames(command_throw_frames(escaped=True))
+        brk = self.only(events, "throw_break")
+        self.assertEqual(brk["frame"], 102)
+        self.assertEqual(brk["detail"]["evidence"], "escape_flag")
+
+    def test_landed_throw_is_not_a_break(self):
+        _, _, events = self.run_frames(command_throw_frames(landed=True))
+        self.assertEqual([e for e in events if e["kind"] == "throw_break"], [])
+
+
+class TimeoutTest(Base):
+    def test_versus_counter_reset_without_ko_is_a_timeout(self):
+        tracker = Tracker(SID, timeouts=True, rounds_to_win=3)
+        _, _, events = self.run_frames(round_frames(30, (10, 106)) + round_frames(10), tracker=tracker)
+        end = self.only(events, "round_end")
+        self.assertEqual(end["detail"], {"reason": "time", "winner": 1})
+        self.assertEqual(end["frame"], 29)
+        self.assertEqual(tracker.rounds[0]["winner"], 1)
+        self.assertEqual(tracker.wins[1], 1)
+
+    def test_equal_health_timeout_is_a_draw(self):
+        tracker = Tracker(SID, timeouts=True)
+        _, _, events = self.run_frames(round_frames(30, (90, 90)) + round_frames(10), tracker=tracker)
+        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "time", "winner": None})
+
+    def test_practice_reset_is_not_a_timeout(self):
+        _, _, events = self.run_frames(round_frames(30, (10, 106)) + round_frames(10))
+        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "counter_reset", "winner": None})
+
+    def test_match_over_after_rounds_to_win(self):
+        tracker = Tracker(SID, timeouts=True, rounds_to_win=3)
+        seq = ko_frames(0) + ko_frames(0) + round_frames(30, (10, 106)) + ko_frames(0)
+        self.assertFalse(tracker.match_over)
+        _, _, events = self.run_frames(seq, tracker=tracker)
+        self.assertEqual([r["winner"] for r in tracker.rounds], [0, 0, 1, 0])
+        self.assertTrue(tracker.match_over)
+        self.assertEqual(dict(tracker.wins), {0: 3, 1: 1})
+
+    def test_practice_never_ends_the_match(self):
+        tracker = Tracker(SID)
+        self.run_frames(ko_frames(0) + ko_frames(0) + ko_frames(0) + ko_frames(0), tracker=tracker)
+        self.assertFalse(tracker.match_over)
+
+
+class StringTest(Base):
+    def test_continued_string_has_no_advantage_and_second_block_counts(self):
+        _, states, events = self.run_frames(string_frames())
+        blocks = [e for e in events if e["kind"] == "block"]
+        self.assertEqual([e["frame"] for e in blocks], [109, 125])
+        self.assertIsNone(blocks[0]["frame_advantage"])
+        self.assertTrue(blocks[0]["detail"]["string_continued"])
+        self.assertEqual(blocks[1]["move_id"], 0x605)
+        self.assertEqual(blocks[1]["frame_advantage"], -1)
+        self.assertFalse(blocks[1]["detail"]["string_continued"])
+        self.assertIsNone(self.at(states, 111)["derived"]["frame_advantage"])
+
+    def test_reaction_change_without_an_active_attack_is_not_a_hit(self):
+        _, _, events = self.run_frames(string_frames(NONE_CODE, "none", 0))
+        blocks = [e for e in events if e["kind"] == "block"]
+        self.assertEqual([e["frame"] for e in blocks], [109])
+        self.assertIsNotNone(blocks[0]["frame_advantage"])
+        self.assertFalse(blocks[0]["detail"]["string_continued"])
+
+    def test_reaction_change_outside_active_frames_is_not_a_hit(self):
+        _, _, events = self.run_frames(string_frames(second_active=5))
+        self.assertEqual([e["frame"] for e in events if e["kind"] == "block"], [109])
 
 
 class EventTest(Base):

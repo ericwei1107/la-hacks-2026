@@ -1,0 +1,113 @@
+{
+  "source": "python -m game.getuptest, live runs on 2026-10-17: face up twice (lying loop 0x8007, basic_state 12), face down once with --face down (lying loop 0x800A, basic_state 13); actionable = round frames from the input to free movement",
+  "kazuya": {
+    "face_up": [
+      {
+        "notation": "u",
+        "kind": "stand",
+        "actionable": 26,
+        "hit_level": "none",
+        "move_id": "0x7D",
+        "travel_mm": 0
+      },
+      {
+        "notation": "b",
+        "kind": "back_roll",
+        "actionable": 37,
+        "hit_level": "none",
+        "move_id": "0xB3",
+        "travel_mm": -1500
+      },
+      {
+        "notation": "f",
+        "kind": "forward_roll",
+        "actionable": 46,
+        "hit_level": "none",
+        "move_id": "0x8A",
+        "travel_mm": 2000
+      },
+      {
+        "notation": "1",
+        "kind": "side_roll",
+        "actionable": 62,
+        "hit_level": "none",
+        "move_id": "0x70",
+        "lateral_mm": -1300
+      },
+      {
+        "notation": "3",
+        "kind": "rising_low",
+        "actionable": 53,
+        "hit_level": "low",
+        "move_id": "0xC0",
+        "travel_mm": 0
+      },
+      {
+        "notation": "4",
+        "kind": "rising_mid",
+        "actionable": 52,
+        "hit_level": "mid",
+        "move_id": "0xC1",
+        "travel_mm": 0
+      },
+      {
+        "notation": "3+4",
+        "kind": "spring_kick",
+        "actionable": 65,
+        "hit_level": "mid",
+        "move_id": "0xD7",
+        "travel_mm": 2150
+      }
+    ],
+    "face_down": [
+      {
+        "notation": "u",
+        "kind": "stand",
+        "actionable": 27,
+        "hit_level": "none",
+        "move_id": "0xAB",
+        "travel_mm": 0
+      },
+      {
+        "notation": "b",
+        "kind": "back_roll",
+        "actionable": 36,
+        "hit_level": "none",
+        "move_id": "0xB7",
+        "travel_mm": -1900
+      },
+      {
+        "notation": "f",
+        "kind": "forward_roll",
+        "actionable": 51,
+        "hit_level": "none",
+        "move_id": "0x8D",
+        "travel_mm": 2000
+      },
+      {
+        "notation": "1",
+        "kind": "side_roll",
+        "actionable": 61,
+        "hit_level": "none",
+        "move_id": "0x79",
+        "lateral_mm": -1300
+      },
+      {
+        "notation": "3",
+        "kind": "rising_low",
+        "actionable": 58,
+        "hit_level": "low",
+        "move_id": "0xDE",
+        "travel_mm": 0
+      },
+      {
+        "notation": "4",
+        "kind": "rising_mid",
+        "actionable": 56,
+        "hit_level": "low,mid",
+        "move_id": "0xE4",
+        "travel_mm": 0
+      }
+    ]
+  }
+}

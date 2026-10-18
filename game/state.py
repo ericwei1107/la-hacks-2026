@@ -22,6 +22,12 @@ ROUND_SECONDS = 60
 CONNECT_DELAY = 2
 WAKEUP_WINDOW = 30
 PUNISH_THRESHOLD = 10
+REPEAT_CONNECT_GAP = 3
+ACTIVE_SLACK = 2
+THROW_SETTLE = 5
+THROW_LIMIT = 180
+GENERIC_MASK = 0xFF00
+GENERIC_BASE = 0x8000
 
 unknown_codes = Counter()
 
@@ -134,13 +140,26 @@ def build_state(raw_players, human_slot, frame, session_id):
     }
 
 
+def lying(player):
+    return (bool(player["status"] & DOWNED_BIT) and player["being_thrown"] == "none"
+            and player["move_id"] & GENERIC_MASK == GENERIC_BASE and player["move_total"] > 1)
+
+
+def active(player):
+    first, last = player["first_active"], player["last_active"]
+    return first > 0 and first <= player["frame_in_move"] <= max(first, last) + ACTIVE_SLACK
+
+
 def advantage(attacker, defender):
     return (defender["move_total"] - defender["frame_in_move"]) - (attacker["move_total"] - attacker["frame_in_move"])
 
 
 class Tracker:
-    def __init__(self, session_id):
+    def __init__(self, session_id, timeouts=False, rounds_to_win=None):
         self.session_id = session_id
+        self.timeouts = timeouts
+        self.rounds_to_win = rounds_to_win
+        self.wins = Counter()
         self.round = 0
         self.prev = None
         self.rounds = []
@@ -151,9 +170,11 @@ class Tracker:
         self.round_start = frame
         self.ko = False
         self.pending = []
+        self.throws = [None, None]
         self.adv = None
         self.actions = [None, None]
         self.down_cleared = [None, None]
+        self.last_connect = [None, None]
 
     def event(self, kind, frame, round_=None, **fields):
         self.events[kind] += 1
@@ -161,7 +182,21 @@ class Tracker:
         ev.update({k: v for k, v in fields.items() if v is not None or k == "frame_advantage"})
         return ev
 
+    def _end_without_ko(self, prev, out):
+        healths = [p["health"] for p in prev["players"]]
+        if not self.timeouts or min(healths) <= 0:
+            self._end_round(prev["frame"], None, "counter_reset", out)
+            return
+        winner = None if healths[0] == healths[1] else healths.index(max(healths))
+        self._end_round(prev["frame"], winner, "time", out)
+
+    @property
+    def match_over(self):
+        return bool(self.rounds_to_win) and bool(self.wins) and max(self.wins.values()) >= self.rounds_to_win
+
     def _end_round(self, frame, winner, reason, out):
+        if winner is not None:
+            self.wins[winner] += 1
         self.rounds.append({"round": self.round, "winner": winner, "start_frame": self.round_start, "end_frame": frame})
         out.append(self.event("round_end", frame, detail={"reason": reason, "winner": winner}))
 
@@ -180,7 +215,7 @@ class Tracker:
             self._start_round(frame, "session_start", out)
         elif frame < prev["frame"]:
             if not self.ko:
-                self._end_round(prev["frame"], None, "counter_reset", out)
+                self._end_without_ko(prev, out)
             self._start_round(frame, "counter_reset", out)
             same = None
         state["round"] = self.round
@@ -206,8 +241,15 @@ class Tracker:
         for d in (0, 1):
             a = 1 - d
             att = state["players"][a]
-            code = state["players"][d]["hit_reaction"]
-            if code and not prev["players"][d]["hit_reaction"]:
+            dfn, old = state["players"][d], prev["players"][d]
+            code = dfn["hit_reaction"]
+            last = self.last_connect[d]
+            repeat = (code and old["hit_reaction"] and last is not None
+                      and dfn["move_id"] != old["move_id"] and dfn["frame_in_move"] == 1
+                      and att["move_id"] != last[1] and state["frame"] - last[0] >= REPEAT_CONNECT_GAP
+                      and att["hit_level"] != "none" and active(att))
+            if (code and not old["hit_reaction"]) or repeat:
+                self.last_connect[d] = (state["frame"], att["move_id"])
                 self.pending.append({
                     "attacker": a,
                     "frame": state["frame"],
@@ -229,8 +271,9 @@ class Tracker:
                 continue
             a, d = p["attacker"], 1 - p["attacker"]
             att, dfn = players[a], players[d]
-            adv = advantage(att, dfn)
-            self.adv = adv if a == human else -adv
+            continued = att["move_id"] != p["move_id"] and att["hit_level"] != "none"
+            adv = None if continued else advantage(att, dfn)
+            self.adv = None if adv is None else (adv if a == human else -adv)
             out.append(self.event(
                 REACTIONS.get(p["code"], "hit"),
                 p["frame"],
@@ -249,6 +292,7 @@ class Tracker:
                     "defender_move_id": dfn["move_id"],
                     "defender_total": dfn["move_total"],
                     "defender_frame": dfn["frame_in_move"],
+                    "string_continued": continued,
                 },
             ))
         self.pending = keep
@@ -269,6 +313,9 @@ class Tracker:
                 ))
                 connected[a] = True
                 struck[d] = True
+                self.throws[d] = {"frame": state["frame"], "move_id": state["players"][a]["move_id"],
+                                  "code": cur["being_thrown"], "health": old["health"]}
+            throw = self.throws[d]
             if cur["throw_escaped"] and not old["throw_escaped"] and (cur["being_thrown"] != "none" or old["being_thrown"] != "none"):
                 out.append(self.event(
                     "throw_break",
@@ -276,8 +323,23 @@ class Tracker:
                     actor=d,
                     target=a,
                     move_id=state["players"][a]["move_id"],
-                    detail={"input": cur["being_thrown"]},
+                    detail={"input": cur["being_thrown"], "evidence": "escape_flag"},
                 ))
+                self.throws[d] = None
+            elif throw is not None:
+                age = state["frame"] - throw["frame"]
+                if cur["health"] < throw["health"] or age > THROW_LIMIT:
+                    self.throws[d] = None
+                elif cur["free_movement"] and age >= THROW_SETTLE:
+                    out.append(self.event(
+                        "throw_break",
+                        state["frame"],
+                        actor=d,
+                        target=a,
+                        move_id=throw["move_id"],
+                        detail={"input": throw["code"], "evidence": "no_damage", "connect_frame": throw["frame"]},
+                    ))
+                    self.throws[d] = None
 
     def _knockdowns(self, state, prev, out):
         for d in (0, 1):
