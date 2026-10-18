@@ -51,7 +51,7 @@ function SmallStat({ value, label, note, divided }: { value: string; label: stri
     <div className={`flex w-[190px] shrink-0 flex-col justify-end gap-1 pt-4 pr-[20px] pb-[18px] pl-6 ${divided ? 'border-l border-solid border-l-[#1D1B161F]' : ''}`}>
       <span className="text-[32px] leading-[40px] font-[900] tracking-[-0.01em] text-text">{value}</span>
       <span className="text-base/sm font-bold text-text">{label}</span>
-      {note && <span className="text-sm leading-[18px] font-medium text-text-muted">{note}</span>}
+      <span className="text-sm leading-[18px] font-medium text-text-muted">{note ?? '\u00a0'}</span>
     </div>
   )
 }

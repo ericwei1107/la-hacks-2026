@@ -60,7 +60,7 @@ A page opened outside Electron, such as the renderer dev server in a plain brows
 
 The main process opens two windows from the same renderer build, both with the shared preload, context isolation, no Node integration, and the sandbox on.
 
-**Main window.** 1440 × 900 by default, 1024 × 640 at least, titled "Kumite", shown once its first frame is ready. It loads the renderer's `index.html`.
+**Main window.** 1440 × 900 by default, 1024 × 640 at least, titled "Kumite", shown once its first frame is ready. It loads the renderer's `index.html`. Closing it quits the app on Windows and Linux, overlay included; on macOS the app stays in the dock and reopens the main window when activated.
 
 **Overlay window.** It loads the renderer's `overlay.html` and is drawn over Tekken 8 (HLD G1):
 

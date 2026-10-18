@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,9 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-import analytics
+import analytics_mock as analytics
 import brain
-import replay
+import replay_mock
 from store import ROOT, Session, Store, check, load_jsonl
 
 FIXTURE = Path(__file__).parent / "fixtures" / "two-rounds.jsonl"
@@ -80,7 +81,7 @@ class BoundariesTest(unittest.TestCase):
             self.assertEqual(set(client.get('/health').json()), {'ok', 'service', 'version'})
 
     def test_saved_report_checks_loaded_session(self):
-        with TestClient(replay.create(self.store)) as client:
+        with TestClient(replay_mock.create(self.store)) as client:
             self.assertEqual(client.get(f'/reports/{self.sid}').status_code, 404)
             report = client.post(f'/analyze/{self.sid}').json()
             self.assertEqual(check('report', report), [])
@@ -90,7 +91,7 @@ class BoundariesTest(unittest.TestCase):
             self.assertEqual(client.get('/reports/unknown').status_code, 404)
             self.assertEqual(client.post('/analyze/unknown').status_code, 404)
             self.assertEqual(client.post('/coach/round', content='{').status_code, 422)
-        with TestClient(replay.create(self.store)) as client:
+        with TestClient(replay_mock.create(self.store)) as client:
             self.assertEqual(client.get(f'/reports/{self.sid}').json(), report)
 
     def test_learning_and_filtered_trends(self):
@@ -106,7 +107,7 @@ class BoundariesTest(unittest.TestCase):
     def test_long_habit_coach_is_under_40_words(self):
         summary = json.loads((ROOT/'contracts/examples/round_summary.json').read_text())
         summary['top_habits'][0]['situation'] = 'word ' * 100
-        with TestClient(replay.create(self.store)) as client:
+        with TestClient(replay_mock.create(self.store)) as client:
             response = client.post('/coach/round', json=summary)
             self.assertLess(len(response.json()['text'].split()), 40)
             summary['newly_fixed'] = ['word ' * 100]
@@ -213,3 +214,137 @@ class TimelineTest(unittest.IsolatedAsyncioTestCase):
         await timeline.play(lambda channel, record: seen.append(record), loop=False, monotonic=lambda: now[0], sleep=sleep)
         self.assertEqual(len(seen), len(timeline.items))
         self.assertAlmostEqual(now[0], timeline.total/60)
+
+
+class ArchiveTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.directory = Path(self.temp.name)
+        env = patch.dict(os.environ, {'DATA_DIR': self.temp.name})
+        env.start()
+        self.addCleanup(env.stop)
+        self.meta = json.loads(FIXTURE.with_suffix('.session.json').read_text())
+        self.sid = self.meta['session_id']
+
+    def archive(self, name='session.zip', members=None):
+        path = self.directory / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if members is None:
+            members = {'nested/recording.jsonl': FIXTURE.read_bytes(), 'nested/recording.session.json': json.dumps(self.meta)}
+        with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as archive:
+            for member, content in members.items():
+                archive.writestr(member, content)
+        return path
+
+    def test_discovery_selection_and_metadata_reference(self):
+        archived = self.archive('samples/session.zip')
+        plain = self.directory / 'recordings/newer.jsonl'
+        plain.parent.mkdir()
+        newer_id = 'newer-fixture'
+        plain.write_text(FIXTURE.read_text().replace(self.sid, newer_id))
+        newer_meta = {**self.meta, 'session_id': newer_id, 'started_at': '2026-10-19T00:00:00Z'}
+        plain.with_suffix('.session.json').write_text(json.dumps(newer_meta))
+        discovered = Store()
+        self.assertEqual(set(discovered.sessions), {self.sid, newer_id})
+        self.assertEqual(discovered.default().id, newer_id)
+        self.assertEqual(Store([archived, plain]).default().id, self.sid)
+        indexed = self.directory / 'sessions'
+        indexed.mkdir()
+        (indexed / f'{self.sid}.json').write_text(json.dumps({**self.meta, 'recording': str(archived)}))
+        self.assertIn(self.sid, Store([plain]).sessions)
+        archived.rename(self.directory / 'recordings/session.zip')
+        self.assertIn(self.sid, Store().sessions)
+
+    def test_download_and_both_websockets_use_recording_member(self):
+        path = self.archive()
+        store = Store([path])
+        with TestClient(brain.create(store, rate=60)) as client:
+            listed = client.get('/sessions').json()
+            self.assertEqual(listed, [self.meta])
+            self.assertEqual(client.get(f'/sessions/{self.sid}').json(), self.meta)
+            response = client.get(f'/sessions/{self.sid}/recording')
+            self.assertEqual(response.headers['content-type'], 'application/x-ndjson')
+            self.assertEqual(response.content, FIXTURE.read_bytes())
+            with client.websocket_connect(f'/ws/state?session={self.sid}') as stream:
+                record = stream.receive_json()
+                self.assertEqual(record['session_id'], self.sid)
+                self.assertIn(record['t'], ('state', 'event'))
+                self.assertEqual(check('gamestate' if record['t'] == 'state' else 'event', record), [])
+            with client.websocket_connect(f'/ws/coach?session={self.sid}') as stream:
+                summary = stream.receive_json()
+                self.assertEqual(summary['session_id'], self.sid)
+                self.assertEqual(check('round_summary', summary), [])
+                self.assertEqual(stream.receive_json()['t'], 'coach')
+        self.assertEqual(sorted(p.name for p in self.directory.iterdir()), ['session.zip'])
+
+    def test_archive_parser_retains_extensions_and_tolerates_partial_tail(self):
+        raw = FIXTURE.read_bytes() + b'{"t":"future","value":tru'
+        path = self.archive(members={
+            'capture.jsonl': raw,
+            'capture.session.json': json.dumps(self.meta),
+            'capture.learning.jsonl': '{}\n',
+            'unrelated.session.json': '{}',
+        })
+        session = Session(path)
+        self.assertEqual(session.records, Session(FIXTURE).records)
+        self.assertEqual(session.recording_bytes, raw)
+        self.assertTrue(any(record.get('future_field') == 'preserved' for record in session.records))
+        with TestClient(analytics.create(Store([path]))) as client:
+            self.assertEqual(check('metrics', client.get(f'/learning/{self.sid}').json()), [])
+            self.assertEqual(client.get(f'/stats/{self.sid}').status_code, 200)
+        with TestClient(replay_mock.create(Store([path]))) as client:
+            self.assertEqual(check('report', client.post(f'/analyze/{self.sid}').json()), [])
+
+    def test_missing_or_ambiguous_members_fail(self):
+        for members, diagnostic in (
+            ({'notes.txt': 'nothing'}, 'exactly one recording'),
+            ({'one.jsonl': '{}', 'two.jsonl': '{}'}, 'exactly one recording'),
+            ({'one.jsonl': '{}'}, 'paired metadata'),
+            ({'nested/one.jsonl': '{}', 'one.session.json': json.dumps(self.meta)}, 'paired metadata'),
+        ):
+            with self.subTest(members=list(members)):
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    Store([self.archive(members=members)])
+
+    def test_invalid_archive_data_uses_existing_validation(self):
+        invalid_state = json.loads(FIXTURE.read_text().splitlines()[0])
+        invalid_state.pop('players')
+        for raw, meta, diagnostic in (
+            (b'{broken\n', self.meta, 'recording.jsonl:1'),
+            (FIXTURE.read_bytes(), {**self.meta, 'session_id': 'wrong'}, 'does not match'),
+            (FIXTURE.read_bytes(), {**self.meta, 'mode': 'invalid'}, 'invalid session metadata'),
+            ((json.dumps(invalid_state) + '\n').encode(), self.meta, 'invalid state record'),
+        ):
+            with self.subTest(diagnostic=diagnostic):
+                path = self.archive(members={'recording.jsonl': raw, 'recording.session.json': json.dumps(meta)})
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    Store([path])
+
+    def test_corrupt_discovered_archive_is_isolated(self):
+        healthy = self.archive('samples/healthy.zip')
+        corrupt = healthy.with_name('corrupt.zip')
+        corrupt.write_bytes(b'not a ZIP')
+        store = Store()
+        self.assertIn(self.sid, store.sessions)
+        with self.assertRaisesRegex(ValueError, 'invalid ZIP archive'):
+            Store([corrupt])
+        with TestClient(brain.create(store)) as client:
+            self.assertEqual(len(client.get('/sessions').json()), 1)
+            self.assertEqual(client.get('/sessions/corrupt').status_code, 503)
+
+    def test_shipped_versus_archives(self):
+        paths = sorted((ROOT / 'data/samples').glob('*.zip'))
+        self.assertEqual(len(paths), 2)
+        store = Store(paths)
+        self.assertEqual(len(store.sessions), 2)
+        for session in store.newest():
+            self.assertEqual(session.meta['mode'], 'versus')
+            self.assertEqual(check('session', session.meta), [])
+            timeline = brain.Timeline(session)
+            self.assertTrue(timeline.items)
+            self.assertEqual({r['round'] for _, channel, r in timeline.items if channel == 'state'}, {1, 2, 3, 4})
+        neutral_id = '2026-10-18T01-24-57_sahil_djin_vs_kaz'
+        with TestClient(brain.create(store)) as client:
+            with client.websocket_connect(f'/ws/state?session={neutral_id}') as stream:
+                self.assertEqual(stream.receive_json()['session_id'], neutral_id)

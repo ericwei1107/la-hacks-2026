@@ -31,7 +31,7 @@ function SetCard({ session, selected, onSelect }: { session: SessionMeta; select
           {characterName(session.human_character)} vs {characterName(session.bot_character)}
         </span>
         <span className="text-base/sm text-text-muted">
-          Level {session.difficulty} · {session.rounds.length} rounds · {length}
+          Level {session.difficulty} · {session.rounds.length} {session.rounds.length === 1 ? 'round' : 'rounds'} · {length}
         </span>
       </span>
       <span className="flex w-[84px] shrink-0 flex-col items-end">

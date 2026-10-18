@@ -90,7 +90,7 @@ flowchart LR
 | Overlay HUD: live session, round, health, timer | `WS /ws/state` (brain) |
 | Overlay HUD: plan note | `plan` records on `WS /ws/state`, when the brain sends them |
 | Overlay HUD: habit belts and mastery | `GET /learning/{session_id}` (analytics), refetched at each `round_summary` on `WS /ws/coach`, which also names the habit the bot is targeting |
-| Between-round card | `coach` and `round_summary` records on `WS /ws/coach` |
+| Between-round card | `round_end` and `round_start` events on `WS /ws/state` (brain) for when it shows; `coach` and `round_summary` records on `WS /ws/coach` for what it says |
 | Sessions list, timeline and set totals | `GET /sessions`, `GET /sessions/{id}/recording` (brain) |
 | Replay analysis | `GET /reports/{session_id}`, `POST /analyze/{session_id}` (replay) |
 | Learning panel | `GET /learning/{session_id}` (analytics); the bot's current target from the recording's round summaries (brain) |

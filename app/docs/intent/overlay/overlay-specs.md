@@ -23,8 +23,21 @@ Design: `overlay-design.md`
 
 ## Between-round card
 
-- [ ] **OVERLAY-020**: When a `coach` record for the live set arrives on the coach stream, the overlay shall show the between-round card centered horizontally, 1000 px wide, with its bottom 64 px above the bottom edge.
-- [ ] **OVERLAY-021**: The overlay shall hide the between-round card 10 seconds after it appears, or earlier when a `state` record arrives for a round later than the coach record's round.
-- [ ] **OVERLAY-022**: The between-round card shall show "Round <n> goes to you", "Round <n> goes to <bot character>" or "Round <n> is a draw" from the live set's round summary for round n, or "Round <n>" when there is none.
-- [ ] **OVERLAY-023**: The between-round card shall show the coach record's `text` at 30 px bold on the mat ground.
-- [ ] **OVERLAY-024**: The between-round card shall show the whole seconds left in the display face in `--color-primary` over "Round <n + 1>", and a bottom bar whose `--color-primary` fill is proportional to the time left.
+- [ ] **OVERLAY-020**: When a `round_end` event for the live set arrives on the state stream, the overlay shall show the between-round card for that event's round, centered horizontally, 1000 px wide, with its bottom 64 px above the bottom edge.
+- [ ] **OVERLAY-028**: The overlay shall not show the between-round card on the arrival of a `coach` record or a `round_summary` record.
+- [ ] **OVERLAY-021**: When a `round_start` event for the card's set arrives on the state stream while the between-round card is showing, the overlay shall hide the card, whatever the event's round.
+- [ ] **OVERLAY-025**: When a `state` record for the card's set arrives with a round later than the between-round card's round, the overlay shall hide the card.
+- [ ] **OVERLAY-026**: When a `state` record for a set other than the between-round card's arrives, the overlay shall hide the card.
+- [ ] **OVERLAY-027**: When the round stops being live while the between-round card is showing, the overlay shall hide the card.
+- [ ] **OVERLAY-022**: The between-round card for round n shall show "Round <n> goes to you", "Round <n> goes to <bot character>" or "Round <n> is a draw" from the latest round summary for the card's set and round n, or "Round <n>" while no such summary has arrived.
+- [ ] **OVERLAY-023**: The between-round card for round n shall show the `text` of the latest `coach` record for the card's set and round n at 30 px bold on the mat ground.
+- [ ] **OVERLAY-029**: While no `coach` record for the card's set and round has arrived, the between-round card shall show "Coach is reviewing the round…" at 30 px in `--color-text-muted` in place of the coach text.
+- [ ] **OVERLAY-024**: While the card's `round_end` event does not carry `detail.match_over: true`, the between-round card for round n shall show, in the display face in `--color-primary`, the whole seconds left of a 10-second countdown that starts when the `round_end` event reaches the overlay and holds at 0, over "Round <n + 1>", and a bottom bar whose `--color-primary` fill is proportional to the time left.
+- [ ] **OVERLAY-030**: While the card's `round_end` event carries `detail.match_over: true`, the between-round card shall show "Set over" at 28 px (`--text-xl`) in the display face in `--color-primary` in place of the seconds and the round label.
+- [ ] **OVERLAY-031**: While the card's `round_end` event carries `detail.match_over: true`, the between-round card shall not draw the bottom bar.
+
+## Implemented in
+
+| Spec IDs | Entry point |
+|---|---|
+| OVERLAY-001 – OVERLAY-031 | `src/renderer/src/overlay.tsx` (`OverlayContent`, `Habits`, `BetweenRounds`) |

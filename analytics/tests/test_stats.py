@@ -45,8 +45,11 @@ class ComputeTest(unittest.TestCase):
         self.assertIsNone(self.totals([])['throw_break_rate'])
 
     def test_low_block_rate(self):
-        lows = [ev(10, 'block', actor=1, target=0, hit_level='low')] + [ev(20 + i, 'hit', actor=1, target=0, hit_level='special_low' if i else 'low') for i in range(3)]
+        lows = [ev(10, 'block', actor=1, target=0, hit_level='low')] + [ev(20 + i, 'hit', actor=1, target=0, hit_level='low') for i in range(3)]
         self.assertEqual(self.totals(lows)['low_block_rate'], 0.25)
+        special = [ev(40, 'block', actor=1, target=0, hit_level='special_low'), ev(50, 'hit', actor=1, target=0, hit_level='special_low')]
+        self.assertEqual(self.totals(lows + special)['low_block_rate'], 0.25)
+        self.assertIsNone(self.totals(special)['low_block_rate'])
 
     def test_advantage_from_the_human_side(self):
         body = self.totals([ev(10, 'block', actor=1, target=0, frame_advantage=-7), ev(30, 'block', actor=1, target=0, frame_advantage=-3)])

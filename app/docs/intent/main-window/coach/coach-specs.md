@@ -24,3 +24,10 @@ Design: `coach-design.md`
 
 - [ ] **MAIN-COACH-020**: While the brain lists no sets, the Coach screen shall show the empty state "No set to talk about yet." with "Play a set against Kumite, then ask the coach about it."
 - [ ] **MAIN-COACH-021**: While the replay service is offline, the Coach screen shall show the offline banner for the replay service and disable the question field and send arrow.
+
+## Implemented in
+
+| Spec IDs | Entry point |
+|---|---|
+| MAIN-COACH-001 – MAIN-COACH-021 | `src/renderer/src/main-window/screens/Coach.tsx` (`Coach`, `Conversation`) |
+| MAIN-COACH-010 | `src/renderer/src/main-window/pushToTalk.ts` (`usePushToTalkKey`) |

@@ -83,7 +83,11 @@ export function useConfig() {
 }
 
 export function useReport(sessionId: string) {
-  return useQuery({ queryKey: queryKeys.report(sessionId), queryFn: () => replay.getReport(sessionId) })
+  return useQuery({
+    queryKey: queryKeys.report(sessionId),
+    queryFn: () => replay.getReport(sessionId),
+    refetchInterval: (query) => query.state.data === null ? 3_000 : false
+  })
 }
 
 export function useStats(sessionId: string) {

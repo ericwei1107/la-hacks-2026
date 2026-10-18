@@ -6,7 +6,7 @@ import time
 from anyio import CancelScope
 from fastapi import HTTPException, Request, WebSocket
 from contextlib import asynccontextmanager
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 import derive
 from store import CONTRACTS, check, make_app
@@ -149,7 +149,10 @@ def create(store, rate=60, loop=True):
 
     @app.get("/sessions/{sid}/recording")
     def recording(sid: str):
-        return FileResponse(session_or_404(sid).path, media_type="application/x-ndjson")
+        session = session_or_404(sid)
+        if session.recording_bytes is not None:
+            return Response(session.recording_bytes, media_type="application/x-ndjson")
+        return FileResponse(session.path, media_type="application/x-ndjson")
 
     @app.get("/profiles/{player}")
     def profiles(player: str):

@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
+from analytics.repository import FileRepository, incomplete_json
+from analytics import stats
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = {path.name.removesuffix('.schema.json'): json.loads(path.read_text()) for path in (ROOT / 'contracts').glob('*.schema.json')}
@@ -73,8 +75,7 @@ def records(path, sid, source):
         try:
             record = loads(line)
         except json.JSONDecodeError as exc:
-            incomplete = exc.pos >= len(line.rstrip()) - 1 or exc.msg.startswith('Unterminated string')
-            if index == len(lines) and not text.endswith('\n') and line.lstrip().startswith('{') and incomplete:
+            if index == len(lines) and not text.endswith('\n') and incomplete_json(line, exc):
                 break
             raise InputError(f'{label}: malformed JSON') from exc
         except ValueError as exc:
@@ -112,32 +113,11 @@ class RoundBatch:
     rows: dict
 
 
-def discover(data_dir):
-    root = Path(data_dir).resolve()
-    found = {}
-    try:
-        paths = list(sorted((root / 'sessions').glob('*.json'))) + list(sorted((root / 'samples').glob('*.session.json')))
-    except OSError as exc:
-        raise InputError('Cannot list session metadata') from exc
-    for path in paths:
-        meta = metadata(path)
-        sid = meta['session_id']
-        sample = path.with_name(path.name.removesuffix('.session.json') + '.jsonl')
-        if sid in found:
-            old_meta, old_path = found[sid]
-            if not old_meta.get('recording') and not old_path.is_file() and sample.is_file():
-                found[sid] = old_meta, sample
-            continue
-        if path.parent == root / 'samples':
-            if not sample.is_file():
-                continue
-            recording = sample
-        else:
-            if path.stem != sid:
-                raise InputError(f'{path.name}: metadata filename/session id mismatch')
-            reference = Path(meta.get('recording') or root / 'recordings' / f'{sid}.jsonl')
-            recording = reference if reference.is_absolute() else ROOT / reference
-        found[sid] = meta, recording.resolve()
+def discover(data_dir, errors=None):
+    repository = FileRepository(data_dir)
+    found = {sid: (entry[2], entry[3]) for sid, entry in repository._sessions().items()}
+    if errors is not None:
+        errors.update(repository.invalid_sessions)
     return found
 
 
@@ -173,7 +153,7 @@ def prepare(meta, recording, data_dir):
         calculated = compute(sid, meta, recorded)['rounds'][0]
         moment = max(row.observed_at for values in rows.values() for row in values)
         rows['round_metrics'].append(Row(moment, 'calculated', 0, {'t': 'calculated_round', 'session_id': sid, **calculated}))
-        content = {'version': 2, 'meta': meta, 'round': number, 'offset': offset, 'records': group}
+        content = {'version': stats.CALCULATION_VERSION, 'meta': meta, 'round': number, 'offset': offset, 'records': group}
         digest = hashlib.sha256(json.dumps(content, sort_keys=True, allow_nan=False, separators=(',', ':')).encode()).hexdigest()
         batches.append(RoundBatch(meta, number, digest, rows))
         offset += last - first + 1

@@ -1,0 +1,2 @@
+pyarrow>=18
+duckdb>=1.1

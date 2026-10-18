@@ -43,3 +43,20 @@ Design: `design-system-design.md`
 - [ ] **DS-STATE-002**: The `EmptyState` component shall show the mat illustration, a headline, one line of copy, and an optional status line with a dot.
 - [ ] **DS-STATE-003**: The `OfflineBanner` component shall name the unreachable service in bold, say what the screen still shows, and offer a Try again button.
 - [ ] **DS-STATE-004**: While a screen's service is unreachable and the screen holds data received earlier, the screen shall keep showing that data below the `OfflineBanner`.
+
+## Implemented in
+
+All paths are under `src/renderer/src/`.
+
+| Spec IDs | Entry point |
+|---|---|
+| DS-TOKEN-001, DS-TOKEN-002, DS-RULE-002 | `styles.css` |
+| DS-TYPE-001 | `fonts.ts` |
+| DS-RULE-001 | every component that draws `--color-bot`; no single entry point |
+| DS-BELT-001 – DS-BELT-006 | `design/belts.ts` (`beltFor`, `beltName`) |
+| DS-BELT-007 – DS-BELT-009 | `design/Belt.tsx` (`Belt`, `BeltSquares`) |
+| DS-WORD-001 – DS-WORD-005 | `design/words.ts` |
+| DS-FMT-001 – DS-FMT-004 | `design/format.ts` |
+| DS-COMP-001, DS-COMP-002 | `design/controls.tsx`, `design/icons.tsx`, `design/states.tsx` |
+| DS-COMP-003, DS-STATE-001 – DS-STATE-003 | `design/states.tsx` |
+| DS-STATE-004 | `main-window/Screen.tsx` (`ScreenBanner`), with the query cache keeping earlier data |

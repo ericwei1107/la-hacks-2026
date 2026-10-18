@@ -32,3 +32,14 @@ Design: `frame-design.md`
 ## Integration readout
 
 - [ ] **MAIN-FRAME-040**: When the main window's address ends in `#integration`, the window shall show the plain integration readout of service addresses, service states and stream states instead of the frame.
+
+## Implemented in
+
+All paths are under `src/renderer/src/`.
+
+| Spec IDs | Entry point |
+|---|---|
+| MAIN-FRAME-001 – MAIN-FRAME-005 | `main-window/Sidebar.tsx` (`Sidebar`), `main-window/MainWindow.tsx` |
+| MAIN-FRAME-010 – MAIN-FRAME-013, MAIN-FRAME-030 | `main-window/frame.tsx` (`FrameProvider`) |
+| MAIN-FRAME-020 – MAIN-FRAME-024 | `main-window/Screen.tsx` (`Screen`, `SetPicker`) |
+| MAIN-FRAME-040 | `main.tsx`, `IntegrationCheck.tsx` |
