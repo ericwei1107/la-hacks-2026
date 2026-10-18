@@ -1,5 +1,15 @@
 # Tiger Data verification — 2026-10-17
 
+## Calculation version 3 remediation
+
+Verified baseline commit `e876d8b` plus the remediation working-tree changes. The opt-in live integration test passed in its disposable schema, proving aggregate-backed reads while `trend_values` is patched to fail, as well as correction replacement, outage fallback, rollback and reconnect. The test removed its schema afterward.
+
+Backfill on the configured `kumite` schema rebuilt four completed rounds: `imported=4 unchanged=0 invalid_sessions=0`. Immediate repeat: `imported=0 unchanged=4 invalid_sessions=0`. Both import and aggregate fingerprints now include calculation version **3**; existing API/watcher processes must be restarted to load it. Credentials were loaded privately from ignored `analytics/.env` and were not printed.
+
+The delayed-database regression verifies that pending database work does not block stats, learning, or a second file-fallback trend request. API connection/statement limits are two seconds each; importer limits remain longer. The loopback smoke verifies real analytics with mock brain/replay, eval refresh and clean shutdown. It is separate from the live cloud test.
+
+## Earlier integration verification
+
 The updated schema was applied to the configured cloud service through `analytics/.env`; credentials were neither printed nor committed.
 
 - Explicit `init` succeeded, including four hypertables and `session_trends` continuous aggregate.

@@ -7,12 +7,31 @@ import sys
 
 import uvicorn
 
-import analytics
+import analytics_mock
 import brain
 import replay
 from store import Store
 
 PORTS = {"brain": 8765, "replay": 8766, "analytics": 8767}
+
+
+@contextmanager
+def shutdown_signals(loop, stop):
+    registered, fallback = [], {}
+    try:
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            try:
+                loop.add_signal_handler(sig, stop.set)
+                registered.append(sig)
+            except NotImplementedError:
+                fallback[sig] = signal.getsignal(sig)
+                signal.signal(sig, lambda signum, frame: loop.call_soon_threadsafe(stop.set))
+        yield
+    finally:
+        for sig in registered:
+            loop.remove_signal_handler(sig)
+        for sig, previous in fallback.items():
+            signal.signal(sig, previous)
 
 
 class Server(uvicorn.Server):
@@ -47,11 +66,17 @@ async def main(argv=None):
     apps = {
         "brain": lambda: brain.create(store, rate=a.rate, loop=not a.no_loop),
         "replay": lambda: replay.create(store),
-        "analytics": lambda: analytics.create(store),
+        "analytics": lambda: analytics_mock.create(store),
     }
     sockets, servers, tasks = [], [], []
     loop = asyncio.get_running_loop()
     stop = asyncio.Event()
+    handlers = shutdown_signals(loop, stop)
+    with handlers:
+        return await serve_apps(a, store, apps, sockets, servers, tasks, loop, stop)
+
+
+async def serve_apps(a, store, apps, sockets, servers, tasks, loop, stop):
     try:
         for name in a.services:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,8 +88,6 @@ async def main(argv=None):
                 sock.setblocking(False)
             except OSError as exc:
                 raise OSError(f"Cannot start {name} on {a.host}:{PORTS[name]}: {exc}") from exc
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, stop.set)
         print(f"{len(store.sessions)} session(s) loaded; default stream: {store.default().id}", flush=True)
         for name, sock in zip(a.services, sockets):
             server = Server(uvicorn.Config(apps[name](), host=a.host, port=PORTS[name], log_level="warning"))
@@ -92,8 +115,6 @@ async def main(argv=None):
                 await asyncio.gather(*tasks, return_exceptions=True)
         for sock in sockets:
             sock.close()
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.remove_signal_handler(sig)
 
 
 if __name__ == "__main__":

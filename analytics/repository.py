@@ -1,16 +1,23 @@
 import copy
 import json
+import hashlib
+import logging
+import re
+import os
 import threading
 from datetime import datetime
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
+from analytics.observability import traced
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = {p.name.removesuffix('.schema.json'): json.loads(p.read_text()) for p in (ROOT / 'contracts').glob('*.schema.json')}
 VALIDATORS = {name: Draft202012Validator(schema, format_checker=FormatChecker()) for name, schema in SCHEMAS.items()}
 ROUND_VALIDATOR = Draft202012Validator({**SCHEMAS['metrics']['$defs']['round'], '$defs': SCHEMAS['metrics']['$defs']}, format_checker=FormatChecker())
 EVAL_VALIDATOR = Draft202012Validator({'type': 'object', 'required': ['before', 'after'], 'properties': {key: {'type': ['number', 'null'], 'minimum': 0, 'maximum': 1} for key in ('before', 'after')}})
+RECORD_SCHEMAS = {'state': 'gamestate', 'event': 'event', 'round_summary': 'round_summary', 'plan': 'gameplan', 'learning_round': 'metrics'}
+logger = logging.getLogger(__name__)
 
 
 class DataError(Exception):
@@ -36,6 +43,40 @@ def decode(text):
     return json.loads(text, parse_constant=reject_constant)
 
 
+def incomplete_json(line, error):
+    if not line.lstrip().startswith('{'):
+        return False
+    tail = line[error.pos:].strip()
+    return (error.pos >= len(line.rstrip()) or error.msg.startswith('Unterminated string')
+            or (bool(tail) and any(token.startswith(tail) for token in ('true', 'false', 'null')))
+            or (error.msg.startswith('Invalid \\u') and re.search(r'\\u[0-9a-fA-F]{0,3}$', line) is not None)
+            or (error.msg.startswith("Expecting ','") and re.search(r'\d(?:\.\d*)?(?:[eE][+-]?\d*)?$', line) is not None and tail[:1] in ('.', 'e', 'E')))
+
+
+def checked_record(record, sid, label):
+    kind = record.get('t')
+    if not isinstance(kind, str) or kind not in RECORD_SCHEMAS:
+        return False
+    body = {key: value for key, value in record.items() if key not in ('t', 'session_id', 'round', 'frame')} if kind == 'plan' else record
+    validate(body, ROUND_VALIDATOR if kind == 'learning_round' else VALIDATORS[RECORD_SCHEMAS[kind]], label)
+    if record.get('session_id', sid) != sid:
+        raise DataError(f'{label}: mismatched session id')
+    if kind == 'event' and record['kind'] == 'round_end':
+        winner = (record.get('detail') or {}).get('winner')
+        if winner is not None and (type(winner) is not int or winner not in (0, 1)):
+            raise DataError(f'{label}: invalid round winner')
+    return True
+
+
+def normalized_learning(sid, records, label):
+    rounds = {}
+    for record in records:
+        if record.get('t') == 'learning_round':
+            checked_record(record, sid, label)
+            rounds[record['round']] = record
+    return [rounds[number] for number in sorted(rounds)]
+
+
 def read_lines(text, label):
     lines = text.splitlines()
     result = []
@@ -45,41 +86,54 @@ def read_lines(text, label):
         try:
             record = decode(line)
         except json.JSONDecodeError as exc:
-            incomplete = exc.pos >= len(line.rstrip()) - 1 or exc.msg.startswith('Unterminated string')
-            if index == len(lines) - 1 and not text.endswith('\n') and line.lstrip().startswith('{') and incomplete:
+            if index == len(lines) - 1 and not text.endswith('\n') and incomplete_json(line, exc):
                 break
-            raise DataError(f'{label}: invalid JSON at line {index + 1}') from exc
+            raise DataError(f'{label}:{index + 1}: invalid JSON') from exc
         except ValueError as exc:
-            raise DataError(f'{label}: invalid JSON at line {index + 1}') from exc
+            raise DataError(f'{label}:{index + 1}: invalid JSON') from exc
         if not isinstance(record, dict):
-            raise DataError(f'{label}: expected object at line {index + 1}')
+            raise DataError(f'{label}:{index + 1}: expected object')
         result.append(record)
     return result
 
 
 class TailReader:
-    def __init__(self, path):
+    def __init__(self, path, sid):
         self.path = Path(path)
+        self.sid = sid
         self.records = []
         self.offset = 0
         self.mtime = None
         self.generation = 0
         self.skipped = 0
+        self.identity = None
+        self.digest = hashlib.sha256().digest()
 
+    @traced('file.load')
     def refresh(self):
-        st = self.path.stat()
-        if st.st_size < self.offset or (st.st_size == self.offset and self.mtime is not None and st.st_mtime_ns != self.mtime):
-            self.records, self.offset, self.skipped = [], 0, 0
-            self.generation += 1
-        if st.st_size > self.offset:
-            with open(self.path, 'rb') as f:
-                f.seek(self.offset)
-                chunk = f.read(st.st_size - self.offset)
+        with self.path.open('rb') as f:
+            st = os.fstat(f.fileno())
+            identity = (st.st_dev, st.st_ino)
+            if identity == self.identity and st.st_mtime_ns == self.mtime and st.st_size == self.offset:
+                return self
+            prefix = f.read(min(self.offset, st.st_size))
+            if identity != self.identity or st.st_size < self.offset or hashlib.sha256(prefix).digest() != self.digest:
+                self.records, self.offset, self.skipped = [], 0, 0
+                self.generation += 1
+                f.seek(0)
+                prefix = b''
+            chunk = f.read(st.st_size - self.offset)
+            after = os.fstat(f.fileno())
+            if (st.st_size, st.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+                raise DataError(f'{self.path.name}: changed while being read; retry the request')
             end = chunk.rfind(b'\n')
             if end >= 0:
                 for raw in chunk[:end + 1].splitlines():
                     self._parse(raw)
                 self.offset += end + 1
+                prefix += chunk[:end + 1]
+            self.digest = hashlib.sha256(prefix).digest()
+        self.identity = identity
         self.mtime = st.st_mtime_ns
         return self
 
@@ -88,12 +142,11 @@ class TailReader:
             return
         try:
             record = decode(raw)
-        except (ValueError, UnicodeDecodeError):
-            self.skipped += 1
-            return
-        if isinstance(record, dict) and isinstance(record.get('t'), str):
-            self.records.append(record)
-        else:
+            if not isinstance(record, dict):
+                raise ValueError('expected object')
+            if checked_record(record, self.sid, self.path.name):
+                self.records.append(record)
+        except (ValueError, UnicodeDecodeError, DataError):
             self.skipped += 1
 
 
@@ -105,19 +158,21 @@ class FileRepository:
         self.results = {}
         self.parsed = {}
         self.tails = {}
+        self.invalid_sessions = {}
 
+    @traced('file.load')
     def _read(self, path, optional=False):
         path = Path(path)
         try:
             for _ in range(2):
                 before = path.stat()
-                stamp = (before.st_mtime_ns, before.st_size)
+                stamp = (before.st_dev, before.st_ino, before.st_mtime_ns, before.st_size)
                 cached = self.files.get(path)
                 if cached and cached[0] == stamp:
                     return stamp, cached[1]
                 text = path.read_text(encoding='utf-8')
                 after = path.stat()
-                if stamp == (after.st_mtime_ns, after.st_size):
+                if stamp == (after.st_dev, after.st_ino, after.st_mtime_ns, after.st_size):
                     self.files[path] = (stamp, text)
                     return stamp, text
             raise DataError(f'{path.name}: changed while being read; retry the request')
@@ -143,28 +198,53 @@ class FileRepository:
         self.parsed[key] = (stamp, value)
         return stamp, value
 
-    def _sessions(self):
+    def _session(self, path):
+        stamp, meta = self._json(path, VALIDATORS['session'])
+        for field in ('started_at', 'ended_at'):
+            if meta.get(field) is not None:
+                try:
+                    parsed = datetime.fromisoformat(meta[field].replace('Z', '+00:00'))
+                    if parsed.tzinfo is None:
+                        raise ValueError('timezone required')
+                except ValueError as exc:
+                    raise DataError(f'{path.name}: invalid {field} timestamp') from exc
+        sid = meta['session_id']
+        if not safe_id(sid):
+            raise DataError(f'{path.name}: unsafe session id')
+        if path.parent == self.root / 'sessions' and path.stem != sid:
+            raise DataError(f'{path.name}: session id does not match metadata filename')
+        return stamp, meta
+
+    def _sessions(self, requested=None):
         try:
             canonical = sorted((self.root / 'sessions').glob('*.json'))
             samples = sorted((self.root / 'samples').glob('*.session.json'))
         except OSError as exc:
             raise DataError('Cannot discover session metadata') from exc
         found = {}
+        self.invalid_sessions = {}
         for path in canonical + samples:
-            stamp, meta = self._json(path, VALIDATORS['session'])
-            for field in ('started_at', 'ended_at'):
-                if meta.get(field) is not None:
+            try:
+                stamp, meta = self._session(path)
+            except DataError as exc:
+                sid = path.stem if path in canonical else path.name.removesuffix('.session.json')
+                cached = self.parsed.get((path, 'json'))
+                if path not in canonical and cached:
+                    sid = cached[1].get('session_id', sid)
+                elif path not in canonical:
                     try:
-                        parsed = datetime.fromisoformat(meta[field].replace('Z', '+00:00'))
-                        if parsed.tzinfo is None:
-                            raise ValueError('timezone required')
-                    except ValueError as exc:
-                        raise DataError(f'{path.name}: invalid {field} timestamp') from exc
+                        with path.with_name(sid + '.jsonl').open() as stream:
+                            first = next(line for line in stream if line.strip())
+                        sid = decode(first).get('session_id', sid)
+                    except (OSError, ValueError, StopIteration, AttributeError):
+                        pass
+                if safe_id(sid) and sid not in found:
+                    self.invalid_sessions[sid] = exc
+                logger.warning('Session metadata unavailable: %s', exc)
+                continue
             sid = meta['session_id']
-            if not safe_id(sid):
-                raise DataError(f'{path.name}: unsafe session id')
-            if path.parent == self.root / 'sessions' and path.stem != sid:
-                raise DataError(f'{path.name}: session id does not match metadata filename')
+            if sid in self.invalid_sessions:
+                continue
             sample = path.with_name(path.name.removesuffix('.session.json') + '.jsonl')
             if sid in found:
                 previous = found[sid]
@@ -180,6 +260,8 @@ class FileRepository:
                 recording = reference if reference.is_absolute() else ROOT / reference
             found[sid] = (path, stamp, meta, recording.resolve())
         self.results = {key: value for key, value in self.results.items() if key[0] in found}
+        if requested in self.invalid_sessions:
+            raise self.invalid_sessions[requested]
         return found
 
     def _learning(self, sid):
@@ -189,16 +271,7 @@ class FileRepository:
         cached = self.parsed.get(key)
         if cached and cached[0] == stamp:
             return stamp, cached[1]
-        rounds = {}
-        if text is not None:
-            for record in read_lines(text, path.name):
-                if record.get('t') != 'learning_round':
-                    continue
-                validate(record, ROUND_VALIDATOR, path.name)
-                if record.get('session_id', sid) != sid:
-                    raise DataError(f'{path.name}: mismatched session id')
-                rounds[record['round']] = record
-        result = [rounds[number] for number in sorted(rounds)]
+        result = normalized_learning(sid, read_lines(text, path.name) if text is not None else [], path.name)
         self.parsed[key] = (stamp, result)
         return stamp, result
 
@@ -231,7 +304,7 @@ class FileRepository:
 
     def learning(self, sid):
         with self.lock:
-            if not safe_id(sid) or sid not in self._sessions():
+            if not safe_id(sid) or sid not in self._sessions(sid):
                 return None
             return copy.deepcopy(self._metrics(sid)[1])
 
@@ -242,18 +315,8 @@ class FileRepository:
         if cached and cached[0] == stamp and cached[1] == sid:
             return stamp, cached[2]
         records = []
-        names = {'state': 'gamestate', 'event': 'event', 'round_summary': 'round_summary', 'plan': 'gameplan', 'learning_round': 'metrics'}
         for record in read_lines(text, path.name):
-            kind = record.get('t')
-            if not isinstance(kind, str) or kind not in names:
-                continue
-            body = record
-            if kind == 'plan':
-                body = {key: value for key, value in record.items() if key not in ('t', 'session_id', 'round', 'frame')}
-            validate(body, ROUND_VALIDATOR if kind == 'learning_round' else VALIDATORS[names[kind]], path.name)
-            if record.get('session_id') != sid:
-                raise DataError(f'{path.name}: mismatched session id')
-            if kind in ('event', 'round_summary'):
+            if checked_record(record, sid, path.name) and record['t'] in ('state', 'event', 'round_summary'):
                 records.append(record)
         self.parsed[key] = (stamp, sid, records)
         return stamp, records
@@ -262,11 +325,11 @@ class FileRepository:
         from analytics.stats import compute
 
         with self.lock:
-            sessions = self._sessions() if safe_id(sid) else {}
+            sessions = self._sessions(sid) if safe_id(sid) else {}
             if sid not in sessions:
                 return None
             _, meta_stamp, meta, recording = sessions[sid]
-            tail = self.tails.get(recording) or TailReader(recording)
+            tail = self.tails.get(recording) or TailReader(recording, sid)
             try:
                 tail.refresh()
             except FileNotFoundError as exc:

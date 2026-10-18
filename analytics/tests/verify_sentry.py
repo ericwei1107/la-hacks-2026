@@ -64,7 +64,7 @@ def run():
                     if time.monotonic() > deadline:
                         raise RuntimeError('Analytics verification startup timed out')
                     time.sleep(0.1)
-                release = response.json()['version']
+                release = env.get('SENTRY_RELEASE') or f"kumite-analytics@{response.json()['version']}"
                 endpoints = {'/health': '/health', '/learning/{session_id}': f'/learning/{sid}', '/trends/{player}/{character}': '/trends/sahil/devil_jin', '/stats/{session_id}': f'/stats/{sid}'}
                 for route, path in endpoints.items():
                     trace_id, parent_id = uuid.uuid4().hex, uuid.uuid4().hex[:16]

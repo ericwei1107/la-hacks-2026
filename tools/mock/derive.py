@@ -1,17 +1,11 @@
 from datetime import datetime, timezone
-import importlib.util
-import json
-
-from store import ROOT, data_dir
-
-_spec = importlib.util.spec_from_file_location("kumite_analytics_stats", ROOT / "analytics" / "stats.py")
-analytics_stats = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(analytics_stats)
+from store import data_dir
+from analytics import stats as analytics_stats
+from analytics.metrics import learning_metrics
+from analytics.repository import DataError, FileRepository, normalized_learning
 
 CONNECT = ("hit", "counter_hit")
 DAMAGING = CONNECT + ("throw",)
-DETECT_N = 4
-DETECT_P = 0.6
 OPTIONS = [("block_low", "d/b", 0.55), ("press", "1", 0.25), ("sidestep", "u", 0.20)]
 
 
@@ -29,13 +23,7 @@ def rounds(session):
 
 
 def winner(session, round_):
-    for e in events(session, round_):
-        if e["kind"] == "round_end":
-            return (e.get("detail") or {}).get("winner")
-    for r in session.meta.get("rounds", []):
-        if r.get("round") == round_:
-            return r.get("winner")
-    return None
+    return analytics_stats.winners(session.records, session.meta).get(round_)
 
 
 def damage_to(evs, slot):
@@ -82,26 +70,15 @@ def stats(session):
 
 
 def learning(session):
-    lines = sorted(session.learning, key=lambda l: l["round"])
-    detect, mastery = {}, {}
-    for line in lines:
-        for habit, h in line.get("habits", {}).items():
-            if habit not in detect and h.get("n", 0) >= DETECT_N and h.get("p", 0) >= DETECT_P:
-                detect[habit] = line["round"]
-            if habit not in mastery and h.get("fixed"):
-                mastery[habit] = line["round"]
-    return {"session_id": session.id, "rounds": lines, "time_to_detect": detect, "time_to_mastery": mastery, "finetune": finetune(session.id)}
+    try:
+        lines = normalized_learning(session.id, session.load_learning(), str(session.path))
+    except ValueError as exc:
+        raise DataError(f'{session.id}: invalid learning data') from exc
+    return learning_metrics(session.id, lines, finetune(session.id))
 
 
 def finetune(sid):
-    path = data_dir() / "eval" / f"{sid}.json"
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {"before": None, "after": None}
-    if not isinstance(value, dict):
-        return {"before": None, "after": None}
-    return {key: value.get(key) for key in ("before", "after")}
+    return FileRepository(data_dir())._evaluation(sid)[1]
 
 
 def coach_text(summary):

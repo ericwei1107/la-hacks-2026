@@ -1,7 +1,9 @@
 from fastapi import HTTPException
+from datetime import datetime
 
 import derive
 from store import check, make_app
+from analytics.metrics import trend_values
 
 
 def create(store):
@@ -32,10 +34,11 @@ def create(store):
         for s in sorted(store.sessions.values(), key=lambda s: s.meta.get("started_at", "")):
             if s.meta.get("player") != player or s.meta.get("human_character") != character:
                 continue
-            values = {k: v for k, v in derive.stats(s)["totals"].items() if v is None or isinstance(v, (int, float))}
-            if stat:
+            values = trend_values(s.meta, s.records, derive.learning(s))
+            if stat is not None:
                 values = {stat: values[stat]} if stat in values else {}
             series.append({"session_id": s.id, "started_at": s.meta.get("started_at"), "values": values})
+        series.sort(key=lambda point: (datetime.fromisoformat(point['started_at'].replace('Z', '+00:00')), point['session_id']))
         return {"player": player, "character": character, "series": series}
 
     return app

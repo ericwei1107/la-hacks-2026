@@ -1,6 +1,9 @@
 import bisect
 from collections import defaultdict
 
+from analytics.observability import traced
+
+CALCULATION_VERSION = 3
 PUNISHABLE = -10
 PUNISH_WINDOW = 10
 CONNECT = ("hit", "counter_hit")
@@ -14,7 +17,7 @@ def rate(num, den):
 
 
 def rounds_of(records):
-    found = sorted({r["round"] for r in records if isinstance(r.get("round"), int)})
+    found = sorted({r["round"] for r in records if r.get('t') in ('state', 'event', 'round_summary') and type(r.get("round")) is int})
     return found or [1]
 
 
@@ -40,13 +43,19 @@ class Situations:
 
 
 def winners(records, meta):
-    found = {}
+    found = {r['round']: r.get('winner') for r in meta.get('rounds', [])}
     for e in records:
-        if e.get("t") == "event" and e.get("kind") == "round_end":
-            found[e.get("round")] = (e.get("detail") or {}).get("winner")
-    for r in meta.get("rounds") or []:
-        if isinstance(r, dict) and found.get(r.get("round")) is None:
-            found[r.get("round")] = r.get("winner")
+        if e.get('t') == 'round_summary':
+            winner = e.get('winner')
+        elif e.get('t') == 'event' and e.get('kind') == 'round_end':
+            winner = (e.get('detail') or {}).get('winner')
+        else:
+            continue
+        if winner is not None:
+            found[e['round']] = winner
+    if any(w is not None and (type(w) is not int or w not in (0, 1)) for w in found.values()):
+        from analytics.repository import DataError
+        raise DataError('Invalid round winner in session metadata or recording')
     return found
 
 
@@ -58,8 +67,13 @@ def block(evs, human, situations, won):
             key = e.get("situation") or situations.at(e.get("round"), e.get("frame", 0)) or "neutral"
             by_situation[key] += e["damage"]
     opps = [e for e in evs if e["kind"] == "block" and e.get("actor") == bot and e.get("target") == human and isinstance(e.get("frame_advantage"), int) and e["frame_advantage"] <= PUNISHABLE]
-    hits_by_human = [e for e in evs if e["kind"] in CONNECT and e.get("actor") == human]
-    punished = sum(1 for o in opps if any(h.get("round") == o.get("round") and 0 < h["frame"] - o["frame"] <= abs(o["frame_advantage"]) + PUNISH_WINDOW for h in hits_by_human))
+    hits_by_human = [e for e in evs if e['kind'] in CONNECT and e.get('actor') == human and e.get('target') == bot]
+    matched = set()
+    for hit in sorted(hits_by_human, key=lambda h: (h['round'], h['frame'])):
+        candidates = [i for i, o in enumerate(opps) if i not in matched and o['round'] == hit['round'] and 0 < hit['frame'] - o['frame'] <= abs(o['frame_advantage']) + PUNISH_WINDOW]
+        if candidates:
+            matched.add(max(candidates, key=lambda i: (opps[i]['frame'], i)))
+    punished = len(matched)
     throws = sum(1 for e in evs if e["kind"] == "throw" and e.get("actor") == bot and e.get("target") == human)
     breaks = [e for e in evs if e["kind"] == "throw_break" and e.get("actor") == human]
     by_type = defaultdict(int)
@@ -98,6 +112,7 @@ def health_timeline(records, human):
     return {str(k): v for k, v in sorted(out.items(), key=lambda kv: (kv[0] is None, kv[0]))}
 
 
+@traced('stats.reduce')
 def compute(session_id, meta, records):
     human = meta.get("human_slot", 0) if meta.get("human_slot") in (0, 1) else 0
     evs = [r for r in records if r.get("t") == "event" and isinstance(r.get("kind"), str) and isinstance(r.get("frame"), int)]

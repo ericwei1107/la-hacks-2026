@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-import analytics
+import analytics_mock as analytics
 import brain
 import replay
 from store import ROOT, Session, Store, check, load_jsonl

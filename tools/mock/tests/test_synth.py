@@ -76,7 +76,7 @@ class SynthTest(unittest.TestCase):
 
     def test_served_by_mock(self):
         from fastapi.testclient import TestClient
-        import analytics
+        import analytics_mock as analytics
 
         store = Store()
         self.assertIn(self.sid, store.sessions)

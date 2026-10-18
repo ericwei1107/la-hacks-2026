@@ -28,7 +28,7 @@ The launcher checks all requested ports before serving. An occupied port fails s
 
 Each recording needs metadata from `<recording-stem>.session.json`, or `DATA_DIR/sessions/<session_id>.json`. Missing or invalid required files fail with a diagnostic. The id comes from the records, not the filename. The shipped sample is named `practice_djin_vs_kaz.jsonl`, but its id is `2026-10-17T21-13-10_sahil_djin_vs_kaz`.
 
-Optional files are `DATA_DIR/learning/<session_id>.jsonl`, `profiles/*.json`, and `reports/<session_id>.json`. Learning records embedded in a recording take precedence over its learning file. Missing learning returns empty rounds/maps and null fine-tune values; missing profiles returns an empty list. Known records and schema-backed responses are validated. Unknown fields are retained, unsupported record types are ignored by playback, and an incomplete final JSON line is tolerated. Malformed complete lines fail with a filename and line number.
+Optional files are `DATA_DIR/learning/<session_id>.jsonl`, `profiles/*.json`, and `reports/<session_id>.json`. A companion learning file takes precedence; inline learning records remain a fallback for standalone mock fixtures. Repeated round numbers use the last complete record and are sorted by round. Unknown learning extension fields are retained. Missing learning returns empty rounds/maps and null fine-tune values; missing profiles returns an empty list. Known records and schema-backed responses are validated. Fine-tune values come only from `DATA_DIR/eval/<session_id>.json`, using real analytics validation; a missing file gives nulls and an invalid existing file gives 503. Unknown fields are retained, unsupported record types are ignored by playback, and an incomplete final JSON line is tolerated. Malformed complete lines fail with a filename and line number.
 
 ## APIs and mock behavior
 
@@ -39,9 +39,9 @@ Optional files are `DATA_DIR/learning/<session_id>.jsonl`, `profiles/*.json`, an
 | Brain :8765 | WebSockets `/ws/state`, `/ws/coach` | Shared replay timeline per session; state/events and round summaries with canned coach text |
 | Replay :8766 | POST `/coach/round`, `/coach/chat` | Deterministic template coaching; chat cites only moments from the selected recording |
 | Replay :8766 | POST `/analyze/{id}`, GET `/reports/{id}` | Mock analysis persisted under `DATA_DIR/reports/`; 404 before analysis unless saved; unknown ids return 404 |
-| Analytics :8767 | `/stats/{id}`, `/trends/{player}/{character}`, `/learning/{id}` | Simple event-derived placeholder stats, sorted trends with optional `?stat=`, and available learning records |
+| Analytics :8767 | `/stats/{id}`, `/trends/{player}/{character}`, `/learning/{id}` | Shared real-analytics reducers, learning-derived trend values with optional `?stat=`, and normalized learning/eval records |
 
-Coaching and option scores are canned mock content. Stats use provisional event heuristics, including the assumption that event frame advantage is from the actor's side; these are not the real analytics pipeline or verified coaching. The real practice sample lacks round summaries and learning data. For playback, a minimal summary is derived at the last frame of each round, with no invented mastery/habit claims. Richer learning curves require a recording and learning files containing them.
+Stats, trends and learning use the real analytics calculations, including actor-relative frame advantage and the provisional punish window. Coaching and option scores remain canned content. The internal module is named `analytics_mock.py` so it cannot shadow the real analytics package. The real practice sample lacks round summaries and learning data. For playback, a minimal summary is derived at the last frame of each round, with no invented mastery/habit claims. Richer learning curves require a recording and learning files containing them.
 
 Playback advances at 60 game frames per second, preserving frame gaps and source order. It handles nonzero initial frames, frame resets at round boundaries, and EOF looping. All sockets for a session join the same running timeline. Slow clients may miss state messages; a client that cannot accept required events or summaries is explicitly disconnected rather than silently losing those records. Reconnect joins the current position. The mock is a recording snapshot; restart to reload a changed streamed recording.
 
@@ -81,3 +81,9 @@ When section 3.1 produces another recording, select its JSONL with `--recording`
 | 3 | every low blocked and punished; the plan switches to mids and throws | accuracy 0.71, `low_defense` fixed, `player_changed` | human |
 
 Result `loss 1-2`; `/learning` gives `time_to_detect.low_defense = 1` and `time_to_mastery.low_defense = 3`. Flags: `--seed`, `--rounds` (1–3), `--round-seconds` (30 minimum), `--player`, `--out`. Tests: `tests/test_synth.py`.
+
+## Remediation and portability
+
+The launcher uses POSIX asyncio signal handlers where supported and a standard signal fallback on Windows; previous handlers are restored on exit or startup failure. Native Windows validation remains pending. Invalid discovered metadata is isolated to its session; explicitly selected invalid input fails startup with a diagnostic. Each service returns 503 when requested session data is invalid.
+
+For a complete checked-in three-round session, use [the synthetic bundle](../../data/samples/synthetic/README.md). Set `DATA_DIR` to that bundle for both the mock and real analytics. Mock dependencies include the Sentry SDK for shared no-op spans; the mock never initializes telemetry or requires a DSN.
