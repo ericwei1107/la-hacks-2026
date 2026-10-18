@@ -2,6 +2,10 @@
 
 The real analytics service serves stats, learning metrics and per-session trends on port 8767. It works from files without a running game. Optional Tiger Data integration serves current trends from a continuous aggregate and falls back to files. Sentry retains HTTP transactions with loading, reduction and learning operation spans. See [remediation status and owner handoffs](REMEDIATION.md).
 
+## Real live-learning sample
+
+`data/samples/live_learning/` is a real L3 set, session `2026-10-18T05-14-03_sahil_djin_vs_kaz`. Set `DATA_DIR` to that folder. Detection/exploitation is measured; low-defense mastery is absent. Recorded accuracy is 0.60 → 0.7333 → 0.9048 → 1.00, and `after_block:any` has a fixed event followed by regression. Fine-tune values remain null. See [local verification and exact run commands](LIVE_LEARNING_VERIFICATION.md); approved cloud ingestion and aggregate/API parity are verified (four rounds imported; repeat imported zero).
+
 ## Run
 
 ```sh

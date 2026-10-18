@@ -30,7 +30,7 @@ Executed successfully against project `kumite-analytics`, organization `universi
 
 The owner accepted the existing health-check filter during remediation planning. `/health` instrumentation is verified locally; retained functional endpoint traces are the live acceptance criterion. No inbound filter was changed.
 
-Cross-service decision spans and coach-agent monitoring remain section 6.2 work. This verification does not claim they are configured.
+Cross-service decision spans and coach-agent monitoring are tracked separately below under B5. The analytics verification above covers analytics only.
 
 ## Remediation verification — October 17, 2026, 7:29 PM PDT
 
@@ -48,4 +48,44 @@ The first MCP lookup preceded full indexing; a later query confirmed all three t
 
 Importer and database paths now emit `tigerdata.ingest`, `tigerdata.publish`, `tigerdata.read` and `tigerdata.trends` spans when they have a parent transaction. This live endpoint check used file-backed analytics; the cloud regression independently proves the database path.
 
-**Cross-track sponsor status: blocked on retained owner decision and coach traces.** Concrete handoffs are [Sahil](handoffs/sentry-brain.md) and [Garrett](handoffs/sentry-replay.md). Their required decision-waterfall screenshot remains pending because there is no retained game decision trace to capture. Trace URLs above are analytics evidence, not substitutes for that screenshot.
+**Current B5 status: analytics and replay evidence retained; brain evidence pending.** Garrett's real HTTP → agent → provider trace is verified below. [Sahil's decision trace](handoffs/sentry-brain.md), its waterfall screenshot and tracing on/off timings remain pending. The analytics and replay traces do not substitute for a game decision waterfall or prove distributed propagation across services.
+
+M4's brain API/coach-forwarding code is now on main; Sahil reports live verification with Chloe's app. He will add brain decision spans next, at 5% sampling, and compare hot-loop timings with tracing disabled/enabled after receiving the brain DSN. Sentry MCP verified that project's existing DSN for private forwarding; the key is not copied here and org viewing access remains unverified. Retained brain traces, waterfall screenshot and timing results are still pending. See [the current brain handoff](handoffs/sentry-brain.md). Report API readiness and observed decision frequencies do not establish mastery integration.
+
+## B5: retained replay coach evidence — October 18, 2026
+
+GitHub confirms both owner PRs are merged: [#15](https://github.com/ericwei1107/la-hacks-2026/pull/15) adds instrumentation (`c7e11f209460b7498dec39ea209e3740385fecc1`), and [#16](https://github.com/ericwei1107/la-hacks-2026/pull/16) records live evidence (`4787b3268d8bc086653b66b62d6039c8c899a7f0`). The authoritative owner record is [replay/SENTRY_VERIFICATION.md at the PR #16 merge](https://github.com/ericwei1107/la-hacks-2026/blob/4787b3268d8bc086653b66b62d6039c8c899a7f0/replay/SENTRY_VERIFICATION.md#retained-live-evidence-2026-10-18), read from fetched `origin/main`. That record supersedes PR #15's original pending-live-evidence wording. The trace release identifies the measured run separately from the instrumentation PR head, either merge commit, or the current deployment.
+
+The retained [successful trace](https://university-of-maryland-ma.sentry.io/explore/traces/trace/bc9fad3bd3974dbb9145165d02f9605c/) is in `kumite-replay`, organization `university-of-maryland-ma`. Garrett ran the actual service on verification port **8776** with `KUMITE_COACH_MODE=auto`, a real HTTP `POST /coach/round` using `contracts/examples/round_summary.json`, and the real OpenAI API. Sentry MCP independently confirmed all four spans and their parent chain:
+
+| Operation | Description | Duration |
+| --- | --- | --- |
+| `http.server` | `/coach/round` | 839 ms |
+| `gen_ai.invoke_agent` | `round_coach` | 835 ms |
+| `gen_ai.responses` | `responses gpt-4.1-nano` | 667 ms |
+| `http.client` | `POST` to OpenAI Responses | 615 ms |
+
+Project-scoped span search confirmed `coach.outcome=provider_selected` on the agent and HTTP spans, actual response model `gpt-4.1-nano-2025-04-14`, and usage of **387 input / 24 output tokens (411 total)**. All four spans carry release `kumite-replay@33d058ff7fbfe7b86a02f84e8ca24b3c2c8ff9c9` and environment `development`. This proves replay's successful provider path and retained monitoring; it does not prove demo-environment execution, live-game input, or reliable provider selection under the deadline.
+
+### Deadline and fallback evidence
+
+The successful run used `OPENAI_COACH_MODEL=gpt-4.1-nano` for that process only. The merged owner record reports three nano HTTP requests taking **1046, 855 and 1034 ms**, with a provider-selected tip in **1 of 3 attempts**; the other two used local fallback. The successful request's client-observed 855 ms and retained server span's 839 ms measure different intervals. `gpt-4.1-mini` took approximately **1.05–1.43 seconds** and always fell back in the owner's trial. These are small-sample owner measurements, not a reliability benchmark. The recorded source default remains `gpt-4.1-mini`; the separately requested Luna migration is not claimed implemented.
+
+Sentry MCP independently confirmed the two supplied retained agent spans have `coach.outcome=fallback`, the same recorded release, and environment `development`:
+
+| Trace | HTTP / agent duration | Result and owner-reported context |
+| --- | --- | --- |
+| [00d6272017d44356b3f2a3528afea8a4](https://university-of-maryland-ma.sentry.io/explore/traces/trace/00d6272017d44356b3f2a3528afea8a4/) | 1039 / 1035 ms | Fallback; OpenAI account had no credit and the call timed out |
+| [ce7223b81fc04a5f96d800d1b7416392](https://university-of-maryland-ma.sentry.io/explore/traces/trace/ce7223b81fc04a5f96d800d1b7416392/) | 1040 / 1035 ms | Fallback; credit added, default model exceeded the deadline |
+
+The reviewed implementation and merged evidence preserve the **1.0-second provider deadline**, with no retries and local fallback; the OpenAI client timeout is 0.9 seconds. Total HTTP duration includes surrounding work, so it may exceed the provider budget. Garrett did not extend the deadline to obtain evidence. The fallback URLs establish fallback behavior and the owner record now supplies the contexts above; they are not labelled as the two nano failures.
+
+### Privacy and completion boundaries
+
+Garrett reports no AI inputs/outputs, prompt text, raw session ID or round content in the retained AI attributes. The reviewed PR disables AI input/output and HTTP body capture, excludes user identity, and hashes session correlation. The inspected provider-span details expose no prompt/output content. This is scoped evidence, not a project-wide privacy audit. Garrett reports Sentry may add coarse IP-derived geography; project settings were not changed. Credentials and raw event payloads are not copied into these artifacts.
+
+- **Replay B5 evidence complete:** retained real HTTP → agent → provider trace with outcome, actual model/usage and release/environment. Current round coaching is tool-free; no tool activity is claimed.
+- **Overall B5 remains open:** Sahil must supply the real five-operation decision trace, waterfall screenshot and tracing on/off timing comparison.
+- **Demo decision, October 18:** Eric approved keeping grounded local fallback and the existing one-second provider budget; Chloe agrees. Consistent OpenAI selection is not required on every tip. Chloe still verifies wording and voice timing, including fallback, on the demo host with `SENTRY_ENVIRONMENT=demo`. Eric also requested GPT-6 Luna (`gpt-6-luna`) for GPT-4 text-coaching replacements; [owner migration work](handoffs/coach-model.md) and fresh measurements remain pending. The retained nano trace remains historical B5 evidence and does not establish Luna behavior.
+
+See [the updated replay handoff](handoffs/sentry-replay.md) for the decision and owner actions, and [the evidence index](evidence/README.md) for retained trace links.
