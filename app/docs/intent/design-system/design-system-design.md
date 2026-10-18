@@ -26,6 +26,7 @@ The tokens are the Paper file's design tokens, copied into a Tailwind v4 `@theme
 | Rust, only what the bot is targeting | `--color-bot` | `#B5462B` |
 | Night (overlay ground, line, text, muted) | `--color-overlay*` | `#1A2034` at 90%, `#3A4A72`, `#EDE7CB`, `#B9B394` |
 | Online | `--color-ok` | `#5BB86E` |
+| Right call (a Paper literal, kept as a token) | `--color-good` | `#2E6B3B` |
 | Belts | `--color-belt-*` | white, yellow, orange, green, blue, brown, black |
 
 **Mat ground.** The main window and the between-round card sit on the mat: `--color-bg` with a faint weave, a repeating horizontal 1 px ink line at 3.5% opacity every 5 px.

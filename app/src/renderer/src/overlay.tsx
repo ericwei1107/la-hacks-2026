@@ -2,14 +2,20 @@ import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { Belt, beltFor, beltName, characterName, habitName, NOTATION_TOKEN } from './design'
-import { useConfig, useLearning, useLatestCoach, useLatestPlan, useLatestSummary, useLiveState, useSummaryListener, type CoachMessage, type LearningRound } from './services'
-import type { Slot } from './services/streams'
+import { useConfig, useEventListener, useLearning, useLatestCoach, useLatestPlan, useLatestSummary, useLiveState, useSummaryListener, type CoachMessage, type LearningRound, type RoundSummary } from './services'
 import './fonts'
 import './styles.css'
 import { ServicesProvider } from './services'
 
 const ROUND_LIVE_MS = 2_000
-const CARD_DURATION_MS = 10_000
+const COUNTDOWN_MS = 10_000
+
+interface Card {
+  sessionId: string
+  round: number
+  openedAt: number
+  matchOver: boolean
+}
 
 function notationText(text: string) {
   const parts: React.ReactNode[] = []
@@ -56,42 +62,47 @@ function Habits({ sessionId, round, exploited }: { sessionId: string; round: Lea
   )
 }
 
-function BetweenRounds({ coach, winner, humanSlot, botCharacter, stateRound }: {
-  coach: Slot<CoachMessage>
-  winner: number | null | undefined
-  humanSlot: number | undefined
+function BetweenRounds({ card, coach, summary, botCharacter }: {
+  card: Card
+  coach: CoachMessage | null
+  summary: RoundSummary | null
   botCharacter: string
-  stateRound: number
 }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 100)
     return () => window.clearInterval(timer)
   }, [])
-  const end = coach.receivedAt + CARD_DURATION_MS
-  const remaining = Math.max(0, end - now)
-  if (remaining === 0 || stateRound > coach.record.round) return null
+  const remaining = Math.max(0, card.openedAt + COUNTDOWN_MS - now)
   const seconds = Math.ceil(remaining / 1000)
-  const result = winner === undefined
-    ? `Round ${coach.record.round}`
-    : winner === null
-      ? `Round ${coach.record.round} is a draw`
-      : winner === humanSlot
-        ? `Round ${coach.record.round} goes to you`
-        : `Round ${coach.record.round} goes to ${botCharacter}`
+  const result = !summary
+    ? `Round ${card.round}`
+    : summary.winner === null
+      ? `Round ${card.round} is a draw`
+      : summary.winner === summary.human_slot
+        ? `Round ${card.round} goes to you`
+        : `Round ${card.round} goes to ${botCharacter}`
   return (
     <section className="mat-card absolute bottom-16 left-1/2 flex min-h-[250px] w-[1000px] -translate-x-1/2 items-stretch overflow-hidden rounded-sm text-text shadow-2xl">
       <div className="flex grow flex-col justify-center gap-5 px-10 py-8">
         <p className="text-base font-bold text-text-muted">{result}</p>
-        <p className="text-[30px] leading-[40px] font-bold text-text">{coach.record.text}</p>
+        {coach
+          ? <p className="text-[30px] leading-[40px] font-bold text-text">{coach.text}</p>
+          : <p className="text-[30px] leading-[40px] text-text-muted">Coach is reviewing the round…</p>}
       </div>
       <div className="flex w-[200px] shrink-0 flex-col items-center justify-center gap-1 border-l border-solid border-[#1D1B1626]">
-        <span className="font-display text-[64px] leading-[72px] text-primary">{seconds}</span>
-        <span className="text-base font-bold text-text">Round {coach.record.round + 1}</span>
+        {card.matchOver
+          ? <span className="font-display text-xl leading-7 text-primary">Set over</span>
+          : <>
+            <span className="font-display text-[64px] leading-[72px] text-primary">{seconds}</span>
+            <span className="text-base font-bold text-text">Round {card.round + 1}</span>
+          </>}
       </div>
-      <div className="absolute right-0 bottom-0 left-0 h-3 bg-track">
-        <div className="h-full bg-primary" style={{ width: `${(remaining / CARD_DURATION_MS) * 100}%` }} />
-      </div>
+      {!card.matchOver && (
+        <div className="absolute right-0 bottom-0 left-0 h-3 bg-track">
+          <div className="h-full bg-primary" style={{ width: `${(remaining / COUNTDOWN_MS) * 100}%` }} />
+        </div>
+      )}
     </section>
   )
 }
@@ -111,20 +122,36 @@ function OverlayContent() {
   const sessionId = state?.record.session_id
   const learning = useLearning(sessionId ?? '')
   const [now, setNow] = useState(Date.now())
+  const [card, setCard] = useState<Card | null>(null)
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(timer)
   }, [])
 
+  useEventListener((event) => {
+    if (event.kind === 'round_end' && event.session_id === sessionId) {
+      setCard({ sessionId: event.session_id, round: event.round, openedAt: Date.now(), matchOver: event.detail?.match_over === true })
+    } else if (event.kind === 'round_start') {
+      setCard((current) => current?.sessionId === event.session_id ? null : current)
+    }
+  })
+
   const isLive = Boolean(state && now - state.receivedAt < ROUND_LIVE_MS)
+  const cardClosed = card !== null && (!isLive || !state || state.record.session_id !== card.sessionId || state.record.round > card.round)
+
+  useEffect(() => {
+    if (cardClosed) setCard(null)
+  }, [cardClosed])
+
+  const openCard = card && !cardClosed ? card : null
   const livePlan = plan?.record.session_id === sessionId ? plan : null
-  const activeCoach = coach && coach.record.session_id === sessionId && coach.receivedAt + CARD_DURATION_MS > now ? coach : null
   const activeSummary = summary && summary.record.session_id === sessionId ? summary.record : null
+  const cardCoach = openCard && coach?.record.session_id === openCard.sessionId && coach.record.round === openCard.round ? coach.record : null
+  const cardSummary = openCard && activeSummary?.session_id === openCard.sessionId && activeSummary.round === openCard.round ? activeSummary : null
   const learningRounds = [...(learning.data?.rounds ?? [])].sort((a, b) => a.round - b.round)
   const lastRound = learningRounds[learningRounds.length - 1]
-  const matchingSummary = activeSummary?.round === activeCoach?.record.round ? activeSummary : null
-  const showingCard = Boolean(activeCoach && state && state.record.round <= activeCoach.record.round)
+  const showingCard = openCard !== null
 
   return (
     <div className="relative h-[1080px] w-[1920px] overflow-hidden bg-transparent">
@@ -140,12 +167,11 @@ function OverlayContent() {
           </div>
         </section>
       )}
-      {showingCard && activeCoach && state && <BetweenRounds
-        coach={activeCoach}
-        winner={matchingSummary?.winner}
-        humanSlot={matchingSummary?.human_slot ?? state.record.human_slot}
+      {openCard && <BetweenRounds
+        card={openCard}
+        coach={cardCoach}
+        summary={cardSummary}
         botCharacter={characterName(config.data?.bot_character)}
-        stateRound={state.record.round}
       />}
     </div>
   )

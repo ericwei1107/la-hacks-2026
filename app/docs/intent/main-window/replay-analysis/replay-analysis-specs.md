@@ -12,17 +12,17 @@ Design: `replay-analysis-design.md`
 
 ## Situation filter
 
-- [ ] **MAIN-REPLAY-010**: The Replay analysis screen shall show an "All" chip with the number of decision points, followed by one chip per distinct decision-point `situation`, in order of first appearance, each with its count.
+- [ ] **MAIN-REPLAY-010**: The Replay analysis screen shall show an "All" chip with the number of decision points, followed by one chip per distinct decision-point `situation`, in order of first appearance, each labelled with the situation in words (design-system) and its count.
 - [ ] **MAIN-REPLAY-011**: When the player selects a situation chip, the screen shall show only the decision points with that `situation`, and the "All" chip shall show all of them.
 
 ## Decision points
 
 - [ ] **MAIN-REPLAY-020**: The screen shall show the filtered decision points in report order with the first expanded and the others collapsed.
 - [ ] **MAIN-REPLAY-021**: When the player activates a collapsed decision point, the screen shall expand it and collapse the one that was expanded.
-- [ ] **MAIN-REPLAY-022**: An expanded decision point shall show "Round <r>, frame <f>", the situation, its cost as "<cost> damage", "You did" with the actual option, "Best option" with the best option and its command, one meter per option with its percentage (the best first, in `--color-primary`, the others in `--color-text-muted`), "your pick" beside the actual option, and "Why" with the explanation.
+- [ ] **MAIN-REPLAY-022**: An expanded decision point shall show "Round <r>, frame <f>", the situation in words, its cost as "<cost> damage", "You did" with the actual option, "Best option" with the best option and its command, one meter per option with its percentage (the best first, in `--color-primary`, the others in `--color-text-muted`), "your pick" beside the actual option, and "Why" with the explanation.
 - [ ] **MAIN-REPLAY-023**: A collapsed decision point not marked `good` shall show "<actual>. Best: <best>" and "−<cost>".
 - [ ] **MAIN-REPLAY-024**: A collapsed decision point marked `good` shall show a check and "<actual>. Right call" and "+<cost>", all in green.
-- [ ] **MAIN-REPLAY-025**: The screen shall show at most four decision points of the current filter until the player activates "Show <n> more in this situation", which shows the rest.
+- [ ] **MAIN-REPLAY-025**: The screen shall show at most four decision points of the current filter until the player activates "Show <n> more" (followed by "in this situation" while a situation chip is selected), which shows the rest.
 - [ ] **MAIN-REPLAY-026**: When the screen opens with a focus of round and frame, it shall select "All", show every decision point, and expand the one at that round and frame if one exists.
 - [ ] **MAIN-REPLAY-027**: The screen shall write an option as its name in words followed by its command in notation in parentheses when the option has a command.
 
@@ -35,3 +35,11 @@ Design: `replay-analysis-design.md`
 - [ ] **MAIN-REPLAY-034**: When the report has no decision points, the screen shall show "No decision points in this set." in place of the filter and the list.
 - [ ] **MAIN-REPLAY-035**: While the brain lists no sets, the screen shall show the empty state "No set to analyze yet." with "Play a set against Kumite and its analysis shows up here."
 - [ ] **MAIN-REPLAY-036**: While the replay service is offline, the screen shall show the offline banner for the replay service above any report it already holds.
+
+## Implemented in
+
+| Spec IDs | Entry point |
+|---|---|
+| MAIN-REPLAY-001 – MAIN-REPLAY-005 | `src/renderer/src/main-window/screens/ReplayAnalysis.tsx` (`TopHabit`, `DirectionPad`) |
+| MAIN-REPLAY-010 – MAIN-REPLAY-027 | `src/renderer/src/main-window/screens/ReplayAnalysis.tsx` (`DecisionPoints`, `ExpandedPoint`, `CollapsedPoint`) |
+| MAIN-REPLAY-030 – MAIN-REPLAY-036 | `src/renderer/src/main-window/screens/ReplayAnalysis.tsx` (`ReplayAnalysis`, `ReplayBody`, `NotAnalyzed`) |

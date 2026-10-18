@@ -35,6 +35,7 @@ Design: `shell-design.md`
 - [ ] **SHELL-WIN-006**: The overlay window shall ignore all mouse events and shall not be focusable.
 - [ ] **SHELL-WIN-007**: The overlay window shall leave content protection off, so screen capture records it.
 - [ ] **SHELL-WIN-008**: The overlay window shall set its zoom factor to the primary display's width divided by 1920.
+- [ ] **SHELL-WIN-009**: When the main window closes on Windows or Linux, the main process shall quit the app, closing the overlay window with it.
 
 ## Implemented in
 
@@ -44,3 +45,5 @@ Design: `shell-design.md`
 | SHELL-ADDR-002, SHELL-ADDR-004 – SHELL-ADDR-013 | `src/main/services.ts` (`resolveServiceAddresses`) |
 | SHELL-ADDR-003 | `src/shared/bridge.ts` (`DEFAULT_SERVICE_URLS`) |
 | SHELL-BRIDGE-001 – SHELL-BRIDGE-004 | `src/preload/index.ts`, answered by `src/main/index.ts` (the `SERVICES_CHANNEL` handler) |
+| SHELL-WIN-001, SHELL-WIN-002, SHELL-WIN-009 | `src/main/index.ts` (`createMainWindow`) |
+| SHELL-WIN-003 – SHELL-WIN-008 | `src/main/index.ts` (`createOverlayWindow`), `src/main/services.ts` (`overlayEnabled`) |

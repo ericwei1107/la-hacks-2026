@@ -116,7 +116,7 @@ All paths are under `src/renderer/src/services/`.
 | CLIENT-HTTP-008 | `brain.ts` (`postConfig`) |
 | CLIENT-ERR-001 – CLIENT-ERR-006 | `http.ts` (`ServiceError`, `exchange`, `requestJson`) |
 | CLIENT-REC-001 – CLIENT-REC-008 | `recording.ts` (`getRecording`) |
-| CLIENT-LIVE-001 – CLIENT-LIVE-014 | `streams.ts` (`BrainStream` and the slots and channels it feeds) |
+| CLIENT-LIVE-001 – CLIENT-LIVE-015 | `streams.ts` (`BrainStream` and the slots and channels it feeds) |
 | CLIENT-STATUS-001 – CLIENT-STATUS-005, CLIENT-STATUS-009, CLIENT-STATUS-010 | `status.ts` (`serviceStatus`, `health`, `startHealthPolling`) |
 | CLIENT-STATUS-006 – CLIENT-STATUS-008 | `http.ts` (outcome reporting), applied in `status.ts` |
 | CLIENT-HOOK-001 – CLIENT-HOOK-015 | `hooks.tsx`; the provider wraps the root in `src/renderer/src/main.tsx` |
