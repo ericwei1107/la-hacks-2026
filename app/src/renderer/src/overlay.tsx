@@ -2,20 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { Belt, beltFor, beltName, characterName, habitName, NOTATION_TOKEN } from './design'
-import { useConfig, useEventListener, useLearning, useLatestCoach, useLatestPlan, useLatestSummary, useLiveState, useSummaryListener, type CoachMessage, type LearningRound, type RoundSummary } from './services'
+import { useConfig, useLearning, useLatestCoach, useLatestPlan, useLatestSummary, useRoundBreak, useSummaryListener, type CoachMessage, type LearningRound, type RoundBreak, type RoundSummary } from './services'
 import './fonts'
 import './styles.css'
 import { ServicesProvider } from './services'
 
-const ROUND_LIVE_MS = 2_000
 const COUNTDOWN_MS = 10_000
-
-interface Card {
-  sessionId: string
-  round: number
-  openedAt: number
-  matchOver: boolean
-}
 
 function notationText(text: string) {
   const parts: React.ReactNode[] = []
@@ -63,7 +55,7 @@ function Habits({ sessionId, round, exploited }: { sessionId: string; round: Lea
 }
 
 function BetweenRounds({ card, coach, summary, botCharacter }: {
-  card: Card
+  card: RoundBreak
   coach: CoachMessage | null
   summary: RoundSummary | null
   botCharacter: string
@@ -108,7 +100,7 @@ function BetweenRounds({ card, coach, summary, botCharacter }: {
 }
 
 function OverlayContent() {
-  const state = useLiveState()
+  const { state, liveSet: sessionId, isLive, roundBreak: openCard } = useRoundBreak()
   const plan = useLatestPlan()
   const coach = useLatestCoach()
   const summary = useLatestSummary()
@@ -119,32 +111,7 @@ function OverlayContent() {
       void client.invalidateQueries({ queryKey: ['analytics', 'learning', record.session_id] })
     }
   })
-  const sessionId = state?.record.session_id
   const learning = useLearning(sessionId ?? '')
-  const [now, setNow] = useState(Date.now())
-  const [card, setCard] = useState<Card | null>(null)
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 250)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  useEventListener((event) => {
-    if (event.kind === 'round_end' && event.session_id === sessionId) {
-      setCard({ sessionId: event.session_id, round: event.round, openedAt: Date.now(), matchOver: event.detail?.match_over === true })
-    } else if (event.kind === 'round_start') {
-      setCard((current) => current?.sessionId === event.session_id ? null : current)
-    }
-  })
-
-  const isLive = Boolean(state && now - state.receivedAt < ROUND_LIVE_MS)
-  const cardClosed = card !== null && (!isLive || !state || state.record.session_id !== card.sessionId || state.record.round > card.round)
-
-  useEffect(() => {
-    if (cardClosed) setCard(null)
-  }, [cardClosed])
-
-  const openCard = card && !cardClosed ? card : null
   const livePlan = plan?.record.session_id === sessionId ? plan : null
   const activeSummary = summary && summary.record.session_id === sessionId ? summary.record : null
   const cardCoach = openCard && coach?.record.session_id === openCard.sessionId && coach.record.round === openCard.round ? coach.record : null

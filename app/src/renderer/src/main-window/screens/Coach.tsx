@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { EmptyState, KeyCap, Microphone, PlayMark, SendArrow, Toggle } from '../../design'
 import { useChat, useConfig, usePostConfig, type ChatCitation, type SessionMeta } from '../../services'
 import { useFrame } from '../frame'
-import { usePushToTalkKey } from '../pushToTalk'
+import { keyLabel, usePushToTalkKey } from '../pushToTalk'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
+import { useHoldToTalk } from '../../voice'
 
 interface Turn {
   role: 'user' | 'coach'
@@ -53,11 +54,9 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
     end.current?.scrollIntoView({ block: 'end' })
   }, [session.session_id, turns])
 
-  const send = async () => {
-    const message = draft.trim()
+  const ask = async (message: string) => {
     if (!message || chat.isPending) return
     const history = turns.filter((turn) => !turn.failed).map(({ role, text }) => ({ role, text }))
-    setDraft('')
     setTurns((current) => [...current, { role: 'user', text: message }])
     try {
       const reply = await chat.mutateAsync({
@@ -71,6 +70,47 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
       setTurns((current) => [...current, { role: 'coach', text: `Couldn't reach the coach. ${(error as Error).message}`, failed: true }])
     }
   }
+
+  const available = !disabled && !chat.isPending && Boolean(window.kumite?.transcribe)
+  const talk = useHoldToTalk((text) => void ask(text), available)
+  const { start, stop } = talk
+
+  const send = () => {
+    const message = draft.trim()
+    if (!message || chat.isPending) return
+    setDraft('')
+    talk.clearNote()
+    void ask(message)
+  }
+
+  useEffect(() => {
+    if (!available) stop()
+  }, [available, stop])
+
+  useEffect(() => {
+    const typing = () => {
+      const element = document.activeElement
+      return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || (element instanceof HTMLElement && element.isContentEditable)
+    }
+    const down = (event: KeyboardEvent) => {
+      if (event.repeat || typing() || keyLabel(event) !== pushToTalk) return
+      event.preventDefault()
+      void start()
+    }
+    const up = (event: KeyboardEvent) => {
+      if (keyLabel(event) === pushToTalk) stop()
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', stop)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', stop)
+    }
+  }, [pushToTalk, start, stop])
+
+  const talkLabel = talk.phase === 'listening' ? 'Listening…' : talk.phase === 'transcribing' ? 'Transcribing…' : 'Hold to talk'
 
   const voice = postConfig.isPending ? (postConfig.variables?.voice ?? config.data?.voice) : config.data?.voice
 
@@ -99,45 +139,55 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
         )}
         <div ref={end} />
       </div>
-      <div className="sticky bottom-0 flex items-center gap-4 border-t-2 border-solid border-t-primary bg-bg pt-6">
-        <button
-          type="button"
-          disabled
-          title="Voice comes with the voice update."
-          className="flex h-[72px] shrink-0 items-center gap-[14px] rounded-md bg-primary pr-6 pl-[22px] opacity-60"
-        >
-          <Microphone />
-          <span className="text-[22px] leading-lg font-bold text-overlay-text">Hold to talk</span>
-          <KeyCap raised>{pushToTalk}</KeyCap>
-        </button>
-        <form
-          className="flex h-[72px] grow basis-0 items-center justify-between gap-3 rounded-md border-[1.5px] border-solid border-[#1D1B1640] bg-surface px-[20px] focus-within:border-primary"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void send()
-          }}
-        >
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.currentTarget.value)}
-            disabled={disabled || chat.isPending}
-            placeholder="Or type a question about this set"
-            aria-label="Question for the coach"
-            className="grow basis-0 bg-transparent text-lg/base text-text outline-none placeholder:text-text-muted"
-          />
-          <button type="submit" aria-label="Send" disabled={disabled || chat.isPending || !draft.trim()} className="focus-ring rounded-sm text-text-muted enabled:hover:text-primary">
-            <SendArrow />
+      <div className="sticky bottom-0 flex flex-col gap-2 border-t-2 border-solid border-t-primary bg-bg pt-6">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            disabled={!available}
+            aria-pressed={talk.phase === 'listening'}
+            onPointerDown={(event) => {
+              if (event.button === 0) void start()
+            }}
+            onPointerUp={stop}
+            onPointerLeave={stop}
+            onPointerCancel={stop}
+            onContextMenu={(event) => event.preventDefault()}
+            className={`focus-ring flex h-[72px] shrink-0 items-center gap-[14px] rounded-md bg-primary pr-6 pl-[22px] select-none disabled:opacity-60 ${talk.phase === 'listening' ? 'ring-4 ring-primary/30' : ''}`}
+          >
+            <Microphone />
+            <span className="text-[22px] leading-lg font-bold text-overlay-text">{talkLabel}</span>
+            <KeyCap raised>{pushToTalk}</KeyCap>
           </button>
-        </form>
-        <label className="flex h-[40px] items-center gap-3 pl-2">
-          <span className="text-base/sm font-medium text-text">Coach voice</span>
-          <Toggle
-            label="Coach voice"
-            checked={Boolean(voice)}
-            disabled={!config.data}
-            onChange={(checked) => postConfig.mutate({ voice: checked })}
-          />
-        </label>
+          <form
+            className="flex h-[72px] grow basis-0 items-center justify-between gap-3 rounded-md border-[1.5px] border-solid border-[#1D1B1640] bg-surface px-[20px] focus-within:border-primary"
+            onSubmit={(event) => {
+              event.preventDefault()
+              send()
+            }}
+          >
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.currentTarget.value)}
+              disabled={disabled || chat.isPending}
+              placeholder="Or type a question about this set"
+              aria-label="Question for the coach"
+              className="grow basis-0 bg-transparent text-lg/base text-text outline-none placeholder:text-text-muted"
+            />
+            <button type="submit" aria-label="Send" disabled={disabled || chat.isPending || !draft.trim()} className="focus-ring rounded-sm text-text-muted enabled:hover:text-primary">
+              <SendArrow />
+            </button>
+          </form>
+          <label className="flex h-[40px] items-center gap-3 pl-2">
+            <span className="text-base/sm font-medium text-text">Coach voice</span>
+            <Toggle
+              label="Coach voice"
+              checked={Boolean(voice)}
+              disabled={!config.data}
+              onChange={(checked) => postConfig.mutate({ voice: checked })}
+            />
+          </label>
+        </div>
+        {talk.note && <p role="status" className="text-sm leading-5 text-text-muted">{talk.note}</p>}
       </div>
     </>
   )
