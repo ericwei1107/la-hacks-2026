@@ -119,7 +119,7 @@ class Hooks:
         pass
 
 
-def run_session(reader, args, hooks=None):
+def run_session(reader, args, hooks=None, outlet=None):
     hooks = hooks or Hooks()
     pacer = Pacer()
     snap = wait_snapshot(reader, pacer, hooks.poll)
@@ -164,6 +164,9 @@ def run_session(reader, args, hooks=None):
             recorder.events(events)
             recorder.events(extra)
             recorder.state(gs)
+            if outlet is not None:
+                outlet.state(gs)
+                outlet.records(events + extra)
             for rec in events + extra:
                 print(fmt_record(rec), flush=True)
             if any(ev["kind"] == "round_end" for ev in events):
@@ -183,7 +186,11 @@ def run_session(reader, args, hooks=None):
         recorder.events(extra)
         for rec in final + extra:
             print(fmt_record(rec), flush=True)
+        if outlet is not None:
+            outlet.records(final + extra)
         recorder.close(tracker.rounds, iso_utc(datetime.now(timezone.utc)), result_text(tracker.rounds, human))
+        if outlet is not None and not outlet.close():
+            print("coach: a tip was still pending at exit", flush=True)
         elapsed, rate = pacer.rate()
         kinds = ", ".join(f"{k} {n}" for k, n in sorted(tracker.events.items()))
         unknown = ", ".join(f"{f}=0x{v:X} x{n}" for (f, v), n in st.unknown_codes.items() if isinstance(v, int)) or "none"

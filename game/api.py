@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import threading
+import time
 from collections import deque
 from pathlib import Path
 
@@ -26,6 +27,7 @@ STATE_BACKLOG = 120
 MAX_BACKLOG = 5000
 SEND_TIMEOUT = 2.0
 CHUNK = 1 << 16
+START_WAIT = 3.0
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*$")
 DEFAULT_CONFIG = {"difficulty": 3, "knobs": {}, "bot_character": "kazuya", "player": "sahil", "demo_mode": False, "voice": True}
 CONFIG_VALIDATOR = Draft202012Validator(json.loads((CONTRACTS / "config.schema.json").read_text(encoding="utf-8")))
@@ -147,6 +149,15 @@ def write_json(path, obj):
     os.replace(tmp, path)
 
 
+def load_config(root=None):
+    stored = read_json((Path(root) if root else data_dir()) / "config.json")
+    if isinstance(stored, dict):
+        merged = merge(DEFAULT_CONFIG, stored)
+        if not config_errors(merged):
+            return merged
+    return copy.deepcopy(DEFAULT_CONFIG)
+
+
 def create_app(root=None, hub=None):
     hub = hub or HUB
     version = git_sha()
@@ -161,14 +172,6 @@ def create_app(root=None, hub=None):
         if not SAFE_ID.match(value) or ".." in value:
             raise HTTPException(404, f"unknown session {value}")
         return value
-
-    def load_config():
-        stored = read_json(base() / "config.json")
-        if isinstance(stored, dict):
-            merged = merge(DEFAULT_CONFIG, stored)
-            if not config_errors(merged):
-                return merged
-        return copy.deepcopy(DEFAULT_CONFIG)
 
     @app.get("/health")
     def health():
@@ -223,7 +226,7 @@ def create_app(root=None, hub=None):
 
     @app.get("/config")
     def get_config():
-        return load_config()
+        return load_config(base())
 
     @app.post("/config")
     async def post_config(request: Request):
@@ -234,7 +237,7 @@ def create_app(root=None, hub=None):
         if not isinstance(patch, dict):
             return JSONResponse({"errors": ["body must be a JSON object"]}, status_code=422)
         with config_lock:
-            merged = merge(load_config(), patch)
+            merged = merge(load_config(base()), patch)
             errors = config_errors(merged)
             if errors:
                 return JSONResponse({"errors": errors}, status_code=422)
@@ -287,12 +290,18 @@ def create_app(root=None, hub=None):
     return app
 
 
-def start(host=HOST, port=PORT, root=None):
+def start(host=HOST, port=PORT, root=None, wait=START_WAIT):
     import uvicorn
 
     server = uvicorn.Server(uvicorn.Config(create_app(root), host=host, port=port, log_level="warning"))
     thread = threading.Thread(target=server.run, name="brain-api", daemon=True)
     thread.start()
+    deadline = time.monotonic() + wait
+    while not server.started and thread.is_alive() and time.monotonic() < deadline:
+        time.sleep(0.02)
+    if not server.started:
+        server.should_exit = True
+        return None
     return server, thread
 
 
