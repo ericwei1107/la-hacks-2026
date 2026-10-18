@@ -171,18 +171,18 @@ class DemoReplayTest(unittest.TestCase):
             self.assertIsNone(runner.on_state({"frame": f, "players": [player(x=1550.0), stepping]}))
             seq.on_frame(f, stepping)
             self.assertEqual(device.pressed, set())
-        for f in range(106, 111):
+        for f in range(106, 135):
             self.assertIsNone(runner.on_state({"frame": f, "players": [player(x=1550.0), bot]}))
             seq.on_frame(f, bot)
-        self.assertEqual(runner.on_state({"frame": 111, "players": [player(x=1550.0), bot]}), "ws1,2")
+        self.assertEqual(runner.on_state({"frame": 135, "players": [player(x=1550.0), bot]}), "ws1,2")
         self.assertEqual(runner.opener_distance, 1550)
-        seq.on_frame(111, bot)
-        for f in range(112, 120):
+        seq.on_frame(135, bot)
+        for f in range(136, 150):
             runner.on_state({"frame": f, "players": [player(x=1000.0), dict(bot, free_movement=False)]})
             seq.on_frame(f, bot)
-        runner.on_state({"frame": 120, "players": [player(x=800.0, health=180, hit_reaction=10),
+        runner.on_state({"frame": 150, "players": [player(x=800.0, health=180, hit_reaction=10),
                                                    dict(bot, free_movement=False, move_id=0x696)]})
-        self.assertEqual(runner.connect_frame, 120)
+        self.assertEqual(runner.connect_frame, 150)
         self.assertEqual(route["learned_reach"], 750)
         self.assertEqual(runner.fire_distance(), 962 + 750)
 
@@ -211,15 +211,15 @@ class DemoReplayTest(unittest.TestCase):
         runner = ComboRunner(route, seq, 1, name="ws12")
         bot = player(side=0, x=0.0)
         self.assertIsNone(runner.on_state({"frame": 50, "players": [player(x=1774.0), bot]}))
-        for f in range(51, 56):
+        for f in range(51, 80):
             self.assertIsNone(runner.on_state({"frame": f, "players": [player(x=1400.0), bot]}))
-        self.assertEqual(runner.on_state({"frame": 56, "players": [player(x=1400.0), bot]}), "ws1,2")
-        seq.on_frame(56, bot)
+        self.assertEqual(runner.on_state({"frame": 80, "players": [player(x=1400.0), bot]}), "ws1,2")
+        seq.on_frame(80, bot)
         busy = dict(bot, free_movement=False, move_id=0x697)
-        runner.on_state({"frame": 60, "players": [player(x=1100.0), busy]})
-        seq.on_frame(60, busy)
-        runner.on_state({"frame": 61, "players": [player(x=1100.0, health=178, hit_reaction=12), busy]})
-        self.assertEqual(runner.connect_frame, 61)
+        runner.on_state({"frame": 90, "players": [player(x=1100.0), busy]})
+        seq.on_frame(90, busy)
+        runner.on_state({"frame": 91, "players": [player(x=1100.0, health=178, hit_reaction=12), busy]})
+        self.assertEqual(runner.connect_frame, 91)
         self.assertIsNone(runner.reach)
         self.assertNotIn("learned_reach", route)
 
