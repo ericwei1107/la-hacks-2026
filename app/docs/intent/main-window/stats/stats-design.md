@@ -15,7 +15,7 @@ Its data is the analytics service's stats for the selected set and the player's 
 
 - **Low block rate**, large: the set's total `low_block_rate`. The line under it: the change since the previous set in the trends ("Down 4 from last set", "Up 3 from last set", "Same as last set"), then "This is the habit <bot> is hunting." when `low_defense` is in the last round summary's `exploited`.
 - **Punish rate**, with "+n vs last set".
-- **Throw break rate**, with "<k> of <n> broken" from the recording's throw-break and throw events, as in the Sessions totals.
+- **Throw break rate**, with "<k> of <n> broken" from the recording's throw-break and throw events, as in the Sessions totals: n counts each throw attempt at the human once, so the note agrees with the service's rate.
 - **Counter hits taken**, with "<x> per round" (total over the round count, one decimal when not whole).
 - **Counter hits given**, with "+n vs last set".
 

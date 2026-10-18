@@ -26,7 +26,7 @@ The open set's card is framed in indigo on mat light; the others have hairline b
 - A primary "Replay analysis" button that opens Replay analysis on this set.
 - A legend: hit (dot), block (square), throw (diamond), knockdown (triangle), and, at the right, rust for "Bot's planned exploit".
 - **Timeline.** One row per round, labelled "R1" and who won ("You win" in indigo, "<Bot> wins" muted). A line runs the length of the round. The human's events sit above it in indigo and the bot's below in muted ink, each at its frame along the line. Rounds are drawn to one scale, so a shorter round has a shorter line. A bot event is rust when its `situation` is one the round's summary lists in `exploited`. Events of kinds other than hit, counter hit, block, throw, throw break and knockdown are not drawn.
-- **Totals** across the set's round summaries: damage dealt (the sum of `bot_damage_taken`), damage taken (the sum of `human_damage_taken`), knockdowns as "<human's>–<bot's>" (knockdown events by actor), and throws broken as "<k> of <n>": the human's throw-break events out of every throw aimed at the human, which is the landed throws (throw events targeting the human) plus the broken ones.
+- **Totals** across the set's round summaries: damage dealt (the sum of `bot_damage_taken`), damage taken (the sum of `human_damage_taken`), knockdowns as "<human's>–<bot's>" (knockdown events by actor), and throws broken as "<k> of <n>": the human's throw-break events out of every throw aimed at the human. The brain emits a `throw` event for every throw attempt, broken or not, and a `throw_break` event besides when the human escapes, so n is the throw events targeting the human; adding the breaks again would count escaped throws twice. With no throws aimed at the human, the total reads as an em dash rather than "0 of 0".
 
 The timeline and totals come from the set's recording, read without per-frame states.
 
@@ -48,7 +48,7 @@ The timeline and totals come from the set's recording, read without per-frame st
 ## Open Questions & Future Decisions
 
 ### Deferred
-1. The event contract does not say which slot is the `actor` of a `block` or `throw_break`, or whether a broken throw also emits a `throw` event. The screen assumes the actor is the player who performed the action (the blocker, the breaker) and that `throw` means a throw that landed. Confirm with Sahil.
+1. The event contract does not say which slot is the `actor` of a `block` or `throw_break`. The screen takes the actor to be the player who performed the action (the blocker, the breaker), matching the brain and the analytics service.
 
 ## References
 
