@@ -203,6 +203,7 @@ def main(argv=None):
     parser.add_argument("--replay", action="store_true", help="run the captured route on the practice dummy instead")
     parser.add_argument("--attempts", type=int, default=10)
     parser.add_argument("--difficulty", type=int, default=5, choices=range(1, 6))
+    parser.add_argument("--wait-reset", dest="wait_reset", action="store_true", default=True, help=argparse.SUPPRESS)
     parser.add_argument("--no-wait-reset", dest="wait_reset", action="store_false",
                         help="start attempts without waiting for a practice position reset (the opener needs the demo spacing)")
     parser.add_argument("--dir", default=str(CAPTURED_DIR))
@@ -214,8 +215,10 @@ def main(argv=None):
             return 1
         if args.replay:
             route = load_captured(args.name, args.dir)
-            print(f"{route['guide']}; the demo opener started from {route['start_distance']} distance, so each attempt "
-                  f"waits for a practice position reset" + ("" if args.wait_reset else " (disabled)"), flush=True)
+            print(f"{route['guide']}; the demo opener started from {route['start_distance']} distance", flush=True)
+            if args.wait_reset:
+                print("NOTHING STARTS UNTIL YOU RESET: press the practice position reset to start attempt 1, and reset "
+                      "again after every attempt (use --no-wait-reset to start without resets)", flush=True)
             return replay(reader, args)
         return capture(reader, args)
     except (KeyboardInterrupt, KillSwitch) as e:
