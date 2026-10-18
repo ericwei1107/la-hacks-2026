@@ -315,6 +315,45 @@ def ko_frames(winner, start=0, frames=20):
     return seq
 
 
+def command_throw_frames(landed=False, escaped=False):
+    seq = []
+    for f in range(97, 200):
+        a, d = idle(0, f), idle(1, f)
+        if 100 <= f < 130:
+            a.update(move_id=0x895, frame_in_move=f - 99, move_total=60, free_movement=0)
+            d.update(move_id=0x896, frame_in_move=f - 99, move_total=60, free_movement=0, status=0x6084)
+            if f < 103:
+                d.update(being_thrown=0xD000001C)
+            if escaped and 102 <= f < 103:
+                d.update(throw_escape_flags=0x800)
+            if landed and f >= 120:
+                d.update(health=155)
+        elif f >= 130 and landed:
+            d.update(health=155, move_id=0x8007, move_total=60, free_movement=0, status=0x6084, basic_state=12)
+        seq.append((f, [a, d]))
+    return seq
+
+
+class CommandThrowBreakTest(Base):
+    def test_break_without_escape_flag_counts_when_no_damage(self):
+        _, _, events = self.run_frames(command_throw_frames())
+        brk = self.only(events, "throw_break")
+        self.assertEqual(brk["frame"], 130)
+        self.assertEqual(brk["actor"], 1)
+        self.assertEqual(brk["move_id"], 0x895)
+        self.assertEqual(brk["detail"], {"input": "press_1", "evidence": "no_damage", "connect_frame": 100})
+
+    def test_escape_flag_break_is_not_double_counted(self):
+        _, _, events = self.run_frames(command_throw_frames(escaped=True))
+        brk = self.only(events, "throw_break")
+        self.assertEqual(brk["frame"], 102)
+        self.assertEqual(brk["detail"]["evidence"], "escape_flag")
+
+    def test_landed_throw_is_not_a_break(self):
+        _, _, events = self.run_frames(command_throw_frames(landed=True))
+        self.assertEqual([e for e in events if e["kind"] == "throw_break"], [])
+
+
 class TimeoutTest(Base):
     def test_versus_counter_reset_without_ko_is_a_timeout(self):
         tracker = Tracker(SID, timeouts=True, rounds_to_win=3)

@@ -16,7 +16,7 @@ CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
 JABS = {"devil_jin": 0x643}
 CONNECT_KINDS = ("block", "hit", "counter_hit")
 OUTCOME_WINDOW = 60
-BREAK_WINDOW = 25
+BREAK_WINDOW = 60
 
 
 def zip_members(path):
@@ -191,7 +191,7 @@ def main(argv=None):
             print(f"blocked jab 0x{jab:X}: {advs} (tekkendocs: +1)")
         else:
             print(f"blocked jab 0x{jab:X}: none found in this recording")
-    reflex_section(records, events, human)
+    reflex_section(records, replayed, human)
     print("PASS" if failures == 0 else f"{failures} failure(s)")
     return 1 if failures else 0
 

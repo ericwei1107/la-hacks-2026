@@ -24,6 +24,8 @@ WAKEUP_WINDOW = 30
 PUNISH_THRESHOLD = 10
 REPEAT_CONNECT_GAP = 3
 ACTIVE_SLACK = 2
+THROW_SETTLE = 5
+THROW_LIMIT = 180
 GENERIC_MASK = 0xFF00
 GENERIC_BASE = 0x8000
 
@@ -168,6 +170,7 @@ class Tracker:
         self.round_start = frame
         self.ko = False
         self.pending = []
+        self.throws = [None, None]
         self.adv = None
         self.actions = [None, None]
         self.down_cleared = [None, None]
@@ -310,6 +313,9 @@ class Tracker:
                 ))
                 connected[a] = True
                 struck[d] = True
+                self.throws[d] = {"frame": state["frame"], "move_id": state["players"][a]["move_id"],
+                                  "code": cur["being_thrown"], "health": old["health"]}
+            throw = self.throws[d]
             if cur["throw_escaped"] and not old["throw_escaped"] and (cur["being_thrown"] != "none" or old["being_thrown"] != "none"):
                 out.append(self.event(
                     "throw_break",
@@ -317,8 +323,23 @@ class Tracker:
                     actor=d,
                     target=a,
                     move_id=state["players"][a]["move_id"],
-                    detail={"input": cur["being_thrown"]},
+                    detail={"input": cur["being_thrown"], "evidence": "escape_flag"},
                 ))
+                self.throws[d] = None
+            elif throw is not None:
+                age = state["frame"] - throw["frame"]
+                if cur["health"] < throw["health"] or age > THROW_LIMIT:
+                    self.throws[d] = None
+                elif cur["free_movement"] and age >= THROW_SETTLE:
+                    out.append(self.event(
+                        "throw_break",
+                        state["frame"],
+                        actor=d,
+                        target=a,
+                        move_id=throw["move_id"],
+                        detail={"input": throw["code"], "evidence": "no_damage", "connect_frame": throw["frame"]},
+                    ))
+                    self.throws[d] = None
 
     def _knockdowns(self, state, prev, out):
         for d in (0, 1):
