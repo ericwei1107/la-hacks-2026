@@ -196,7 +196,8 @@ def punisher_for(ctx, move):
     listed = ctx.human.by_command.get(command)
     return {"command": command, "name": listed.get("name") if listed else None,
             "damage": entry.get("damage") if entry and type(entry.get("damage")) is int else None,
-            "startup": entry.get("startup") if entry else (listed.get("startup") if listed else None)}
+            "startup": entry.get("startup") if entry else (listed.get("startup") if listed else None),
+            "launcher": bool(entry.get("launcher")) if entry else False}
 
 
 def _bucket(tail, round_number, frame):

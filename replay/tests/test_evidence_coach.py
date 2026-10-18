@@ -270,8 +270,11 @@ def test_chat_default_answer_speaks_like_a_coach(client, tmp_path):
 def test_beat_question_and_combos_use_character_data(client, tmp_path):
     round_one(tmp_path / "recordings")
     reply = chat(client, "What combos should I use and how do I beat Kazuya?")
-    assert reply["text"].startswith("Devil Jin's reliable combos")
+    assert reply["text"].startswith("Your best launch chances this set")
+    assert "Block Demon God Fist (ws2) at -18 on block, launch with b+1+3, then" in reply["text"]
     assert "After Wind God Fist (f,n,d,df+2)" in reply["text"] and "for 55" in reply["text"]
+    reply = chat(client, "Do you know any combos that I can use to improve my gameplay?")
+    assert "launch with b+1+3" in reply["text"] and "Start with throw breaks" in reply["text"]
     assert "Start with throw breaks" in reply["text"] and "Double High Sweep" in reply["text"]
     reply = chat(client, "How do I beat Kazuya?")
     assert reply["text"].startswith("Start with throw breaks.")

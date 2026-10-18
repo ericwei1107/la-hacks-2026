@@ -489,6 +489,14 @@ matching actions and a frequency of at least 60% among the relevant labeled
 decisions with unambiguous exact state context. This is a practice suggestion, not proof of avoidable damage or a
 guaranteed different outcome. Sparse or uncertain evidence stays explicit.
 
+The model runs only when `OPENAI_API_KEY` is set in the process environment or
+the repository root `.env` (never committed) and `KUMITE_COACH_MODE` is `auto`;
+without a key every answer is the local coach-voice text, and the replay window
+prints nothing about it. Check `/health` is up and the key is present before a
+demo that should sound natural. The coach never searches the web: every move,
+number and route comes from the recording and `characters/`, which includes
+the Wavu combo routes.
+
 When the model is enabled, the selector also writes the reply itself: a
 coach's answer of at most 140 words composed from the selected facts
 (structured output: fact ids, text, moves). Every move name, command and

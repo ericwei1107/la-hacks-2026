@@ -228,23 +228,56 @@ def progression(pack, situation=""):
     return " ".join(lines)
 
 
-def combos(character):
+def _route(data, command):
+    launchers = data.combos.get("launchers", {}) if isinstance(data.combos, dict) else {}
+    routes = launchers.get(command)
+    route = routes.get("reliable") if isinstance(routes, dict) else None
+    if isinstance(route, dict) and route.get("route"):
+        return route
+    bnb = data.combos.get("bnb", {}) if isinstance(data.combos, dict) else {}
+    regular = bnb.get("regular_launch")
+    return regular if isinstance(regular, dict) and regular.get("route") else None
+
+
+def _route_text(route):
+    damage = f" for {route['dmg']}" if type(route.get("dmg")) is int else ""
+    return f"{route['route']}{damage}"
+
+
+def combos(character, pack=None):
     try:
         data = load_character(character)
     except (CharacterDataError, OSError, ValueError, KeyError):
         return []
     launchers = data.combos.get("launchers", {}) if isinstance(data.combos, dict) else {}
+    label = str(data.name).replace("_", " ").title()
     facts = []
-    for command, routes in launchers.items():
-        route = routes.get("reliable") if isinstance(routes, dict) else None
-        if not isinstance(route, dict) or not route.get("route"):
+    openings = []
+    seen = set()
+    for candidate in ranked(pack):
+        punisher = candidate.detail.get("punisher")
+        move = candidate.detail.get("opponent_move") or candidate.detail.get("blocked_move")
+        if not punisher or not punisher.get("launcher") or not move or not move.get("command") or punisher["command"] in seen:
+            continue
+        route = _route(data, punisher["command"])
+        if route is None:
+            continue
+        seen.add(punisher["command"])
+        name = f"{move['name']} ({move['command']})" if move.get("name") else move["command"]
+        on_block = f" at {move['on_block']} on block" if type(move.get("on_block")) is int else ""
+        openings.append(f"Block {name}{on_block}, launch with {punisher['command']}, then {_route_text(route)}.")
+    if openings:
+        facts.append(f"Your best launch chances this set, from the character data: " + " ".join(openings[:2])
+                     + " Verify the routes in Practice before relying on them.")
+    routes = []
+    for command, entry in launchers.items():
+        route = entry.get("reliable") if isinstance(entry, dict) else None
+        if not isinstance(route, dict) or not route.get("route") or command in seen:
             continue
         move = data.by_command.get(command)
         name = f"{move['name']} ({command})" if move and move.get("name") else command
-        damage = f" for {route['dmg']}" if type(route.get("dmg")) is int else ""
-        facts.append(f"After {name}: {route['route']}{damage}.")
-    if not facts:
-        return []
-    label = str(data.name).replace("_", " ").title()
-    return [f"{label}'s reliable combos from the character data. " + " ".join(facts[:3])
-            + " Verify the routes in Practice before relying on them."]
+        routes.append(f"After {name}: {_route_text(route)}.")
+    if routes:
+        facts.append(f"{label}'s reliable combos from the character data. " + " ".join(routes[:3])
+                     + (" Verify the routes in Practice before relying on them." if not openings else ""))
+    return facts

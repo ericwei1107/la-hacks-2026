@@ -88,7 +88,8 @@ def asks_for_practice(question):
     if (asks_about_practice_results(question)
             or re.search(r"^\s*(?:have i|am i|did (?:i|my|practi[cs]ing)|has (?:my|practi[cs]ing)|is my|show (?:my )?(?:mastery|learning|progress))\b", question)):
         return False
-    return bool(re.search(r"\b(?:advice|drills?|tips|practi[cs]e)\b", question)
+    return bool(re.search(r"\b(?:advice|drills?|tips|practi[cs]e|combos?|juggles?)\b", question)
+                or re.search(r"\bto (?:improve|get better)\b", question)
                 or re.search(r"\b(?:how|what)\b.*\b(?:beat|deal with|handle|counter|stop|fight|win against)\b", question)
                 or re.search(r"\bwhat (?:should|can|do) i do\b", question)
                 or re.search(r"\b(?:how|what)\b.*\b(?:can|could|should|do)\s+i\b.*\b(?:improve|work on|get better|do better)\b", question)
@@ -251,11 +252,35 @@ class ChatTools:
                   if citations else "Record a short set with repeated blocking and throw situations, then ask again.")
         return [self.fact("There are not enough repeated, attributable decisions to pick a specific drill yet. " + review, citations)]
 
+    def notes(self):
+        if not hasattr(self, "_notes"):
+            notes = []
+            pack = self.set_evidence()
+            try:
+                notes += [f"Weakness: {candidate.text}" for candidate in coachvoice.ranked(pack)[:4]]
+                notes += [f"Went well: {text}" for text, _ in coachvoice.positives(pack)]
+                story = coachvoice.progression(pack)
+                if story:
+                    notes.append(f"Round by round: {story}")
+                if self.human:
+                    notes += [f"Combos: {text}" for text in coachvoice.combos(self.human, pack)]
+                    matchup = load_character(self.human).matchup(self.bot) if self.bot else None
+                    if matchup is not None:
+                        notes += [f"Matchup note: {line}" for line in matchup.expectations[:4]]
+                        rows = [f"{row.get('Move')} ({row.get('Name') or 'unnamed'}) is {row.get('On block')} on block; punish with {row.get('Punish with')}"
+                                for row in matchup.punishable[:8]]
+                        if rows:
+                            notes.append("Punishable on block: " + "; ".join(rows) + ".")
+            except (CharacterDataError, OSError, ValueError, KeyError, TypeError, AttributeError):
+                pass
+            self._notes = notes
+        return self._notes
+
     def get_combos(self, character=""):
         name = normalize_character(character) if character else self.human
         if name is None or name != self.human:
             return [self.fact("Combos come from the recorded human's character only.")]
-        facts = [self.fact(text) for text in coachvoice.combos(name)]
+        facts = [self.fact(text) for text in coachvoice.combos(name, self.set_evidence())]
         return facts or [self.fact("No combo routes are listed for that character.")]
 
     def get_mastery(self, situation=""):
@@ -408,7 +433,7 @@ class ChatTools:
             for label in labels[:4]:
                 values = [f"round {row['round']}: {row['habits'][label]['mastery']:.3g}" for row in sorted(rows, key=lambda item: item["round"])
                           if label in row["habits"] and "mastery" in row["habits"][label]]
-                facts.append(self.fact(f"Analytics reports {words(label)} learner mastery estimates of " + "; ".join(values[-6:])
+                facts.append(self.fact(f"Your {words(label)} mastery estimate went " + "; ".join(values[-6:])
                                        + ". These estimates alone do not confirm improvement."))
             return facts or [self.fact("Analytics has no matching mastery estimates for the recorded rounds.")]
         except (httpx.HTTPError, httpx.InvalidURL, ValueError, TimeoutError):
@@ -429,6 +454,11 @@ class ChatTools:
                 question = previous[-1] + " " + question
         lowered = question.lower()
         situation = question_situation(request.message.lower()) or question_situation(lowered)
+        if re.search(r"\bcombos?\b|\bjuggles?\b", lowered):
+            facts = (await self.call("get_combos", {"character": self.human or "unknown"}))["facts"][:2]
+            if practice:
+                facts += (await self.call("get_practice", {"situation": situation}))["facts"][:3 - len(facts)]
+            return answer(facts)
         if not practice and (asks_about_practice_results(request.message)
                              or any(token in lowered for token in ("mastery", "improv", "learning", "progress", "better", "fixed"))):
             facts = (await self.call("get_learning_curve", {"session": self.session, "situation": situation}))["facts"]
@@ -450,11 +480,6 @@ class ChatTools:
         if explicit_move:
             character = self.human if explicit_move[1] == "my" else self.bot
             return answer((await self.call("get_frame_data", {"character": character or "unknown", "move": explicit_move[2].strip()}))["facts"])
-        if re.search(r"\bcombos?\b|\bjuggles?\b", lowered):
-            facts = (await self.call("get_combos", {"character": self.human or "unknown"}))["facts"][:1]
-            if practice:
-                facts += (await self.call("get_practice", {"situation": situation}))["facts"][:2]
-            return answer(facts)
         for character in characters:
             if not character or normalize_character(character) is None:
                 continue
