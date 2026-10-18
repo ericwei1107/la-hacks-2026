@@ -20,7 +20,7 @@ The conversation belongs to the selected set and lasts while the app runs: switc
 
 ## Input bar
 
-- **Hold to talk**, with the push-to-talk key as a key cap. Speech is not connected in this build, so the button is drawn disabled, and pointing at it says "Voice comes with the voice update."
+- **Hold to talk**, with the push-to-talk key as a key cap. Holding the button, or the key, records a spoken question; on release it is transcribed and sent like a typed one. The button reads "Listening…" while recording and "Transcribing…" after, and a muted line under the input bar explains a question that could not be heard. The voice design owns this behavior.
 - **Type a question:** a text field, "Or type a question about this set", with a send arrow. Enter or the arrow sends; an empty field sends nothing.
 - **Coach voice:** a toggle bound to the brain config's `voice`, saved when changed.
 
@@ -35,7 +35,6 @@ The "Speaking" indicator from Paper belongs to the voice update.
 
 | Decision | Chosen | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
-| Hold to talk without voice | Drawn disabled with an explanation | Hidden; drawn live with no effect | It keeps the Paper layout and tells the player plainly that voice is coming. A live button that does nothing would look broken. |
 | Conversation lifetime | Per set, for the app's run | Persisted to disk; cleared on every visit | The coach answers about one set; keeping each set's thread while the app runs supports going back and forth without storing transcripts. |
 | History roles | `user` and `coach` | `user` and `assistant` | `contracts/api.md` names no roles; these match the screen's own words until the replay service says otherwise (service-clients, deferred question). |
 
@@ -43,3 +42,4 @@ The "Speaking" indicator from Paper belongs to the voice update.
 
 - Paper file "Kumite — Tatami": Coach
 - `../../service-clients/service-clients-design.md` (chat call)
+- `../../voice/voice-design.md` (hold to talk)

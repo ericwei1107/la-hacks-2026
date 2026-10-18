@@ -110,6 +110,20 @@ The brain has two WebSocket streams: **state** (`/ws/state`) and **coach** (`/ws
 
 **Dropped and missed records.** Nothing in the clients depends on consecutive state frames; the latest-state slot is the only state they keep. Events sent while a socket is down are not recovered, and delivery resumes with the next event after reconnecting. The recording is the complete history.
 
+## Live set and round break
+
+The live set, a live round and the round break are defined in the HLD; the clients track them once, in one hook, so the main window's between-round voice and the overlay's card agree on when a break starts and ends.
+
+`useRoundBreak` reads the latest-state slot and listens for events. It returns the latest state, the live set, whether a round is live, and the open round break, if any. A round break records its set, its round, when its `round_end` event reached the window, and whether that event's `detail.match_over` is `true`.
+
+- A `round_end` event for the live set opens a round break for the event's round, replacing any break already open.
+- A `round_start` event for the break's set ends it, whatever the event's round, so a replayed or reset round still ends the break.
+- A `state` record for a later round of the break's set ends it, in case the `round_start` event was missed while a socket was down.
+- A `state` record for another set ends it.
+- The round stopping being live ends it. This is how the break after a set's final round ends: the brain stops the state stream once the game leaves the match.
+
+The hook re-checks liveness every 250 ms. Each window that calls it keeps its own break; the windows open separate sockets, so their breaks can differ by the time a record takes to reach each.
+
 ## Service status
 
 Each window tracks one status per service. It holds:
@@ -143,6 +157,7 @@ Screens use hooks built on TanStack Query. A provider component wraps each windo
   - `useLiveState`, `useLatestPlan`, `useLatestCoach` and `useLatestSummary` read the slots.
   - `useEventListener`, `useCoachListener` and `useSummaryListener` register a listener for the component's lifetime.
   - `useStreamStatus` reads a stream's status and counts as a subscriber, so a status view opens the stream it reports on.
+  - `useRoundBreak` reads the live set, whether a round is live, and the open round break.
 - **`useServiceStatus`** reads a service's status.
 
 ## Module layout
@@ -168,6 +183,8 @@ All of it lives under `src/renderer/src/services/`, shared by every window's ren
 | Reading a stream's status | Counts as a subscriber and opens the stream | An `idle` status before any subscriber | A status view showing `connecting` while nothing is trying would mislead. Opening the stream makes the status it shows real. |
 | Concurrent `analyze` calls for one session | Share one request | Let each call through | One analysis is minutes of scoring and writes `data/reports/`. A double press should not start two. |
 | 404 from `GET /reports/{id}` | Resolves `null` | A `not_found` failure | The contract defines that 404 as "not analyzed yet", a normal state the replay analysis screen designs for by offering to analyze. |
+| Where the round break is tracked | One hook in the service clients | In each consumer (the overlay's card, the main window's voice) | The voice and the card must start and end on the same records. One definition keeps them from drifting. |
+| End of the last round break of a set | When the round stops being live (2 seconds without states), or at a state for another set | Held until the next set starts | No `round_start` follows a set's final KO; the brain stops the state stream once the game leaves the match. A break held over the results screen and menus would keep the coach's voice and the card alive past the set. |
 
 ## Open Questions & Future Decisions
 
@@ -175,6 +192,10 @@ All of it lives under `src/renderer/src/services/`, shared by every window's ren
 1. Looking up recorded state at a frame, for clip timestamps that jump to a moment. Designed with the sessions screen, which decides what a jump shows.
 2. Role values in `/coach/chat` history. `contracts/api.md` gives entries as `{role, text}` without naming the roles. The coach screen sends `user` and `coach` until the replay service states what it expects.
 3. The `totals` object in `/stats`. `contracts/api.md` gives it as "same keys" as a round entry. It is typed as a round entry without `round`.
+
+### Open questions
+1. **The mock starts the next round one frame after each `round_end`.** Against `tools/mock`, a round break opens and ends almost at once, so the between-round voice and card cannot be heard or seen there. Seeing them needs a round-end pause in the mock's playback.
+2. **A `round_end` sent while the state socket is down is lost** (events are not recovered), so that round gets no break, no voice and no card.
 
 ## References
 

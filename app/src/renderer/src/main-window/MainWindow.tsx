@@ -6,6 +6,7 @@ import { Learning } from './screens/Learning'
 import { ReplayAnalysis } from './screens/ReplayAnalysis'
 import { Sessions } from './screens/Sessions'
 import { Stats } from './screens/Stats'
+import { useBetweenRoundVoice } from '../voice'
 
 function CurrentScreen() {
   const { screen } = useFrame()
@@ -18,6 +19,7 @@ function CurrentScreen() {
 }
 
 export function MainWindow() {
+  useBetweenRoundVoice()
   return (
     <FrameProvider>
       <div className="mat-ground flex h-full overflow-hidden">

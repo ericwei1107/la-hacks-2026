@@ -2,11 +2,9 @@
 
 Design: `overlay-design.md`
 
-## Layout and live set
+## Layout
 
 - [ ] **OVERLAY-001**: The overlay page shall lay out its content in a 1920 × 1080 space with a transparent background everywhere outside the HUD and the between-round card.
-- [ ] **OVERLAY-002**: The overlay shall treat the `session_id` of the latest `state` record on the brain's state stream as the live set.
-- [ ] **OVERLAY-003**: The overlay shall consider a round live while the latest `state` record was received less than 2 seconds ago.
 
 ## HUD
 
@@ -23,21 +21,18 @@ Design: `overlay-design.md`
 
 ## Between-round card
 
-- [ ] **OVERLAY-020**: When a `round_end` event for the live set arrives on the state stream, the overlay shall show the between-round card for that event's round, centered horizontally, 1000 px wide, with its bottom 64 px above the bottom edge.
+- [ ] **OVERLAY-020**: While `useRoundBreak` reports an open round break, the overlay shall show the between-round card for the break's round, centered horizontally, 1000 px wide, with its bottom 64 px above the bottom edge.
 - [ ] **OVERLAY-028**: The overlay shall not show the between-round card on the arrival of a `coach` record or a `round_summary` record.
-- [ ] **OVERLAY-021**: When a `round_start` event for the card's set arrives on the state stream while the between-round card is showing, the overlay shall hide the card, whatever the event's round.
-- [ ] **OVERLAY-025**: When a `state` record for the card's set arrives with a round later than the between-round card's round, the overlay shall hide the card.
-- [ ] **OVERLAY-026**: When a `state` record for a set other than the between-round card's arrives, the overlay shall hide the card.
-- [ ] **OVERLAY-027**: When the round stops being live while the between-round card is showing, the overlay shall hide the card.
 - [ ] **OVERLAY-022**: The between-round card for round n shall show "Round <n> goes to you", "Round <n> goes to <bot character>" or "Round <n> is a draw" from the latest round summary for the card's set and round n, or "Round <n>" while no such summary has arrived.
 - [ ] **OVERLAY-023**: The between-round card for round n shall show the `text` of the latest `coach` record for the card's set and round n at 30 px bold on the mat ground.
 - [ ] **OVERLAY-029**: While no `coach` record for the card's set and round has arrived, the between-round card shall show "Coach is reviewing the round…" at 30 px in `--color-text-muted` in place of the coach text.
-- [ ] **OVERLAY-024**: While the card's `round_end` event does not carry `detail.match_over: true`, the between-round card for round n shall show, in the display face in `--color-primary`, the whole seconds left of a 10-second countdown that starts when the `round_end` event reaches the overlay and holds at 0, over "Round <n + 1>", and a bottom bar whose `--color-primary` fill is proportional to the time left.
+- [ ] **OVERLAY-024**: While the card's `round_end` event does not carry `detail.match_over: true`, the between-round card for round n shall show, in the display face in `--color-primary`, the whole seconds left of a 10-second countdown that starts when the round break opened and holds at 0, over "Round <n + 1>", and a bottom bar whose `--color-primary` fill is proportional to the time left.
 - [ ] **OVERLAY-030**: While the card's `round_end` event carries `detail.match_over: true`, the between-round card shall show "Set over" at 28 px (`--text-xl`) in the display face in `--color-primary` in place of the seconds and the round label.
 - [ ] **OVERLAY-031**: While the card's `round_end` event carries `detail.match_over: true`, the between-round card shall not draw the bottom bar.
+- [ ] **OVERLAY-035**: The overlay shall not play the coach's line or any other audio.
 
 ## Implemented in
 
 | Spec IDs | Entry point |
 |---|---|
-| OVERLAY-001 – OVERLAY-031 | `src/renderer/src/overlay.tsx` (`OverlayContent`, `Habits`, `BetweenRounds`) |
+| OVERLAY-001 – OVERLAY-035 | `src/renderer/src/overlay.tsx` (`OverlayContent`, `Habits`, `BetweenRounds`), reading the live set and round break from `useRoundBreak` |

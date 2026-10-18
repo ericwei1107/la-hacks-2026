@@ -16,7 +16,7 @@ Design: `coach-design.md`
 
 ## Input bar
 
-- [ ] **MAIN-COACH-010**: The Coach screen shall show a disabled "Hold to talk" button with the push-to-talk key as a key cap, explaining on hover that voice comes with the voice update.
+- [ ] **MAIN-COACH-010**: The Coach screen shall show a "Hold to talk" button with the push-to-talk key as a key cap, left of the text field, behaving as the voice design's hold-to-talk specs (VOICE-TALK) require.
 - [ ] **MAIN-COACH-011**: When the player presses Enter in the question field or activates the send arrow with a non-empty question, the Coach screen shall send the question and clear the field.
 - [ ] **MAIN-COACH-012**: The Coach screen shall show a "Coach voice" toggle bound to the brain config's `voice` and save a change to the brain config.
 
@@ -30,4 +30,4 @@ Design: `coach-design.md`
 | Spec IDs | Entry point |
 |---|---|
 | MAIN-COACH-001 – MAIN-COACH-021 | `src/renderer/src/main-window/screens/Coach.tsx` (`Coach`, `Conversation`) |
-| MAIN-COACH-010 | `src/renderer/src/main-window/pushToTalk.ts` (`usePushToTalkKey`) |
+| MAIN-COACH-010 | `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`), with the key from `src/renderer/src/main-window/pushToTalk.ts` (`usePushToTalkKey`) |

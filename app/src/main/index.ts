@@ -1,7 +1,9 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { SERVICES_CHANNEL } from '../shared/bridge'
 import { overlayEnabled, readAppEnv, resolveServiceAddresses } from './services'
+import { handleMicrophone, handleVoice, readVoiceSettings } from './voice'
 
 const OVERLAY_DESIGN_WIDTH = 1920
 
@@ -9,10 +11,18 @@ const webPreferences = {
   preload: join(__dirname, '../preload/index.js'),
   contextIsolation: true,
   nodeIntegration: false,
-  sandbox: true
+  sandbox: true,
+  autoplayPolicy: 'no-user-gesture-required' as const
 }
 
 let mainWindow: BrowserWindow | null = null
+
+function isAppPage(url: string): boolean {
+  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+    return url.startsWith(`${process.env.ELECTRON_RENDERER_URL.replace(/\/+$/, '')}/`)
+  }
+  return url.startsWith(`${pathToFileURL(join(__dirname, '../renderer')).href}/`)
+}
 
 function loadPage(win: BrowserWindow, page: 'index.html' | 'overlay.html'): void {
   if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
@@ -30,7 +40,7 @@ function createMainWindow(): BrowserWindow {
     minHeight: 640,
     title: 'Kumite',
     show: false,
-    webPreferences
+    webPreferences: { ...webPreferences, backgroundThrottling: false }
   })
   win.once('ready-to-show', () => win.show())
   win.on('closed', () => {
@@ -76,6 +86,8 @@ app.whenReady().then(() => {
   ipcMain.on(SERVICES_CHANNEL, (event) => {
     event.returnValue = services
   })
+  handleVoice(readVoiceSettings(fileValues))
+  handleMicrophone(isAppPage)
   mainWindow = createMainWindow()
   if (overlayEnabled(fileValues)) createOverlayWindow()
   app.on('activate', () => {

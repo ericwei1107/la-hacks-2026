@@ -22,6 +22,7 @@ export {
   usePostConfig,
   useProfiles,
   useRecording,
+  useRoundBreak,
   useReport,
   useServiceStatus,
   useSession,
@@ -31,3 +32,4 @@ export {
   useSummaryListener,
   useTrends
 } from './hooks'
+export type { RoundBreak } from './hooks'

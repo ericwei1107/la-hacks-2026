@@ -68,6 +68,17 @@ Design: `service-clients-design.md`
 - [ ] **CLIENT-LIVE-014**: The client shall not recover events the brain sent while a stream's socket was down.
 - [ ] **CLIENT-LIVE-015**: When a `plan` record arrives on the state stream, the client shall replace the latest-plan slot.
 
+## Live set and round break
+
+- [ ] **CLIENT-ROUND-001**: The `useRoundBreak` hook shall treat the `session_id` of the latest `state` record on the state stream as the live set.
+- [ ] **CLIENT-ROUND-002**: The `useRoundBreak` hook shall consider a round live while the latest `state` record was received less than 2 seconds ago, re-checking every 250 ms.
+- [ ] **CLIENT-ROUND-003**: When a `round_end` event for the live set arrives on the state stream, the `useRoundBreak` hook shall open a round break for that event's round, recording the time the event arrived and whether its `detail.match_over` is `true`, and replacing any round break already open.
+- [ ] **CLIENT-ROUND-004**: When a `round_start` event for the round break's set arrives while a round break is open, the `useRoundBreak` hook shall end the round break, whatever the event's round.
+- [ ] **CLIENT-ROUND-005**: When a `state` record for the round break's set arrives with a round later than the break's, the `useRoundBreak` hook shall end the round break.
+- [ ] **CLIENT-ROUND-006**: When a `state` record for a set other than the round break's arrives, the `useRoundBreak` hook shall end the round break.
+- [ ] **CLIENT-ROUND-007**: When the round stops being live while a round break is open, the `useRoundBreak` hook shall end the round break.
+- [ ] **CLIENT-ROUND-008**: The `useRoundBreak` hook shall return the latest-state slot, the live set, whether a round is live, and the open round break or none.
+
 ## Service status
 
 - [ ] **CLIENT-STATUS-001**: Each window shall track, for each of the brain, replay and analytics services, a status of `unknown`, `online` or `offline`; the address with its source and any warning; the last-checked time; and the `service` name and `version` from the last successful `/health` reply.
@@ -120,3 +131,4 @@ All paths are under `src/renderer/src/services/`.
 | CLIENT-STATUS-001 – CLIENT-STATUS-005, CLIENT-STATUS-009, CLIENT-STATUS-010 | `status.ts` (`serviceStatus`, `health`, `startHealthPolling`) |
 | CLIENT-STATUS-006 – CLIENT-STATUS-008 | `http.ts` (outcome reporting), applied in `status.ts` |
 | CLIENT-HOOK-001 – CLIENT-HOOK-015 | `hooks.tsx`; the provider wraps the root in `src/renderer/src/main.tsx` |
+| CLIENT-ROUND-001 – CLIENT-ROUND-008 | `hooks.tsx` (`useRoundBreak`) |
