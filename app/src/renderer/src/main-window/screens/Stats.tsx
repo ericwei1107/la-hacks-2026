@@ -94,7 +94,7 @@ function Headline({ stats, session, previous, exploited, throws }: {
           <SmallStat
             value={percent(totals.punish_rate)}
             label="Punish rate"
-            note={totals.punish_rate === null ? "Didn't come up this set" : vsLast(changeSince('punish_rate', totals.punish_rate, previous?.values.punish_rate))}
+            note={totals.punish_rate === null ? "Not enough data this set" : vsLast(changeSince('punish_rate', totals.punish_rate, previous?.values.punish_rate))}
           />
           <SmallStat
             value={percent(totals.throw_break_rate)}

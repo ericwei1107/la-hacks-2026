@@ -26,6 +26,7 @@
             "frame_advantage": -12,
             "hit_level": "low",
             "kind": "block",
+            "move_id": 42,
             "target": 0
           },
           "opportunity": {
@@ -58,6 +59,7 @@
             "frame_advantage": -12,
             "hit_level": "low",
             "kind": "block",
+            "move_id": 42,
             "target": 0
           },
           "opportunity": {
@@ -96,6 +98,7 @@
         "frame_advantage": -12,
         "hit_level": "low",
         "kind": "block",
+        "move_id": 42,
         "target": 0
       },
       "metric_outcomes": {
@@ -127,8 +130,8 @@
   ],
   "moments_total": 1,
   "quality": "observed",
-  "recording_sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+  "recording_sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
   "session_id": "insight-example",
-  "snapshot_id": "3338b8ee2b377b38c44ab65f6086f4b2caf51ab8738e96f7d03e7e9ad655ede1",
+  "snapshot_id": "5f9b23f030d69038f379b6486fd93b9f7b1167f0f3476f7c63b50135b8c189cc",
   "synthetic": true
 }

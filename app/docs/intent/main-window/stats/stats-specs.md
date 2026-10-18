@@ -11,7 +11,7 @@ Design: `stats-design.md`
 - [ ] **MAIN-STATS-005**: The Stats screen shall show throw break rate with "<k> of <n> broken", where k is the human's throw-break events and n is the throw events targeting the human in the set's recording, each attempt counted once whether broken or not.
 - [ ] **MAIN-STATS-006**: The Stats screen shall show counter hits taken with "<total over round count> per round".
 - [ ] **MAIN-STATS-007**: The Stats screen shall treat the trend point immediately before the selected set's point, by start time, as "last set".
-- [ ] **MAIN-STATS-008**: When a rate is null, the Stats screen shall show an em dash with "Didn't come up this set".
+- [x] **MAIN-STATS-008**: When punish rate is null, the Stats screen shall show an em dash with "Not enough data this set"; when another rate is null, it shall show an em dash with "Didn't come up this set".
 
 ## Damage taken by situation
 

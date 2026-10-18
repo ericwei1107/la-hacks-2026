@@ -7,7 +7,7 @@
   "required": ["format_version", "calculation_version", "rule_version", "snapshot_id", "session_id", "synthetic", "population", "sources", "freshness", "quality", "metrics", "rounds", "rounds_total", "focus", "learning", "tactical", "moments", "moments_total", "report"],
   "properties": {
     "format_version": {"const": 1},
-    "calculation_version": {"const": 4},
+    "calculation_version": {"const": 6},
     "rule_version": {"const": 1},
     "snapshot_id": {"$ref": "#/$defs/hash"},
     "session_id": {"type": "string", "minLength": 1},
@@ -79,7 +79,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["label", "definition_version", "successes", "opportunities", "failures", "value", "state", "estimated", "anomalies", "evidence", "evidence_total"],
       "properties": {
-        "label": {"type": "string"}, "definition_version": {"const": 1},
+        "label": {"type": "string"}, "definition_version": {"const": 2},
         "successes": {"type": "integer", "minimum": 0}, "opportunities": {"type": "integer", "minimum": 0},
         "failures": {"type": ["integer", "null"], "minimum": 0}, "value": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
         "state": {"enum": ["observed", "early_signal", "no_opportunities", "invalid"]},

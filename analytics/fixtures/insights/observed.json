@@ -1,5 +1,5 @@
 {
-  "calculation_version": 4,
+  "calculation_version": 6,
   "focus": {
     "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
     "action_status": "reviewed",
@@ -39,7 +39,7 @@
   "metrics": {
     "low_defense": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [
         {
@@ -110,7 +110,7 @@
     },
     "punish_conversion": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": true,
       "evidence": [],
       "evidence_total": 0,
@@ -123,7 +123,7 @@
     },
     "throw_defense": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [],
       "evidence_total": 0,
@@ -295,7 +295,7 @@
       "metrics": {
         "low_defense": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [
             {
@@ -345,7 +345,7 @@
         },
         "punish_conversion": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": true,
           "evidence": [],
           "evidence_total": 0,
@@ -358,7 +358,7 @@
         },
         "throw_defense": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [],
           "evidence_total": 0,
@@ -376,7 +376,7 @@
   "rounds_total": 1,
   "rule_version": 1,
   "session_id": "insight-example",
-  "snapshot_id": "4ded2c4ddf0bde47d080773992a202a524bf8e4aa157a4b10e5a91a318980ac8",
+  "snapshot_id": "76a9144597029a31af5917fc09da78f3c1b3088dbea2f1ff3a488345d14dfe23",
   "sources": {
     "evaluation": {
       "available": false,

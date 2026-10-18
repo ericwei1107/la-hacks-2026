@@ -1,0 +1,56 @@
+{
+  "calculation_version": 6,
+  "cloud_checked": false,
+  "cloud_writes": false,
+  "sessions": [
+    {
+      "eligible": true,
+      "final_punish_rate": 0.2,
+      "rounds": [
+        {
+          "fingerprint": "dcd80f7515a8598b1f0ef6d399be2102f76e34d85aae37bc8aa9fe48e78e6c39",
+          "punish_rate": 0.5,
+          "round": 1,
+          "rows": {
+            "events": 53,
+            "frames": 2139,
+            "round_metrics": 3
+          }
+        },
+        {
+          "fingerprint": "bd83b5d19eb06681500c2671408f5502ad9f2054bfe205e57afef6a7297152f5",
+          "punish_rate": 0.0,
+          "round": 2,
+          "rows": {
+            "events": 60,
+            "frames": 2579,
+            "round_metrics": 3
+          }
+        },
+        {
+          "fingerprint": "0882f87c22f9f46597c54fec217885a1d7bd27d533cadc94e03fb9a4b0cc23e3",
+          "punish_rate": null,
+          "round": 3,
+          "rows": {
+            "events": 76,
+            "frames": 3364,
+            "round_metrics": 3
+          }
+        },
+        {
+          "fingerprint": "6e83f7a75c10c06351f3f15dd131b4bb63d2f9ffa0eb94ac0e21f8b3251a5286",
+          "punish_rate": null,
+          "round": 4,
+          "rows": {
+            "events": 49,
+            "frames": 1998,
+            "round_metrics": 3
+          }
+        }
+      ],
+      "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
+      "signature": "d45421c74ed6268ab2a97c67770931d8510e3bf319975a43ff1ebc0b5b3a51f5",
+      "snapshot_rows": 102
+    }
+  ]
+}

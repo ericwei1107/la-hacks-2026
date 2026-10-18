@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 import tempfile
 from pathlib import Path
@@ -57,7 +58,18 @@ def build_examples():
         two_rounds = lows + [round_end(1), event(1, round_=2, hit_level='low', damage=10), round_end(2)]
         results['pending_learning'] = example(root, two_rounds, rounds=(1,))
         results['current_learning'] = example(root, two_rounds, rounds=(1, 2))
-        results['mixed_outcomes'] = example(root, [event(1, 'block', hit_level='low', frame_advantage=-12), round_end(1)])
+        blocked = event(1, 'block', hit_level='low', frame_advantage=-12, move_id=42,
+                        detail={'read_frame': 2, 'attacker_total': 14, 'attacker_frame': 1,
+                                'defender_total': 2, 'defender_frame': 1, 'string_continued': False})
+        base = json.loads((ROOT / 'contracts/examples/gamestate.json').read_text())
+        recovery = []
+        for frame in range(2, 16):
+            state = copy.deepcopy(base)
+            state.update(session_id='insight-example', round=1, frame=frame)
+            state['players'][0]['frames_until_actionable'] = max(0, 3-frame)
+            state['players'][1].update(move_id=42, frame_in_move=frame-1, hit_level='low', frames_until_actionable=15-frame)
+            recovery.append(state)
+        results['mixed_outcomes'] = example(root, [blocked, *recovery, round_end(1)])
     return results
 
 

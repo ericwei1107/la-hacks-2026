@@ -18,7 +18,7 @@ class InsightExamplesTest(unittest.TestCase):
                 self.assertTrue(all(len(m['evidence']) <= 3 for m in value['metrics'].values()))
         real = self.examples['real']
         self.assertFalse(real['synthetic'])
-        self.assertEqual([(m['successes'], m['opportunities']) for m in real['metrics'].values()], [(0, 16), (1, 4), (0, 6)])
+        self.assertEqual([(m['successes'], m['opportunities']) for m in real['metrics'].values()], [(0, 16), (1, 4), (1, 5)])
         self.assertEqual(real['focus']['metric'], 'low_defense')
         self.assertTrue(self.examples['synthetic']['synthetic'])
 

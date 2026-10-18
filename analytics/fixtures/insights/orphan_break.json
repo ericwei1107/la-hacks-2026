@@ -1,5 +1,5 @@
 {
-  "calculation_version": 4,
+  "calculation_version": 6,
   "focus": {
     "action": null,
     "metric": null,
@@ -36,7 +36,7 @@
   "metrics": {
     "low_defense": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [],
       "evidence_total": 0,
@@ -49,7 +49,7 @@
     },
     "punish_conversion": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": true,
       "evidence": [],
       "evidence_total": 0,
@@ -80,7 +80,7 @@
           "kind": "successes_exceed_opportunities"
         }
       ],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [],
       "evidence_total": 0,
@@ -111,7 +111,7 @@
       "metrics": {
         "low_defense": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [],
           "evidence_total": 0,
@@ -124,7 +124,7 @@
         },
         "punish_conversion": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": true,
           "evidence": [],
           "evidence_total": 0,
@@ -155,7 +155,7 @@
               "kind": "successes_exceed_opportunities"
             }
           ],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [],
           "evidence_total": 0,
@@ -173,7 +173,7 @@
   "rounds_total": 1,
   "rule_version": 1,
   "session_id": "insight-example",
-  "snapshot_id": "0d72e49b7ac26bb73f58706960097cda2bd860634e0c09b9e280668a0b05c926",
+  "snapshot_id": "05c096b026247602038e2b66d7dd63e2a8bb3fb7869037d7d568bb6526302b87",
   "sources": {
     "evaluation": {
       "available": false,

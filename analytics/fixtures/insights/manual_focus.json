@@ -1,5 +1,5 @@
 {
-  "calculation_version": 4,
+  "calculation_version": 6,
   "focus": {
     "action": "Review these throws and practice the appropriate break against the recorded throw.",
     "action_status": "reviewed",
@@ -39,7 +39,7 @@
   "metrics": {
     "low_defense": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [
         {
@@ -110,7 +110,7 @@
     },
     "punish_conversion": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": true,
       "evidence": [],
       "evidence_total": 0,
@@ -123,7 +123,7 @@
     },
     "throw_defense": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [
         {
@@ -350,7 +350,7 @@
       "metrics": {
         "low_defense": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [
             {
@@ -400,7 +400,7 @@
         },
         "punish_conversion": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": true,
           "evidence": [],
           "evidence_total": 0,
@@ -413,7 +413,7 @@
         },
         "throw_defense": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [
             {
@@ -468,7 +468,7 @@
   "rounds_total": 1,
   "rule_version": 1,
   "session_id": "insight-example",
-  "snapshot_id": "699431f3f40d9b4710b527e4a03fa0964dbe8acc12a70397783d193f22be6c22",
+  "snapshot_id": "8ce874e346062d35a32de8e13dbf67ffb053d6cf403d8686c1194b03ff653de4",
   "sources": {
     "evaluation": {
       "available": false,

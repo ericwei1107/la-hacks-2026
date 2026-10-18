@@ -1,5 +1,5 @@
 {
-  "calculation_version": 4,
+  "calculation_version": 6,
   "focus": {
     "action": null,
     "metric": null,
@@ -40,7 +40,7 @@
           "kind": "invalid_recording_lines"
         }
       ],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [
         {
@@ -115,7 +115,7 @@
           "kind": "invalid_recording_lines"
         }
       ],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": true,
       "evidence": [],
       "evidence_total": 0,
@@ -132,7 +132,7 @@
           "kind": "invalid_recording_lines"
         }
       ],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [],
       "evidence_total": 0,
@@ -310,7 +310,7 @@
               "kind": "invalid_recording_lines"
             }
           ],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [
             {
@@ -364,7 +364,7 @@
               "kind": "invalid_recording_lines"
             }
           ],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": true,
           "evidence": [],
           "evidence_total": 0,
@@ -381,7 +381,7 @@
               "kind": "invalid_recording_lines"
             }
           ],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [],
           "evidence_total": 0,
@@ -399,7 +399,7 @@
   "rounds_total": 1,
   "rule_version": 1,
   "session_id": "insight-example",
-  "snapshot_id": "3cad4d2ecee3984d2f3e614bd245006883b171fe691b8f0ba84d71a6aa8260ca",
+  "snapshot_id": "79e51bb50d6922fc7da00dd319686a0b0fde40c333c31423e49db2c509741a00",
   "sources": {
     "evaluation": {
       "available": false,

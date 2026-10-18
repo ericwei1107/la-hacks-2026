@@ -168,8 +168,12 @@
             "line": 1361,
             "round": 1
           },
-          "outcome": "failure",
-          "response": null
+          "outcome": "success",
+          "response": {
+            "frame": 1522,
+            "line": 1393,
+            "round": 1
+          }
         },
         {
           "event": {
@@ -190,13 +194,13 @@
           "response": null
         }
       ],
-      "evidence_total": 6,
-      "failures": 6,
+      "evidence_total": 5,
+      "failures": 4,
       "label": "Estimated punish conversion",
-      "opportunities": 6,
+      "opportunities": 5,
       "state": "observed",
-      "successes": 0,
-      "value": 0.0
+      "successes": 1,
+      "value": 0.2
     },
     "throw_defense": {
       "estimated": false,
@@ -361,10 +365,10 @@
       "response": null
     }
   ],
-  "moments_total": 54,
+  "moments_total": 53,
   "quality": "observed",
   "recording_sha256": "d80b76b456a7655f32539d24981d7c552458858d198f562426a75065c71857be",
   "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
-  "snapshot_id": "a897f7d89c57a3be2c9363d1fea9655a48b85fa620680e31cbad9d23e70198ca",
+  "snapshot_id": "474fa5290cf23d9491993a916fde8baa455cf7ed4528133ed7049ee7576ac631",
   "synthetic": false
 }

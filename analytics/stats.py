@@ -3,9 +3,8 @@ from collections import defaultdict
 
 from analytics.observability import traced
 
-CALCULATION_VERSION = 4
+CALCULATION_VERSION = 6
 PUNISHABLE = -10
-PUNISH_WINDOW = 10
 CONNECT = ("hit", "counter_hit")
 DAMAGING = CONNECT + ("throw",)
 LOWS = ("low",)
@@ -23,6 +22,7 @@ def rounds_of(records):
 
 class Situations:
     def __init__(self, records):
+        self.records = records
         self.by_round = defaultdict(list)
         for r in records:
             if r.get("t") == "state" and isinstance(r.get("frame"), int):
@@ -59,23 +59,90 @@ def winners(records, meta):
     return found
 
 
-def opportunities(evs, human):
+def punish_window(event, states, evs, human):
+    """Return a proven recovery window, or an exclusion/uncertainty reason.
+
+    Tracker details are sampled after contact: total - frame is the remaining
+    recovery at read_frame. Never add a tolerance or anchor at contact time.
+    """
+    detail = event.get('detail') or {}
+    if detail.get('string_continued') is True:
+        return None, 'continuation'
+    keys = ('read_frame', 'attacker_total', 'attacker_frame', 'defender_total', 'defender_frame')
+    if any(type(detail.get(key)) is not int for key in keys):
+        return None, 'missing_recovery'
+    read, at, af, dt, df = (detail[key] for key in keys)
+    if not (event['frame'] <= read and 0 <= af <= at and 0 <= df <= dt):
+        return None, 'invalid_recovery'
+    human_free, bot_free = read + dt - df, read + at - af
+    if bot_free - human_free != -event['frame_advantage'] or human_free < read:
+        return None, 'inconsistent_recovery'
+    bot, rnd = 1 - human, event['round']
+    hits = [e['frame'] for e in evs if e['round'] == rnd and e['kind'] in CONNECT
+            and e.get('actor') == human and e.get('target') == bot
+            and human_free < e['frame'] <= bot_free]
+    stop = min(hits, default=bot_free)
+    coverage_end = min(stop + 1, bot_free)
+    if coverage_end - read > len(states):
+        return None, 'missing_state_coverage'
+    if any(e['round'] == rnd and event['frame'] < e['frame'] <= stop and e['frame'] < bot_free
+           and e.get('actor') == bot and e.get('target') == human
+           and e['kind'] in CONNECT + ('block', 'throw') for e in evs):
+        return None, 'continuation'
+    previous = None
+    for frame in range(read, coverage_end):
+        state = states.get((rnd, frame))
+        players = state.get('players') if state else None
+        if not isinstance(players, list) or len(players) != 2:
+            return None, 'missing_state_coverage'
+        player = players[bot]
+        if frame == read and any(type(players[slot].get('frames_until_actionable')) is not int
+                                 or players[slot]['frames_until_actionable'] != free - read
+                                 for slot, free in ((human, human_free), (bot, bot_free))):
+            return None, 'inconsistent_recovery'
+        if not all(type(player.get(key)) is int for key in ('move_id', 'frame_in_move')) or player.get('hit_level') is None:
+            return None, 'missing_move_timing'
+        if player['hit_level'] != 'none' and (player['move_id'] != event.get('move_id')
+                or (previous and player['frame_in_move'] <= previous['frame_in_move'])):
+            return None, 'continuation'
+        previous = player
+    return (human_free, bot_free), None
+
+
+def opportunities(evs, human, records=()):
     bot = 1 - human
-    opps = [e for e in evs if e["kind"] == "block" and e.get("actor") == bot and e.get("target") == human and isinstance(e.get("frame_advantage"), int) and e["frame_advantage"] <= PUNISHABLE]
+    candidates = [e for e in evs if e["kind"] == "block" and e.get("actor") == bot and e.get("target") == human and type(e.get("frame_advantage")) is int and e["frame_advantage"] <= PUNISHABLE]
+    states = {}
+    for record in records:
+        if record.get('t') == 'state':
+            key = record['round'], record['frame']
+            if key in states and states[key] != record:
+                states[key] = None
+            else:
+                states[key] = record
+    opps, windows, uncertain, excluded = [], [], [], []
+    for event in candidates:
+        window, reason = punish_window(event, states, evs, human)
+        if reason:
+            (excluded if reason == 'continuation' else uncertain).append((event, reason))
+        else:
+            opps.append(event)
+            windows.append(window)
     hits_by_human = [e for e in evs if e['kind'] in CONNECT and e.get('actor') == human and e.get('target') == bot]
     matched = {}
     for hit in sorted(hits_by_human, key=lambda h: (h['round'], h['frame'])):
-        candidates = [i for i, o in enumerate(opps) if i not in matched and o['round'] == hit['round'] and 0 < hit['frame'] - o['frame'] <= abs(o['frame_advantage']) + PUNISH_WINDOW]
+        candidates = [i for i, o in enumerate(opps) if i not in matched and o['round'] == hit['round'] and windows[i][0] < hit['frame'] <= windows[i][1]]
         if candidates:
             matched[max(candidates, key=lambda i: (opps[i]['frame'], i))] = hit
     throws = [e for e in evs if e["kind"] == "throw" and e.get("actor") == bot and e.get("target") == human]
     breaks = [e for e in evs if e["kind"] == "throw_break" and e.get("actor") == human]
     lows = [e for e in evs if e.get("actor") == bot and e.get("target") == human and e.get("hit_level") in LOWS and e["kind"] in ("block",) + CONNECT]
-    return {'low_defense': lows, 'throw_defense': throws, 'breaks': breaks, 'punish_conversion': opps, 'punish_matches': matched}
+    return {'low_defense': lows, 'throw_defense': throws, 'breaks': breaks, 'punish_conversion': opps, 'punish_matches': matched,
+            'punish_uncertain': uncertain, 'punish_excluded': excluded}
 
 
 def block(evs, human, situations, won):
-    counted = opportunities(evs, human)
+    counted = opportunities(evs, human, situations.records)
     by_situation = defaultdict(int)
     for e in evs:
         if e["kind"] in DAMAGING and e.get("target") == human and (e.get("damage") or 0) > 0:
@@ -89,7 +156,7 @@ def block(evs, human, situations, won):
     adv = [-e["frame_advantage"] for e in evs if e["kind"] == "block" and e.get("target") == human and isinstance(e.get("frame_advantage"), int)]
     return {
         "damage_taken_by_situation": dict(by_situation),
-        "punish_rate": rate(len(counted['punish_matches']), len(counted['punish_conversion'])),
+        "punish_rate": None if counted['punish_uncertain'] else rate(len(counted['punish_matches']), len(counted['punish_conversion'])),
         "throw_break_rate": rate(len(counted['breaks']), len(counted['throw_defense'])),
         "low_block_rate": rate(sum(1 for e in lows if e["kind"] == "block"), len(lows)),
         "counter_hits_taken": sum(1 for e in evs if e["kind"] == "counter_hit" and e.get("target") == human),

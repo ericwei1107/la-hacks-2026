@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from analytics.main import create_app
 from analytics.repository import ROOT
 from analytics.stats import compute
+from punish_fixtures import timed
 
 CONTRACT_KEYS = ('damage_taken_by_situation', 'punish_rate', 'throw_break_rate', 'low_block_rate', 'counter_hits_taken', 'counter_hits_given', 'avg_adv_after_block')
 SYNTH = '2026-10-17T13-05-00_synth_djin_vs_kaz'
@@ -33,8 +34,8 @@ class ComputeTest(unittest.TestCase):
 
     def test_punish_window(self):
         opp = ev(10, 'block', actor=1, target=0, frame_advantage=-12)
-        self.assertEqual(self.totals([opp, ev(18, 'hit', actor=0, target=1)])['punish_rate'], 1.0)
-        self.assertEqual(self.totals([opp, ev(50, 'hit', actor=0, target=1)])['punish_rate'], 0.0)
+        self.assertEqual(self.totals(timed(opp) + [ev(18, 'hit', actor=0, target=1)])['punish_rate'], 1.0)
+        self.assertEqual(self.totals(timed(opp) + [ev(50, 'hit', actor=0, target=1)])['punish_rate'], 0.0)
         self.assertIsNone(self.totals([ev(10, 'block', actor=1, target=0, frame_advantage=-5)])['punish_rate'])
 
     def test_throws_follow_the_real_tracker(self):
@@ -103,7 +104,7 @@ class StatsRouteTest(unittest.TestCase):
         rounds = body['rounds']
         self.assertEqual([r['low_block_rate'] for r in rounds], [0.2, 0.4, 1.0])
         self.assertEqual([r['throw_break_rate'] for r in rounds], [0.5, None, 1.0])
-        self.assertEqual([r['punish_rate'] for r in rounds], [1.0, 1.0, 1.0])
+        self.assertEqual([r['punish_rate'] for r in rounds], [None, None, None])
         self.assertEqual([r['rounds_won'] for r in rounds], [0, 0, 1])
         self.assertEqual(rounds[0]['damage_taken_by_situation'], {'low_defense': 48, 'throw_break': 35})
         self.assertEqual(body['totals']['throw_break_rate'], 0.667)

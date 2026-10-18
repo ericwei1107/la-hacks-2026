@@ -14,6 +14,7 @@ from analytics.focus import select
 from analytics.insights import InsightRepository, check_id, encoded, prefix, write_export
 from analytics.repository import DataError, ROOT
 from analytics.stats import CALCULATION_VERSION, Situations, block
+from punish_fixtures import timed
 
 
 def event(frame, kind='hit', round_=1, **fields):
@@ -65,13 +66,15 @@ class MetricEvidenceTest(unittest.TestCase):
 
     def test_punish_pairs_one_hit_with_latest_unmatched_opportunity(self):
         records = [event(10, 'block', actor=1, target=0, frame_advantage=-12),
-                   event(12, 'block', actor=1, target=0, frame_advantage=-12),
+                   event(10, 'block', actor=1, target=0, frame_advantage=-12),
                    event(15, actor=0, target=1), event(16, actor=0, target=1),
                    event(2, 'hit', round_=2, actor=0, target=1)]
+        records += timed(records[0])[1:]
+        timed(records[1])
         result = self.analyze(records)['punish_conversion']
         self.assertEqual(result['successes'], 2)
         self.assertEqual([row['response']['line'] for row in result['evidence']], [4, 3])
-        self.assertEqual(result['value'], block(records, 0, Situations([]), None)['punish_rate'])
+        self.assertEqual(result['value'], block([r for r in records if r['t'] == 'event'], 0, Situations(records), None)['punish_rate'])
 
     def test_simultaneous_events_have_distinct_provenance(self):
         records = [event(10, actor=1, target=0, hit_level='low') for _ in range(2)]
@@ -128,8 +131,8 @@ class SnapshotTest(unittest.TestCase):
 
     def test_counts_snapshot_identity_and_bounded_evidence(self):
         result = self.snapshot(limit=2)
-        self.assertEqual(result['calculation_version'], 4)
-        self.assertEqual(CALCULATION_VERSION, 4)
+        self.assertEqual(result['calculation_version'], 6)
+        self.assertEqual(CALCULATION_VERSION, 6)
         self.assertEqual(result['metrics']['low_defense']['opportunities'], 6)
         self.assertEqual(result['metrics']['low_defense']['evidence_total'], 6)
         self.assertEqual(len(result['metrics']['low_defense']['evidence']), 2)
@@ -158,6 +161,10 @@ class SnapshotTest(unittest.TestCase):
 
     def test_blocking_low_and_missing_punish_keep_distinct_moment_outcomes(self):
         self.records[0] = event(1, 'block', actor=1, target=0, hit_level='low', frame_advantage=-12)
+        for row in self.records[1:]:
+            if row.get('t') == 'event':
+                row['frame'] += 30
+        self.records += timed(self.records[0])[1:]
         self.write_records()
         moment = next(row for row in self.snapshot()['moments'] if row['reference']['line'] == 1)
         self.assertEqual(moment['outcome'], 'mixed')
@@ -306,7 +313,7 @@ class RealInsightTest(unittest.TestCase):
 
     def test_independent_source_populations_match_explanation(self):
         metrics = self.body['metrics']
-        self.assertEqual([(metrics[key]['successes'], metrics[key]['opportunities']) for key in ('low_defense', 'throw_defense', 'punish_conversion')], [(0, 16), (1, 4), (0, 6)])
+        self.assertEqual([(metrics[key]['successes'], metrics[key]['opportunities']) for key in ('low_defense', 'throw_defense', 'punish_conversion')], [(0, 16), (1, 4), (1, 5)])
         self.assertEqual(self.body['focus']['metric'], 'low_defense')
         self.assertEqual(self.body['quality']['skipped_recording_lines'], 0)
         self.assertFalse(self.body['synthetic'])

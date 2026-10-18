@@ -46,7 +46,7 @@ class InsightsRouteTest(unittest.TestCase):
         body = response.json()
         self.assertEqual(list(PUBLIC_VALIDATOR.iter_errors(body)), [])
         self.assertEqual(body, self.expected)
-        self.assertEqual([(m['successes'], m['opportunities']) for m in body['metrics'].values()], [(0, 16), (1, 4), (0, 6)])
+        self.assertEqual([(m['successes'], m['opportunities']) for m in body['metrics'].values()], [(0, 16), (1, 4), (1, 5)])
         self.assertEqual(body['focus']['metric'], 'low_defense')
         self.assertLessEqual(len(body['moments']), 5)
         self.assertEqual(body, json.loads((PUBLIC_FIXTURES / 'real.json').read_text()))

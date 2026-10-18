@@ -1,3 +1,5 @@
+> Calculation version 6: [verified scoped rollout and demo-host activation](evidence/punish-rollout.md). The audited real session is 1/5 estimated punishes (20%); only its four cloud rounds were refreshed.
+
 # Analytics service
 
 The real analytics service serves stats, learning metrics and per-session trends on port 8767. It works from files without a running game. Optional Tiger Data integration serves current trends from a continuous aggregate and falls back to files. Sentry retains HTTP transactions with loading, reduction and learning operation spans. See [remediation status and owner handoffs](REMEDIATION.md).
@@ -12,9 +14,9 @@ The real analytics service serves stats, learning metrics and per-session trends
 .venv/bin/python -m analytics.insights 2026-10-18T05-14-03_sahil_djin_vs_kaz --data-dir ./data/samples/live_learning --output-dir ./data/analytics
 ```
 
-Expect deterministic JSON/Markdown with source fingerprints, original-line citations, completed-round counts **0/16 lows, 1/4 throws, 0/6 estimated punishes**, low-defense focus, first/current habit history and null fine-tune values. The export initializes neither telemetry nor database/provider clients. Generated files stay under ignored `data/analytics`; sample bundles are protected against export writes.
+Expect deterministic JSON/Markdown with source fingerprints, original-line citations, completed-round counts **0/16 lows, 1/4 throws, 1/5 estimated punishes**, low-defense focus, first/current habit history and null fine-tune values. The export initializes neither telemetry nor database/provider clients. Generated files stay under ignored `data/analytics`; sample bundles are protected against export writes.
 
-Metric/evidence/focus rules are in [METRICS.md](METRICS.md). [INSIGHTS_PROPOSAL.md](INSIGHTS_PROPOSAL.md) describes the implemented internal format and proposed shared route. **The new insight HTTP route is not registered:** all-owner contract agreement is still required. Existing stats/learning/trends and stored calculation version 4 remain compatible.
+Metric/evidence/focus rules are in [METRICS.md](METRICS.md). [INSIGHTS_PROPOSAL.md](INSIGHTS_PROPOSAL.md) describes the implemented internal format and proposed shared route. **The new insight HTTP route is not registered:** all-owner contract agreement is still required. Existing stats/learning/trends retain their response contracts; calculation version 6 versions the corrected stored semantics.
 
 Use [INTEGRATION.md](INTEGRATION.md) for real report and Windows-host checks and [submission drafts/claim ledger](submission/README.md) for B7/B9. Chloe's C1 checker and C2 app changes landed in PRs #19/#20. Their [integration review](evidence/pr20-integration.md) records passing local checks and a checker reset follow-up. Sahil's brain evidence, growing-session/native host acceptance and requested Luna migration remain separate owner gates.
 
@@ -70,7 +72,7 @@ Match player and human character exactly; include synthetic sessions if they mat
 
 `?stat=<name>` selects exactly one key. Points without that key remain in the series with empty `values`. Unavailable dynamic metrics are omitted; rates without observations are null. Regressed habits retain their first mastery milestone but show their latest mastery probability.
 
-Event calculations preserve the existing mock reducer conventions: frame advantage is actor-relative; a punish opportunity requires a blocked bot move at -10 or worse, and a human hit/counter-hit in the same round within `abs(frame_advantage) + 10` frames. The extra 10-frame allowance is provisional. Throw-break rate follows the real tracker: human breaks divided by bot throws on the human, capped at 1. The tracker records every throw and emits an additional break event when it is broken.
+Event calculations preserve the existing mock reducer conventions: frame advantage is actor-relative; a punish opportunity requires a blocked bot move at -10 or worse, consistent recorded recovery timing and state evidence, with string continuations excluded. A human hit/counter-hit must land after human recovery and at or before bot recovery in the same round, without tolerance. Missing or ambiguous timing is unavailable. Throw-break rate follows the real tracker: human breaks divided by bot throws on the human, capped at 1. The tracker records every throw and emits an additional break event when it is broken.
 
 Round winners start with metadata and are updated by non-null recorded round-end events/summaries in file order. One hit can satisfy only the most recent unmatched qualifying punish opportunity in the same round. Unknown winners do not enter the denominator. The service does not aggregate match win rates across sessions or difficulties.
 
@@ -81,7 +83,7 @@ Per-round blocks plus `totals`, in the `contracts/api.md` shape, computed by `an
 | Field | Meaning |
 |---|---|
 | `damage_taken_by_situation` | damage from `hit`/`counter_hit`/`throw` on the human, keyed by the event's `situation`, else the brain's `derived.situation` at that frame, else `neutral` (real events carry no `situation`) |
-| `punish_rate` | blocks of a bot move at frame advantage ≤ −10 (the actor's advantage) that the human punished with a hit within `abs(advantage) + 10` frames |
+| `punish_rate` | verified blocks of a bot move at actor-relative advantage ≤ −10, converted by a human hit after human recovery and at or before bot recovery; no tolerance, continuations excluded, unknown timing unavailable |
 | `throw_break_rate` | human `throw_break` events ÷ bot `throw` events on the human; the real tracker emits `throw` for every throw and adds `throw_break` when it's broken |
 | `low_block_rate` | bot lows (`hit_level` `low`) on the human: blocked ÷ blocked + hit. Special lows are excluded: they're stand-blockable, so they don't test the crouch-block habit, and this matches `game/detect.py`'s `low_defense` |
 | `counter_hits_taken`, `counter_hits_given` | counter hits with the human as target / actor |
@@ -99,7 +101,7 @@ Discover canonical metadata in `DATA_DIR/sessions/*.json` and paired `DATA_DIR/s
 
 Each request checks modification time and size of relevant metadata, recording, learning and evaluation files. Unchanged parsed data and derived results are cached; changed or removed files invalidate affected results. Recording data is needed for trends, not for learning. Unknown recording types are ignored and recognized records use the frozen schemas. Invalid metadata is isolated: unrelated sessions remain available and requesting the invalid session returns 503. An incomplete final JSONL record without a newline is tolerated; malformed complete records fail.
 
-Invalid required data or an invalid optional file that exists returns HTTP 503 with a concise diagnostic and an error log. Missing optional learning/evaluation files are unavailable data, not zero measurements. No files are repaired or fabricated. With `DATABASE_URL`, the repository reads ready, source-matching Tiger Data trend aggregates and uses files for missing/stale imports or database outages. Stats and learning continue reading files. API database connections/statements each have two-second limits; the importer keeps longer limits. Database I/O releases the shared file lock, so stats and learning remain responsive and other trend requests can fall back without waiting. Database failures log a credential-free warning and retry after two seconds. Calculation version 4 invalidates older round/aggregate fingerprints and counts only plain lows; restart and backfill after upgrading. See [Tiger Data setup](tigerdata/README.md) for explicit schema initialization, backfill, watcher lifecycle and cloud verification commands.
+Invalid required data or an invalid optional file that exists returns HTTP 503 with a concise diagnostic and an error log. Missing optional learning/evaluation files are unavailable data, not zero measurements. No files are repaired or fabricated. With `DATABASE_URL`, the repository reads ready, source-matching Tiger Data trend aggregates and uses files for missing/stale imports or database outages. Stats and learning continue reading files. API database connections/statements each have two-second limits; the importer keeps longer limits. Database I/O releases the shared file lock, so stats and learning remain responsive and other trend requests can fall back without waiting. Database failures log a credential-free warning and retry after two seconds. Calculation version 6 invalidates earlier round/aggregate fingerprints and retains plain-low counts. Restart the API to load v6; cloud writes require an explicitly scoped backfill. See [Tiger Data setup](tigerdata/README.md) for explicit schema initialization, backfill, watcher lifecycle and cloud verification commands.
 
 ## Optional session archive (B8)
 

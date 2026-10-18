@@ -36,7 +36,8 @@ A bar chart of one stat over the player's last five sets up to and including the
 - **Loading:** skeleton headline and bars.
 - **No sets:** the empty state "No stats yet." / "Play a set against Kumite and its numbers show up here."
 - **Offline:** the offline banner for analytics.
-- A rate that is null (the situation never happened) reads as an em dash with "Didn't come up this set".
+- A null punish rate reads as an em dash with "Not enough data this set". Analytics may lack opportunities or sufficient recovery evidence.
+- Other null rates read as an em dash with "Didn't come up this set".
 
 ## Decisions & Alternatives
 
@@ -45,6 +46,7 @@ A bar chart of one stat over the player's last five sets up to and including the
 | Headline stat | Always low block rate | The stat of whichever habit the bot targets | Paper fixes the layout around low block rate, and the hunted-habit line says when it is the target. A moving headline would reshuffle the screen between sets. |
 | "vs last set" | Difference from the previous trend point | A field from analytics | Trends carry every set's values; subtracting two is arithmetic. |
 | Throw counts | From the recording's events | Deriving them from the rate | A rate cannot give "1 of 3"; the events can. |
+| Unavailable punish rate | Neutral "Not enough data this set" wording | Claiming the situation did not occur | The nullable response does not distinguish absent opportunities from insufficient recovery evidence. |
 
 ## References
 

@@ -244,16 +244,16 @@ class ReducerTest(unittest.TestCase):
     def test_hand_calculated_event_totals(self):
         events=[self.event(10,'block',actor=1,target=0,hit_level='low',frame_advantage=-12),self.event(25,'hit',actor=0,target=1,damage=10),self.event(50,'hit',actor=1,target=0,hit_level='low',damage=12,situation='low_defense'),self.event(70,'counter_hit',actor=1,target=0,damage=8),self.event(90,'counter_hit',actor=0,target=1,damage=6),self.event(100,'throw',actor=1,target=0,damage=35,situation='throw_break'),self.event(112,'throw',actor=1,target=0,damage=0),self.event(120,'throw_break',actor=0,target=1)]
         body=stat_totals(0,events)
-        self.assertEqual(body,{'damage_taken_by_situation':{'low_defense':12,'neutral':8,'throw_break':35},'punish_rate':1.0,'throw_break_rate':0.5,'low_block_rate':0.5,'counter_hits_taken':1,'counter_hits_given':1,'avg_adv_after_block':12.0})
+        self.assertEqual(body,{'damage_taken_by_situation':{'low_defense':12,'neutral':8,'throw_break':35},'punish_rate':None,'throw_break_rate':0.5,'low_block_rate':0.5,'counter_hits_taken':1,'counter_hits_given':1,'avg_adv_after_block':12.0})
         self.assertEqual(stat_totals(1,[self.event(10,'block',actor=0,target=1,frame_advantage=-6)])['avg_adv_after_block'],6.0)
 
-    def test_punish_allowance_and_round_boundary(self):
+    def test_punish_without_recovery_evidence_is_unavailable(self):
         opportunity=self.event(10,'block',actor=1,target=0,frame_advantage=-12)
-        self.assertEqual(stat_totals(0,[opportunity,self.event(32,'hit',actor=0,target=1)])['punish_rate'],1)
-        self.assertEqual(stat_totals(0,[opportunity,self.event(33,'hit',actor=0,target=1)])['punish_rate'],0)
+        self.assertIsNone(stat_totals(0,[opportunity,self.event(32,'hit',actor=0,target=1)])['punish_rate'])
+        self.assertIsNone(stat_totals(0,[opportunity,self.event(33,'hit',actor=0,target=1)])['punish_rate'])
         hit=self.event(15,'hit',actor=0,target=1)
         hit['round']=2
-        self.assertEqual(stat_totals(0,[opportunity,hit])['punish_rate'],0)
+        self.assertIsNone(stat_totals(0,[opportunity,hit])['punish_rate'])
 
 
 if __name__=='__main__':

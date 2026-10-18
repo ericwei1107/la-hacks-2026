@@ -1,3 +1,5 @@
+> Calculation version 6: [scoped production rollout verified](../evidence/punish-rollout.md). The audited session was refreshed once and the repeat imported zero rounds. Other sessions were preserved. Historical v4 verification remains below.
+
 # Tiger Data integration
 
 Tiger Data stores completed rounds and supplies `/trends` through a continuous aggregate. File-backed `/stats` and `/learning` keep their existing behavior. The importer runs separately from the game and API; no request writes to the database.
@@ -49,7 +51,7 @@ Raw records preserve unknown fields in JSONB and promote session/round/frame, pl
 
 Unique keys include the timestamp partition dimension, as required by [TimescaleDB hypertable constraints](https://www.tigerdata.com/docs/reference/timescaledb/hypertables/create_hypertable). SQL identifiers are quoted and values are bound.
 
-Completed-round statistics reuse the real analytics reducer, including actor-relative advantage, the provisional punish allowance, actual tracker throw conventions and state-derived damage situations. Trend snapshots reuse `analytics.metrics.trend_values` and the validated learning loader, so flattened keys, null rates, authoritative first mastery and difficulty-specific win rates match the file endpoint. Companion learning files supply historical learning; inline learning records remain raw evidence only.
+Completed-round statistics reuse the real analytics reducer, including actor-relative advantage, recovery-verified punish timing, actual tracker throw conventions and state-derived damage situations. Trend snapshots reuse `analytics.metrics.trend_values` and the validated learning loader, so flattened keys, null rates, authoritative first mastery and difficulty-specific win rates match the file endpoint. Companion learning files supply historical learning; inline learning records remain raw evidence only.
 
 Snapshots contain cumulative measurements within one session. The [continuous aggregate](https://www.tigerdata.com/docs/build/continuous-aggregates/create-a-continuous-aggregate) groups by `time_bucket('1 day', observed_at)`, session and metric, using `last(value, observed_at)`. Reads choose the latest bucket per metric. Rates are calculated from session events before storage, never averaged between rounds or sessions. This also preserves nulls and the last available habit observation.
 

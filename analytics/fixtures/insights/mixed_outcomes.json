@@ -1,5 +1,5 @@
 {
-  "calculation_version": 4,
+  "calculation_version": 6,
   "focus": {
     "action": null,
     "metric": null,
@@ -36,7 +36,7 @@
   "metrics": {
     "low_defense": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [
         {
@@ -45,6 +45,7 @@
             "frame_advantage": -12,
             "hit_level": "low",
             "kind": "block",
+            "move_id": 42,
             "target": 0
           },
           "opportunity": {
@@ -52,7 +53,7 @@
             "line": 1,
             "round": 1,
             "session_id": "insight-example",
-            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
             "source": "recording"
           },
           "outcome": "success",
@@ -61,7 +62,7 @@
             "line": 1,
             "round": 1,
             "session_id": "insight-example",
-            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
             "source": "recording"
           }
         }
@@ -76,7 +77,7 @@
     },
     "punish_conversion": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": true,
       "evidence": [
         {
@@ -85,6 +86,7 @@
             "frame_advantage": -12,
             "hit_level": "low",
             "kind": "block",
+            "move_id": 42,
             "target": 0
           },
           "opportunity": {
@@ -92,7 +94,7 @@
             "line": 1,
             "round": 1,
             "session_id": "insight-example",
-            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
             "source": "recording"
           },
           "outcome": "failure",
@@ -109,7 +111,7 @@
     },
     "throw_defense": {
       "anomalies": [],
-      "definition_version": 1,
+      "definition_version": 2,
       "estimated": false,
       "evidence": [],
       "evidence_total": 0,
@@ -128,6 +130,7 @@
         "frame_advantage": -12,
         "hit_level": "low",
         "kind": "block",
+        "move_id": 42,
         "target": 0
       },
       "metric_outcomes": {
@@ -138,7 +141,7 @@
             "line": 1,
             "round": 1,
             "session_id": "insight-example",
-            "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+            "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
             "source": "recording"
           }
         },
@@ -157,7 +160,7 @@
         "line": 1,
         "round": 1,
         "session_id": "insight-example",
-        "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+        "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
         "source": "recording"
       },
       "response": null
@@ -181,7 +184,7 @@
       "metrics": {
         "low_defense": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [
             {
@@ -190,7 +193,7 @@
                 "line": 1,
                 "round": 1,
                 "session_id": "insight-example",
-                "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+                "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
                 "source": "recording"
               },
               "outcome": "success",
@@ -199,7 +202,7 @@
                 "line": 1,
                 "round": 1,
                 "session_id": "insight-example",
-                "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+                "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
                 "source": "recording"
               }
             }
@@ -214,7 +217,7 @@
         },
         "punish_conversion": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": true,
           "evidence": [
             {
@@ -223,7 +226,7 @@
                 "line": 1,
                 "round": 1,
                 "session_id": "insight-example",
-                "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+                "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476",
                 "source": "recording"
               },
               "outcome": "failure",
@@ -240,7 +243,7 @@
         },
         "throw_defense": {
           "anomalies": [],
-          "definition_version": 1,
+          "definition_version": 2,
           "estimated": false,
           "evidence": [],
           "evidence_total": 0,
@@ -258,7 +261,7 @@
   "rounds_total": 1,
   "rule_version": 1,
   "session_id": "insight-example",
-  "snapshot_id": "3338b8ee2b377b38c44ab65f6086f4b2caf51ab8738e96f7d03e7e9ad655ede1",
+  "snapshot_id": "5f9b23f030d69038f379b6486fd93b9f7b1167f0f3476f7c63b50135b8c189cc",
   "sources": {
     "evaluation": {
       "available": false,
@@ -280,9 +283,9 @@
     },
     "recording": {
       "available": true,
-      "consumed_bytes": 303,
+      "consumed_bytes": 22202,
       "pending_tail": false,
-      "sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57"
+      "sha256": "c33a0c03238c62b6c326e12b349b4b46b1dca014f3422c3e1c48c1d07f269476"
     },
     "report": {
       "available": false,

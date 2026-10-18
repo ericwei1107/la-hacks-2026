@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from analytics.main import create_app, VERSION
 from analytics.repository import ROOT, DataError, FileRepository, read_lines
 from analytics.stats import compute
+from punish_fixtures import timed
 from analytics.tigerdata.source import prepare
 from analytics.tigerdata.trends import signature, snapshot
 from analytics.tigerdata.repository import TigerRepository
@@ -73,7 +74,9 @@ class RemediationTest(unittest.TestCase):
     def test_punishes_are_one_to_one_for_both_slots_and_rounds(self):
         for human in (0, 1):
             bot = 1 - human
-            records = [self.event(10, 'block', actor=bot, target=human, frame_advantage=-12), self.event(15, 'block', actor=bot, target=human, frame_advantage=-12), self.event(20, 'hit', actor=human, target=bot)]
+            records = [self.event(10, 'block', actor=bot, target=human, frame_advantage=-12), self.event(10, 'block', actor=bot, target=human, frame_advantage=-12), self.event(20, 'hit', actor=human, target=bot)]
+            records += timed(records[0], human)[1:]
+            timed(records[1], human)
             records.append({**self.event(0, 'hit', actor=human, target=bot), 'round': 2})
             totals = compute(self.sid, {'human_slot': human, 'rounds': []}, records)['totals']
             self.assertEqual(totals['punish_rate'], 0.5)

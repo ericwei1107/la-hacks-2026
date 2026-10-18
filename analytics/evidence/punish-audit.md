@@ -1,3 +1,6 @@
+> Current follow-up: [version-6 local implementation and rollout status](punish-rollout.md). The audit below records Garrett’s original review.
+
+
 # Estimated punish conversion: audit of the real M3 session
 
 Audited October 18, 2026 by Track D; reviewed by Garrett the same day (his answers and one correction are below). Session `2026-10-18T05-14-03_sahil_djin_vs_kaz` (`data/samples/live_learning`), human Devil Jin (slot 0), bot Kazuya. Calculation version 4 reports **0/6**. Nothing in the metric was changed by this audit; punishment focus stays disabled.

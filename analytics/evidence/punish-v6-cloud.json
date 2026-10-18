@@ -1,0 +1,35 @@
+{
+  "actual_loopback_http": true,
+  "aggregate_file_parity": true,
+  "calculated_rounds_match": true,
+  "calculation_version": 6,
+  "checkpoints_match": true,
+  "cloud_writes": true,
+  "file_trend_fallback_disabled": true,
+  "final_metric_count": 28,
+  "first_backfill": [
+    4,
+    0,
+    0
+  ],
+  "punish_rate": 0.2,
+  "raw_frames_events_unchanged": true,
+  "repeat_backfill": [
+    0,
+    4,
+    0
+  ],
+  "scope_rounds": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
+  "signature": "d45421c74ed6268ab2a97c67770931d8510e3bf319975a43ff1ebc0b5b3a51f5",
+  "source_files_unchanged": true,
+  "temporary_server_stopped": true,
+  "timescaledb_version": "2.30.2",
+  "unrelated_rows_unchanged": true,
+  "verified_on": "2026-10-18"
+}
