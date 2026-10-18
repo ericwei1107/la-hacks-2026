@@ -51,6 +51,7 @@ class Tactical:
         self.options = options
         self.rng = rng or random.Random()
         self.plan = plan or default_plan()
+        self.base_note = self.plan.get("note", "")
         self.learning = learning
         self.last_decision = None
         self.last_frame = None
@@ -65,6 +66,7 @@ class Tactical:
 
     def set_plan(self, plan):
         self.plan = plan
+        self.base_note = plan.get("note", "")
         self.plan_logged = False
 
     def eligible(self, state, reflex):
@@ -124,7 +126,7 @@ class Tactical:
             targets = self.learning.targets()
             current = self.plan.get("target_habits", [])
             if target_keys(targets) != target_keys(current):
-                self.plan = {**self.plan, "target_habits": targets, "note": self.learning.note(targets)}
+                self.plan = {**self.plan, "target_habits": targets, "note": self.learning.note(targets, self.base_note)}
                 self.plan_logged = False
             elif targets != current:
                 self.plan = {**self.plan, "target_habits": targets}

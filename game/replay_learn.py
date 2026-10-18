@@ -15,6 +15,7 @@ from game.learning import Learning
 from game.notation import Timing
 from game.options import CLASSES, load_options
 from game.pad import load_config
+from game.recorder import data_dir
 from game.reflex import Reflex, load_punishers, load_wakeups
 from game.replay_reflex import RecordingPad
 from game.sequencer import Sequencer
@@ -22,7 +23,11 @@ from game.state import Tracker
 from game.summarize import CONTRACTS, find_session, load_jsonl
 from game.tactical import Tactical
 
-DEFAULT_DATA = Path("data") / "replay"
+REPLAY_DIR = "replay"
+
+
+def default_data():
+    return data_dir() / REPLAY_DIR
 
 
 def schema(name, sub=None):
@@ -82,10 +87,13 @@ class Run:
         self.last_state = None
 
 
-def run_learning(states, player="replay", difficulty=3, mode="practice", rounds_to_win=3, root=DEFAULT_DATA, seed=0,
-                 tactical=False, predictor=True, config=None):
+def run_learning(states, player="replay", difficulty=3, mode="practice", rounds_to_win=3, root=None, seed=0,
+                 tactical=False, predictor=True, config=None, fresh=True):
     versus = mode == "versus"
     sid = states[0]["session_id"] if states else ""
+    root = Path(root) if root is not None else default_data()
+    if fresh and sid:
+        (root / "learning" / f"{sid}.jsonl").unlink(missing_ok=True)
     tracker = Tracker(sid, timeouts=versus, rounds_to_win=rounds_to_win if versus else None)
     diff = Difficulty.preset(difficulty)
     rng = random.Random(seed)
@@ -101,7 +109,7 @@ def run_learning(states, player="replay", difficulty=3, mode="practice", rounds_
             bot_char = state["players"][1 - human]["character"]
             options = load_options(bot_char)[0]
             run.detector = Detector(human, options)
-            run.learning = Learning(player, state["players"][human]["character"], options, diff, rng, root, predictor=predictor)
+            run.learning = Learning(player, state["players"][human]["character"], options, diff, rng, root, predictor=predictor, fresh=fresh)
             if tactical:
                 config = config or load_config()
                 latency = config["input_latency_frames"]
@@ -220,7 +228,8 @@ def main(argv=None):
     parser.add_argument("--all", action="store_true", help="print every decision_point event")
     parser.add_argument("--player", default="replay", help="profile name under <data-dir>/profiles")
     parser.add_argument("--difficulty", type=int, default=3, choices=range(1, 6))
-    parser.add_argument("--data-dir", default=str(DEFAULT_DATA), help="where profiles/ and learning/ are written")
+    parser.add_argument("--data-dir", help="where profiles/ and learning/ are written (default DATA_DIR/replay)")
+    parser.add_argument("--keep-profile", action="store_true", help="continue from the profile and predictor a previous replay left in --data-dir")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--tactical", action="store_true", help="also dry-run the tactical layer with the learners (shows habit-driven picks)")
     parser.add_argument("--no-predictor", action="store_true")
@@ -234,14 +243,17 @@ def main(argv=None):
     failures = 0
     if args.subject == "bot":
         events, decisions, detector = run_detector(states, args.subject, mode)
-        print(f"{args.recording}: {len(states)} states, {len(events)} tracker events, subject bot (slot {detector.subject}), "
+        print(f"{args.recording}: {len(states)} states, {len(events)} tracker events, subject bot (slot {detector.subject if detector else '?'}), "
               f"{len(decisions)} decision points")
         run = None
     else:
         run = run_learning(states, args.player, args.difficulty, mode, root=args.data_dir, seed=args.seed, tactical=args.tactical,
-                           predictor=not args.no_predictor)
+                           predictor=not args.no_predictor, fresh=not args.keep_profile)
         events, decisions = run.events, run.decisions
-        print(f"{args.recording}: {len(states)} states, {len(events)} tracker events, subject human (slot {run.detector.subject}), "
+        slot = run.detector.subject if run.detector else "?"
+        if run.learning is None:
+            run = None
+        print(f"{args.recording}: {len(states)} states, {len(events)} tracker events, subject human (slot {slot}), "
               f"{len(decisions)} decision points")
     for ev in decisions:
         errors = [e.message for e in EVENT_V.iter_errors(ev)]

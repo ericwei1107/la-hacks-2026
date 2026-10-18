@@ -171,6 +171,7 @@ def run_session(reader, args, hooks=None):
     except KeyboardInterrupt:
         pass
     finally:
+        hooks.close()
         final = tracker.finish()
         extra = []
         if final and last is not None:
@@ -178,7 +179,6 @@ def run_session(reader, args, hooks=None):
                 extra = hooks.finish(last, final)
             except Exception as e:
                 print(f"finish hook failed: {e!r}", flush=True)
-        hooks.close()
         recorder.events(final)
         recorder.events(extra)
         for rec in final + extra:
