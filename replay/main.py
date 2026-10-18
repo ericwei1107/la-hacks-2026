@@ -3,7 +3,8 @@ import asyncio
 import os
 from typing import Annotated
 
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, Response
+import sentry_sdk
 from fastapi.middleware.cors import CORSMiddleware
 from jsonschema import Draft202012Validator
 
@@ -11,6 +12,7 @@ from replay.coach import CoachTip, OpenAIProvider, RoundCoach
 from replay.config import ROOT, Settings
 from replay.reports import REPORT_SCHEMA, ReportService
 from replay.chat import ChatReply, ChatRequest, ChatService, OpenAIChatProvider
+from replay.observability import initialize
 
 SCHEMA = json.loads((ROOT / "contracts/round_summary.schema.json").read_text())
 VALIDATOR = Draft202012Validator(SCHEMA)
@@ -19,6 +21,7 @@ EXAMPLE = json.loads((ROOT / "contracts/examples/round_summary.json").read_text(
 
 def create_app() -> FastAPI:
     settings = Settings.load()
+    initialize(settings.version)
     app = FastAPI(title="Kumite replay coach", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
@@ -45,7 +48,7 @@ def create_app() -> FastAPI:
             "application/json": {"schema": SCHEMA, "example": EXAMPLE}
         }}
     })
-    async def coach_round(summary: Annotated[dict, Body(examples=[EXAMPLE])]):
+    async def coach_round(summary: Annotated[dict, Body(examples=[EXAMPLE])], response: Response):
         errors = list(VALIDATOR.iter_errors(summary))
         if errors:
             raise HTTPException(status_code=422, detail=[
@@ -53,7 +56,12 @@ def create_app() -> FastAPI:
                  "msg": f"Round summary violates {error.validator}"}
                 for error in errors
             ])
-        return await app.state.coach.coach(summary)
+        tip = await app.state.coach.coach(summary)
+        if sentry_sdk.is_initialized():
+            span = sentry_sdk.get_current_span()
+            if span is not None:
+                response.headers["X-Sentry-Trace-Id"] = span.trace_id
+        return tip
 
     @app.post("/analyze/{session_id}", responses={200: {"content": {"application/json": {"schema": REPORT_SCHEMA}}}})
     async def analyze(session_id: str):
