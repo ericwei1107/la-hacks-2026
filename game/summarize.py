@@ -8,7 +8,9 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from game.detect import Detector
 from game.hotloop import fmt_event, fmt_record
+from game.options import load_options
 from game.recorder import data_dir
 from game.state import Tracker
 
@@ -27,7 +29,7 @@ def zip_members(path):
 def recording_text(path):
     if str(path).endswith(".zip"):
         members = zip_members(path)
-        return next(text for name, text in members.items() if name.endswith(".jsonl"))
+        return next(text for name, text in members.items() if name.endswith(".jsonl") and not name.endswith(".learning.jsonl"))
     return Path(path).read_text(encoding="utf-8")
 
 
@@ -66,20 +68,46 @@ def check_session(text):
 
 def event_key(ev):
     detail = ev.get("detail") or {}
-    keys = ("round", "frame", "kind", "actor", "target", "move_id", "hit_level", "frame_advantage", "damage")
+    keys = ("round", "frame", "kind", "actor", "target", "move_id", "hit_level", "frame_advantage", "damage", "situation", "action")
     return tuple(ev.get(k) for k in keys) + (detail.get("reason"), detail.get("winner"))
 
 
-def replay(states, mode="practice", rounds_to_win=3):
+def replay(states, mode="practice", rounds_to_win=3, detect=True):
     versus = mode == "versus"
     tracker = Tracker(states[0]["session_id"] if states else "", timeouts=versus, rounds_to_win=rounds_to_win if versus else None)
+    detector = None
     events = []
     for s in states:
         if tracker.match_over and tracker.prev is not None and s["frame"] < tracker.prev["frame"]:
             break
-        events.extend(tracker.step(copy.deepcopy(s)))
+        state = copy.deepcopy(s)
+        evs = tracker.step(state)
+        if detect and detector is None:
+            human = state["human_slot"]
+            detector = Detector(human, load_options(state["players"][1 - human]["character"])[0])
+        events.extend(evs)
+        if detector is not None:
+            events.extend(detector.step(state, evs))
     events.extend(tracker.finish())
     return events
+
+
+def decision_section(events):
+    decisions = [e for e in events if e["kind"] == "decision_point"]
+    if not decisions:
+        print("decision points: none")
+        return
+    print(f"decision points: {len(decisions)} (human responses by situation)")
+    rows = {}
+    for ev in decisions:
+        row = rows.setdefault(ev.get("situation", "?"), {"n": 0, "correct": 0, "actions": Counter()})
+        row["n"] += 1
+        row["correct"] += bool((ev.get("detail") or {}).get("correct"))
+        row["actions"][ev.get("action")] += 1
+    for situation in sorted(rows):
+        row = rows[situation]
+        acts = ", ".join(f"{a} {n}" for a, n in row["actions"].most_common())
+        print(f"  {situation:<24} n={row['n']:<4} correct {row['correct'] / row['n']:.0%}  actions: {acts}")
 
 
 def first_event(events, frame, rnd, window, test):
@@ -202,8 +230,9 @@ def main(argv=None):
             print(f"session: ok {session_path} human P{meta['human_slot'] + 1} {meta['human_character']} vs {meta['bot_character']}, rounds {meta['rounds']}")
 
     replayed = replay(states, meta.get("mode", "practice"))
+    has_decisions = any(e["kind"] == "decision_point" for e in events)
     recorded_keys = Counter(event_key(e) for e in events)
-    replayed_keys = Counter(event_key(e) for e in replayed)
+    replayed_keys = Counter(event_key(e) for e in replayed if has_decisions or e["kind"] != "decision_point")
     if recorded_keys == replayed_keys:
         print(f"replay: ok, re-running the tracker on the states reproduces all {len(replayed)} events")
     else:
@@ -216,7 +245,9 @@ def main(argv=None):
 
     print("events:")
     for ev in events:
-        print("  " + fmt_event(ev))
+        if ev["kind"] != "decision_point":
+            print("  " + fmt_event(ev))
+    decision_section(replayed)
 
     human = meta.get("human_slot", states[0]["human_slot"] if states else 0)
     human_char = meta.get("human_character")

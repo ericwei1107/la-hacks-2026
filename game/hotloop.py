@@ -21,8 +21,11 @@ def fmt_event(ev):
         parts.append(f"adv {ev['frame_advantage']:+d}")
     if "damage" in ev:
         parts.append(f"dmg {ev['damage']}")
+    if "situation" in ev:
+        parts.append(f"{ev['situation']} -> {ev.get('action')}")
     if ev.get("detail"):
-        parts.append(" ".join(f"{k}={v}" for k, v in ev["detail"].items() if not k.startswith(("attacker_", "defender_"))))
+        parts.append(" ".join(f"{k}={v}" for k, v in ev["detail"].items()
+                              if not k.startswith(("attacker_", "defender_")) and k != "state_text"))
     return " ".join(parts)
 
 

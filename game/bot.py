@@ -2,6 +2,7 @@ import argparse
 import random
 import sys
 
+from game.detect import Detector
 from game.difficulty import Difficulty
 from game.hotloop import Hooks, run_session
 from game.notation import Timing
@@ -24,6 +25,7 @@ class BotHooks(Hooks):
         self.seq = None
         self.reflex = None
         self.tactical = None
+        self.detector = None
 
     def start(self, snap, sid):
         bot = 1 - snap.human_slot
@@ -36,6 +38,7 @@ class BotHooks(Hooks):
         self.reflex = Reflex(self.seq, self.difficulty, latency, punishers, self.rng, wakeups)
         options, option_source = load_options(character)
         self.tactical = Tactical(self.seq, self.difficulty, latency, options, self.rng)
+        self.detector = Detector(snap.human_slot, options)
         tiers = ", ".join(f"{s}: " + " ".join(f"{t['notation']}(i{t['startup']})" for t in punishers[s]) for s in ("standing", "crouching"))
         menu = ", ".join(f"{c} {len(options['classes'][c])}" for c in CLASSES)
         print(f"bot P{bot + 1} {character} at difficulty {self.difficulty.level} "
@@ -50,6 +53,7 @@ class BotHooks(Hooks):
 
     def frame(self, state, events):
         records = self.reflex.step(state, events)
+        records += self.detector.step(state, events)
         records += self.tactical.step(state, events, self.reflex)
         bot = state["players"][1 - state["human_slot"]]
         self.seq.on_frame(state["frame"], bot, self.reflex.live(state))
