@@ -34,8 +34,8 @@ class ScriptedReader:
         return SimpleNamespace(players=players, human_slot=0, round_frame=frame)
 
 
-def pair(frame, h0=190, h1=190):
-    return (frame, [idle(0, frame, health=h0), idle(1, frame, health=h1)])
+def pair(frame, h0=190, h1=190, free=1):
+    return (frame, [idle(0, frame, health=h0, free_movement=free), idle(1, frame, health=h1, free_movement=free)])
 
 
 class ConfigRunTest(unittest.TestCase):
@@ -115,24 +115,36 @@ class LoopTest(unittest.TestCase):
             args = SimpleNamespace(bot="kazuya", player="loop", difficulty=3, mode="versus", stage=None, rounds_to_win=3)
             self.assertEqual(run_session(FakeReader([pair(f) for f in range(1, 6)]), args, SpyHooks()), INTERRUPTED)
 
-    def test_wait_for_match_ignores_the_post_match_scene_and_starts_on_a_full_health_reset(self):
-        snaps = [pair(300, 0, 64), pair(301, 0, 64), pair(302, 0, 64), pair(5, 0, 64), pair(6, 0, 64), pair(0), pair(1)]
+    def test_wait_for_match_skips_full_health_scenes_where_nobody_is_free(self):
+        snaps = [pair(300, 0, 64), pair(301, 0, 64), pair(0, free=0), pair(1, free=0), pair(294, free=0), pair(0, free=0), pair(299, free=0),
+                 pair(0, free=0), pair(1, free=0), pair(161, free=0), pair(162), pair(163)]
         logs = []
         snap = wait_for_match(ScriptedReader(snaps), NoPacer(), log=logs.append)
-        self.assertEqual(snap.round_frame, 0)
+        self.assertEqual(snap.round_frame, 162)
         self.assertTrue(any("new match" in line for line in logs))
 
-    def test_wait_for_match_after_menus_needs_full_health(self):
-        snaps = [pair(300, 0, 64), None, None, pair(5, 100, 190), pair(6, 100, 190), pair(7), pair(8)]
+    def test_wait_for_match_after_menus_needs_full_health_and_free_players(self):
+        snaps = [pair(300, 0, 64), None, None, pair(5, 100, 190), pair(6, 100, 190), pair(7, free=0), pair(8), pair(9)]
         polls = []
         snap = wait_for_match(ScriptedReader(snaps), NoPacer(), on_poll=lambda: polls.append(1), log=lambda line: None)
-        self.assertEqual(snap.round_frame, 7)
-        self.assertEqual(len(polls), 5)
+        self.assertEqual(snap.round_frame, 8)
+        self.assertEqual(len(polls), 6)
 
-    def test_wait_for_match_keeps_waiting_while_the_scene_runs_on(self):
-        snaps = [pair(f, 0, 64) for f in range(300, 320)]
+    def test_wait_for_match_never_starts_without_a_new_scene(self):
+        snaps = [pair(f, 0, 64) for f in range(300, 310)] + [pair(f) for f in range(310, 320)]
         with self.assertRaises(KeyboardInterrupt):
             wait_for_match(ScriptedReader(snaps), NoPacer(), log=lambda line: None)
+
+    def test_wait_for_match_on_the_recorded_rematch_scenes(self):
+        path = Path("data/recordings/2026-10-18T10-16-55_sahil_djin_vs_kaz.jsonl")
+        if not path.exists():
+            self.skipTest("live recording not on this machine")
+        states = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        snaps = [(s["frame"], s["players"]) for s in states if s["t"] == "state" and s["round"] <= 3]
+        snaps = [(400, snaps[0][1])] + snaps
+        snap = wait_for_match(ScriptedReader(snaps), NoPacer(), log=lambda line: None)
+        self.assertEqual(snap.round_frame, 162)
+        self.assertEqual([hex(p["move_id"]) for p in snap.players], ["0x85a", "0x874"])
 
 
 if __name__ == "__main__":

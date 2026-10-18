@@ -105,25 +105,30 @@ def frames(reader, pacer, on_poll=None, log=print):
         pacer.wait()
 
 
-def full_health(players):
-    return all(p["health"] >= p["max_health"] for p in players)
+def round_live(players):
+    return all(p["health"] >= p["max_health"] and p["free_movement"] for p in players)
 
 
 def wait_for_match(reader, pacer, on_poll=None, log=print):
     prev = None
     gap = False
+    fresh = False
     while True:
         snap = reader.snapshot()
         if snap is None:
             if not gap:
                 log("players not readable: waiting for the next match")
             gap = True
+            fresh = True
         else:
-            if (gap or (prev is not None and snap.round_frame < prev)) and full_health(snap.players):
-                log(f"new match: both players at full health at round frame {snap.round_frame}")
+            if gap or (prev is not None and snap.round_frame < prev):
+                fresh = True
+                log(f"new scene at round frame {snap.round_frame}; starting once both players are free at full health")
+            gap = False
+            prev = snap.round_frame
+            if fresh and round_live(snap.players):
+                log(f"new match: both players free at full health at round frame {snap.round_frame}")
                 return snap
-            if not gap:
-                prev = snap.round_frame
         if on_poll:
             on_poll()
         pacer.wait()
