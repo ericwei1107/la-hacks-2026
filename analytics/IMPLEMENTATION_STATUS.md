@@ -8,17 +8,20 @@ Implementation date: October 18, 2026. Work began at `dc1f90c`; Chloe's C1/C2 ar
 | E1 metric counts/provenance | Implemented | Shared version-4 opportunity selection plus explained counts, original lines, anomalies and focus suppression |
 | E2 deterministic export | Implemented | Schema-validated JSON/Markdown, stable source capture, correction/deletion/tail tests and bounded evidence |
 | E3 focus/moments | Internal implementation complete | Five-observation ranking, manual override, distinct per-metric moment outcomes; action text awaits Garrett review |
-| Focus review handoff | Generated and reviewed by Eric | Eleven committed real-builder fixtures, drift tests, display rules and TypeScript sketch; Chloe's example/intent review remains pending |
-| New public insight transport | Gated | Proposal/schema are reviewable; all-four-owner agreement has not been confirmed, so real/mock routes and consumer code are absent |
+| Focus review handoff | Generated and reviewed by Eric | Eleven internal fixtures plus their public v1 views, drift tests, v1 display rules and a v1 TypeScript type checked with `tsc --strict`; Chloe's example/intent review remains pending |
+| New public insight transport | Implemented behind opt-in flags; agreement pending | Public v1 view and `GET /insights/{id}` on real analytics (`KUMITE_EXPERIMENTAL_INSIGHTS=1`) and mock (`--experimental-insights`), off by default, route/parity tests pass. Not in `contracts/`; app consumer stays off until all four owners agree |
 | Chloe C1 | Merged in PR #19; owner follow-up | All 15 existing checker tests pass; reproduced reset/late-learning false positive must be fixed before relying on advance-required acceptance |
 | Chloe C2/C3 | C2 merged in PR #20; C3 optional | App typecheck/build pass; Chloe's static real-fixture acceptance is retained; growing-session/reconnect/native audio checks remain pending |
 | E4 local report integration | Locally verified | Real HTTP POST/saved GET/schema/source citations for synthetic + real bundles, providers disabled |
-| E4 data-source setup | Locally verified; host inputs requested | Portable absolute-DATA_DIR launcher and source/API parity check; actual HTTP rehearsal covers partial tails, delayed learning and wrong content |
+| E4 data-source setup | Locally verified; host inputs answered | Portable absolute-DATA_DIR launcher and source/API parity check; actual HTTP rehearsal covers partial tails, delayed learning and wrong content |
 | E4 native host/B5 | Pending external evidence | Host layout confirmed: all services share `C:\Users\sahil\la-hacks-2026\data`, no remote exec. Sahil runs the one-command source check and pastes output; reconnect/shutdown/audio still pending. Sahil's trace/waterfall/on-off timing promised within the hour of 03:40 PT |
+| Mock live scenario (E2) | Implemented | `serve.py --live-dir` grows a real session for the real analytics service, with delayed learning, duplicate summaries and socket drops; end-to-end run at 2x had 45/45 `/insights` 200s and per-round pending → current |
 | E5 B7 export/claim package | Implemented draft | Same export supplies numbers; claim ledger and Devpost/Sentry/Tiger Data drafts await owner/final evidence review |
 | History, pilot, diagnosis | Deferred | DA6/DA7/DA9 remain later releases; no invented producer trials/retests/evaluation |
 
 ## Verification
+
+Insights v1 follow-up on branch `track-d-insights-v1` (stacked on PR #22): analytics **169 cases (168 pass, one opt-in cloud skip)**, mocks **54/54**, frozen contracts, both example sets, `smoke.py`, `live_learning_smoke.py` and `demo_host_smoke.py` pass. The draft contract files validate on a scratch copy of `contracts/`; `contracts/` itself is unchanged.
 
 The remediation's full analytics run passed **152 cases (151 pass, one opt-in cloud skip)**, including thirty-one insight cases, Chloe's fifteen checker cases, three fixture/schema/drift cases and nine host-setup cases. Mocks passed **46/46**, frozen examples validated, and both synthetic/real-learning HTTP/WebSocket smokes passed with clean shutdown. The exact new launcher/check CLI also passed an actual brain/analytics HTTP rehearsal against temporary data, including partial tails, delayed learning and same-size wrong content. Original fixture hashes were preserved. The reset/late-learning sequence documented in the earlier integration review remains a separate gap in C1. App typecheck/build passed during that PR #20 review; no app source changed in this remediation. Existing stored calculation version remains 4, so no aggregate reset/backfill is required.
 

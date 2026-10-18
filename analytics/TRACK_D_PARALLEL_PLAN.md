@@ -14,8 +14,8 @@ The roadmap's first implementation task is already behind us. Plan from this bas
 | Eric DA2: deterministic export | **Implemented; included in the isolated review package** | `analytics/insights.py`, internal `analytics/insights.schema.json`, [INSIGHTS_PROPOSAL.md](INSIGHTS_PROPOSAL.md) |
 | Eric DA3 backend: focus and moments | **Implemented in the review package; action text still a draft** | `analytics/focus.py`, five-observation rule, manual override, punishment focus disabled |
 | Report HTTP integration | Verified locally on synthetic and real copies | [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) |
-| Public `/insights` route, mock route, app consumer | **Not started. Needs the interface agreement (section 3)** | — |
-| Native Windows host run, brain decision trace (B5) | Waiting on Sahil and the host | [INTEGRATION.md](INTEGRATION.md), [brain evidence template](evidence/brain-decision-template.md) |
+| Public `/insights` route and mock route | **Implemented behind opt-in flags (D1, D2)**; app consumer waits for the interface agreement | `analytics/insights_v1.schema.json`, `fixtures/insights/public/`, [proposal](INSIGHTS_PROPOSAL.md) |
+| Native Windows host run, brain decision trace (B5) | Layout confirmed (shared `C:\Users\sahil\la-hacks-2026\data`, no remote exec); waiting on Sahil's pasted source check and Sentry artifacts | [INTEGRATION.md](INTEGRATION.md), [brain evidence template](evidence/brain-decision-template.md) |
 
 The subsequent [remediation verification](evidence/insights-host-verification.md) records 152 analytics cases (151 passed, one opt-in cloud skip), mocks 46/46 and actual HTTP source checks. It also supplies E1's generated examples, display rules and TypeScript sketch, and E6's launcher/source-proof commands. Native host inputs/run and interface/owner acceptance remain pending; the numbered work below remains the broader plan.
 
@@ -85,8 +85,8 @@ Work on separate branches (`Eric`, `chloe`). Stage explicit paths only. Run `pyt
 | ID | Task | Deliverable and acceptance | Can start | Depends on |
 | --- | --- | --- | --- | --- |
 | **E0** | Publish the local first-release backend | Split into reviewable PRs (metrics and evidence; export and focus; docs and submission drafts) through `/handoff`. Fix the stale C1 status in IMPLEMENTATION_STATUS.md. Full analytics and mock suites, `contracts/validate.py` and both smokes pass on the PR commit. Calculation version stays 4. | **Now** | — |
-| **E1** | Interface package (section 3) | v1 subset in INSIGHTS_PROPOSAL.md, `insights-ui.md`, generated fixtures with a drift test, TS sketch. Done when Chloe can name every UI state from the fixtures without asking. **Handoff H1 → Chloe.** | **Now**, in parallel with E0 | — |
-| **E2** | Experimental mock route and scenario player (D1) | `tools/mock/serve.py --experimental-insights` serves `GET /insights/{id}` from the same builder. A scenario mode advances rounds, delays the learning flush, sends duplicate summaries, drops and reconnects the socket, and switches sessions. Default mock behavior is unchanged; existing mock tests pass. **Handoff H2 → Chloe.** | **Now**, once D1 is accepted | E1 subset |
+| **E1** ✅ | Interface package (section 3) | v1 subset in INSIGHTS_PROPOSAL.md, `insights-ui.md`, generated fixtures with a drift test, TS sketch. Done when Chloe can name every UI state from the fixtures without asking. **Handoff H1 → Chloe.** | **Now**, in parallel with E0 | — |
+| **E2** ✅ | Experimental mock route and scenario player (D1) | `tools/mock/serve.py --experimental-insights` serves `GET /insights/{id}` from the same builder. A scenario mode advances rounds, delays the learning flush, sends duplicate summaries, drops and reconnects the socket, and switches sessions. Default mock behavior is unchanged; existing mock tests pass. **Handoff H2 → Chloe.** | **Now**, once D1 is accepted | E1 subset |
 | **E3** | Agreement, contracts PR and real route | Ask all four owners to approve. Draft the contracts PR (api.md row, schema, example). Add the real route in `analytics/main.py` using the same builder. Tests: 404/422/503, real = mock = export parity, existing routes unchanged, `validate.py` passes. Measure HTTP p95 on the real fixture locally (target under 250 ms). **Handoff H3 → Chloe.** | Ask now; build after approval | Four approvals |
 | **E4** | Focus wording and punishment audit | Send Garrett the draft action text for low and throw defense. Review all six real-fixture punish opportunities and record whether each pairing is mechanically sensible. Enable punishment focus only if Garrett agrees; otherwise keep it as an "estimated" count only. | Audit **now**; wording waits on Garrett | Garrett |
 | **E5** | Readiness checker for insights | If D4 is accepted: add an optional `--insights` check (identity, snapshot changes on round advance, learning pending → current) with stub tests. | After E3 | E3 |
@@ -177,8 +177,8 @@ flowchart LR
 
 | # | Decision | Recommended default | Why it matters |
 | --- | --- | --- | --- |
-| D1 | Allow an opt-in experimental `/insights` route in the mock before agreement | **Yes.** Off by default, same builder, disclosed in the proposal; the app's insights source stays off until H3 | Without it, Chloe either waits for agreement or copies fixture JSON into `app/` |
-| D2 | Propose the minimal v1 subset rather than the full internal schema | **Yes** (section 3 list) | Quicker four-way agreement and less rendering work for Chloe |
+| D1 | Allow an opt-in experimental `/insights` route in the mock before agreement | **Accepted.** Off by default, same builder, disclosed in the proposal; the app's insights source stays off until H3 | Without it, Chloe either waits for agreement or copies fixture JSON into `app/` |
+| D2 | Propose the minimal v1 subset rather than the full internal schema | **Accepted** (section 3 list; v1 also carries `recording_sha256`, evidence events and per-metric moment outcomes) | Quicker four-way agreement and less rendering work for Chloe |
 | D3 | Demo deadline, and when to fall back if approval hasn't arrived | **Unknown deadline. Default: if four approvals are not in by the time IC1 passes, plan the demo on F1 and keep C5–C7 off by default** | Determines whether Chloe's time goes to C5–C7 or to polishing existing screens |
 | D4 | Eric takes over maintaining `integration_check.py` | **Yes**, with Chloe's OK | Removes a second analytics surface from Chloe's lane |
 
@@ -194,7 +194,7 @@ SENTRY_DSN= DATABASE_URL= .venv/bin/python -m unittest discover -s analytics/tes
 .venv/bin/python -m analytics.integration_check --session-id 2026-10-18T05-14-03_sahil_djin_vs_kaz
 ```
 
-The export shows 0/16 lows, 1/4 throws, 0/6 estimated punishes, low-defense focus and null evaluation. The checker exits 0 in snapshot mode against real analytics plus mock brain and replay on the real sample, and exits 2 with `--require-advance` on that static sample. Planned commands (`serve.py --experimental-insights`, `GET /insights/{id}`, `integration_check --insights`) do not exist until E2, E3 and E5 land. Chloe's checks remain `npm run typecheck` and `npm run build` from `app/`.
+The export shows 0/16 lows, 1/4 throws, 0/6 estimated punishes, low-defense focus and null evaluation. The checker exits 0 in snapshot mode against real analytics plus mock brain and replay on the real sample, and exits 2 with `--require-advance` on that static sample. `serve.py --experimental-insights`, `serve.py --live-dir` and `GET /insights/{id}` (with `KUMITE_EXPERIMENTAL_INSIGHTS=1`) now exist behind flags; `integration_check --insights` waits for E5. Chloe's checks remain `npm run typecheck` and `npm run build` from `app/`.
 
 ## Appendix: old task IDs
 
