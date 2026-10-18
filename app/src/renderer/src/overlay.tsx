@@ -1,23 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { Belt, beltFor, beltName, characterName, habitName, NOTATION_TOKEN } from './design'
-import { useConfig, useEventListener, useLearning, useLatestCoach, useLatestPlan, useLatestSummary, useLiveState, useSummaryListener, type CoachMessage, type LearningRound, type RoundSummary } from './services'
+import { useConfig, useLearning, useLatestCoach, useLatestPlan, useLatestSummary, useRoundBreak, useSummaryListener, type CoachMessage, type LearningRound, type RoundBreak, type RoundSummary } from './services'
 import './fonts'
 import './styles.css'
 import { ServicesProvider } from './services'
-import { useVoice } from './voice'
 
-const ROUND_LIVE_MS = 2_000
 const COUNTDOWN_MS = 10_000
-const WAVEFORM = [[0, 7, 6], [6, 3, 14], [12, 0, 20], [18, 5, 10], [24, 2, 16], [30, 6, 8], [36, 8, 4]]
-
-interface Card {
-  sessionId: string
-  round: number
-  openedAt: number
-  matchOver: boolean
-}
 
 function notationText(text: string) {
   const parts: React.ReactNode[] = []
@@ -64,12 +54,11 @@ function Habits({ sessionId, round, exploited }: { sessionId: string; round: Lea
   )
 }
 
-function BetweenRounds({ card, coach, summary, botCharacter, speaking }: {
-  card: Card
+function BetweenRounds({ card, coach, summary, botCharacter }: {
+  card: RoundBreak
   coach: CoachMessage | null
   summary: RoundSummary | null
   botCharacter: string
-  speaking: boolean
 }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -92,14 +81,6 @@ function BetweenRounds({ card, coach, summary, botCharacter, speaking }: {
         {coach
           ? <p className="text-[30px] leading-[40px] font-bold text-text">{coach.text}</p>
           : <p className="text-[30px] leading-[40px] text-text-muted">Coach is reviewing the round…</p>}
-        {coach && speaking && (
-          <div className="flex items-center gap-3 pt-1">
-            <svg width="40" height="20" viewBox="0 0 40 20" className="shrink-0" aria-hidden="true">
-              {WAVEFORM.map(([x, y, height]) => <rect key={x} x={x} y={y} width="4" height={height} rx="2" fill="var(--color-primary)" />)}
-            </svg>
-            <span className="text-base/base font-medium text-primary">Coach speaking</span>
-          </div>
-        )}
       </div>
       <div className="flex w-[200px] shrink-0 flex-col items-center justify-center gap-1 border-l border-solid border-[#1D1B1626]">
         {card.matchOver
@@ -119,7 +100,7 @@ function BetweenRounds({ card, coach, summary, botCharacter, speaking }: {
 }
 
 function OverlayContent() {
-  const state = useLiveState()
+  const { state, liveSet: sessionId, isLive, roundBreak: openCard } = useRoundBreak()
   const plan = useLatestPlan()
   const coach = useLatestCoach()
   const summary = useLatestSummary()
@@ -130,32 +111,7 @@ function OverlayContent() {
       void client.invalidateQueries({ queryKey: ['analytics', 'learning', record.session_id] })
     }
   })
-  const sessionId = state?.record.session_id
   const learning = useLearning(sessionId ?? '')
-  const [now, setNow] = useState(Date.now())
-  const [card, setCard] = useState<Card | null>(null)
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 250)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  useEventListener((event) => {
-    if (event.kind === 'round_end' && event.session_id === sessionId) {
-      setCard({ sessionId: event.session_id, round: event.round, openedAt: Date.now(), matchOver: event.detail?.match_over === true })
-    } else if (event.kind === 'round_start') {
-      setCard((current) => current?.sessionId === event.session_id ? null : current)
-    }
-  })
-
-  const isLive = Boolean(state && now - state.receivedAt < ROUND_LIVE_MS)
-  const cardClosed = card !== null && (!isLive || !state || state.record.session_id !== card.sessionId || state.record.round > card.round)
-
-  useEffect(() => {
-    if (cardClosed) setCard(null)
-  }, [cardClosed])
-
-  const openCard = card && !cardClosed ? card : null
   const livePlan = plan?.record.session_id === sessionId ? plan : null
   const activeSummary = summary && summary.record.session_id === sessionId ? summary.record : null
   const cardCoach = openCard && coach?.record.session_id === openCard.sessionId && coach.record.round === openCard.round ? coach.record : null
@@ -163,20 +119,6 @@ function OverlayContent() {
   const learningRounds = [...(learning.data?.rounds ?? [])].sort((a, b) => a.round - b.round)
   const lastRound = learningRounds[learningRounds.length - 1]
   const showingCard = openCard !== null
-  const voice = useVoice()
-  const spokenCard = useRef<Card | null>(null)
-  const { speak, stop } = voice
-
-  useEffect(() => {
-    if (openCard && cardCoach && spokenCard.current !== openCard) {
-      spokenCard.current = openCard
-      speak(cardCoach.text)
-    }
-  }, [openCard, cardCoach, speak])
-
-  useEffect(() => {
-    if (!openCard) stop()
-  }, [openCard, stop])
 
   return (
     <div className="relative h-[1080px] w-[1920px] overflow-hidden bg-transparent">
@@ -197,7 +139,6 @@ function OverlayContent() {
         coach={cardCoach}
         summary={cardSummary}
         botCharacter={characterName(config.data?.bot_character)}
-        speaking={voice.speaking}
       />}
     </div>
   )

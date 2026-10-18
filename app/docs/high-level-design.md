@@ -2,28 +2,28 @@
 
 ## Problem
 
-Kumite's bot learns a player's habits, exploits them, and its services explain what happened, but all of that lives in three local HTTP services and JSONL files. A player in the middle of a set has no way to see what the bot is watching or hear the coach between rounds without leaving the game, and after the set has no single place to read the report, see whether the bot actually learned, and ask follow-up questions. The hackathon judges have the same gap: the Model Learning track asks for proof that the system learns, in numbers, and that proof has to be visible on a 1080p demo video and at a loud booth.
+Kumite's bot learns a player's habits, exploits them, and its services explain what happened, but all of that lives in three local HTTP services and JSONL files. A player in the middle of a set has no way to hear the coach between rounds without leaving the game, and after the set has no single place to read the report, see whether the bot actually learned, and ask follow-up questions. The hackathon judges have the same gap: the Model Learning track asks for proof that the system learns, in numbers, and that proof has to be visible on a 1080p demo video and at a loud booth.
 
 ## Approach
 
-One Electron desktop app with two windows that share one design system.
+One Electron desktop app built around one window and one design system.
 
-- **Overlay window.** A transparent, always-on-top, click-through window drawn over Tekken 8 (borderless windowed). It shows a corner HUD during play and a between-round card with the coach's spoken tip.
-- **Main window.** The place for everything before and after a set: sessions, replay analysis, the learning panel, stats, the coach conversation by text or voice, and the bot's controls.
+- **Main window.** The place for everything before and after a set: sessions, replay analysis, the learning panel, stats, the coach conversation by text or voice, and the bot's controls. During a set it stays out of sight and speaks the coach's tip between rounds; nothing is drawn over the game.
+- **Overlay window, off by default.** A transparent, always-on-top, click-through window that can draw a corner HUD and a between-round card over Tekken 8 (borderless windowed). The app runs without it; `KUMITE_OVERLAY=1` turns it on.
 
 The app is a view over other tracks' services. It renders what the brain (:8765), replay analysis (:8766) and analytics (:8767) services return, in the shapes fixed by `contracts/`, and adds voice through ElevenLabs. It never touches the game.
 
 ## Target Users
 
-- **The player in a set** (beginner-to-intermediate Tekken player): eyes on the game, hands on a stick or pad. Needs a glanceable HUD and a short spoken tip between rounds, nothing that steals focus or input.
+- **The player in a set** (beginner-to-intermediate Tekken player): eyes on the game, hands on a stick or pad. Needs a short spoken tip between rounds and nothing on screen that steals focus or input.
 - **The player after a set**: at the keyboard, wants to know which habits cost the most, what to do instead, and whether they improved; asks the coach in plain words.
 - **A booth judge**: has about three minutes, picks a difficulty, plays three rounds, reads the report. Must succeed without instruction.
 - **The video viewer**: sees the app only through a 1080p recording; every number that matters must be readable at that size.
 
 ## Goals
 
-- G1. The overlay draws over Tekken 8 in borderless windowed mode, passes every mouse click through to the game, and appears in an OBS capture.
-- G2. Between rounds, the coach's text appears on the overlay and its voice starts within the 8–10 second round-end screen.
+- G1. During a set, the app takes no focus or input from the game and, unless the overlay is turned on, draws nothing over it.
+- G2. Between rounds, the coach's voice starts within the 8–10 second round-end screen and stops when the next round starts.
 - G3. After a set, a player can open the session, read its report and decision points, see the learning panel, and ask the coach a question by voice or text and hear the answer.
 - G4. The learning panel shows, in large numbers, that the bot learned: prediction accuracy by round, time to detect and time to mastery per habit, exploit hit rates, and player-changed markers. It is the video's closing shot and is never cut.
 - G5. The replay analysis screen shows every decision point with what happened, the best option, its probabilities and why. It is never cut.
@@ -36,7 +36,7 @@ The app is a view over other tracks' services. It renders what the brain (:8765)
 - Reading game memory, sending game inputs, or any online play. The app knows the game only through the brain service.
 - Computing stats, habits, mastery or learning metrics. Those belong to the brain, replay and analytics services.
 - Accounts, cloud sync or multi-machine profiles. A player is a name in the brain's config.
-- Hiding from screen capture. The overlay must be recordable.
+- Hiding from screen capture. When the overlay is on, it must be recordable.
 - Always-on listening. Voice input is push-to-talk only.
 - Installers, code signing and auto-update. The app runs from source on the demo laptop.
 - The landing page and the demo video. Both are Track B deliverables built in this app's design language, but neither is part of the app.
@@ -45,6 +45,7 @@ The app is a view over other tracks' services. It renders what the brain (:8765)
 
 - **Legible over dense.** When a screen could show more data or show it larger, show it larger; detail sits behind a click or is left out.
 - **Polish over breadth.** When time runs short, finish fewer screens to full design quality rather than every screen roughly.
+- **The game screen belongs to the game.** During a set the app speaks and draws nothing; anything visual waits for the main window after the set.
 - **Arithmetic in the app, judgment in the services.** The app may count, sum, subtract, divide and threshold the values the contracts carry in order to show them, and may build sentences from those values with fixed templates. Anything that decides what a player did, what they should do, or what the bot learned comes from the service that owns it.
 
 ## System Design
@@ -53,8 +54,8 @@ The app is a view over other tracks' services. It renders what the brain (:8765)
 flowchart LR
     subgraph App["Kumite desktop app (Electron)"]
         MP["Main process\nwindows · overlay click-through\nglobal push-to-talk key\nElevenLabs calls (holds the key)\nservice addresses"]
-        OV["Overlay window\nHUD · between-round card"]
-        MW["Main window\nsessions · replay analysis · learning panel\nstats · coach · controls · service status"]
+        OV["Overlay window, off by default\nHUD · between-round card"]
+        MW["Main window\nsessions · replay analysis · learning panel\nstats · coach · controls · service status\nbetween-round voice"]
         SC["Shared service clients\nbrain · replay · analytics"]
         OV --- SC
         MW --- SC
@@ -75,22 +76,28 @@ flowchart LR
 
 | Component | Runs in | Owns |
 |---|---|---|
-| Shell | Main process | Creating and placing both windows, overlay always-on-top and click-through, the global push-to-talk key, the three service addresses, the bridge each window uses for privileged work |
+| Shell | Main process | Creating and placing the windows (the overlay only when turned on), overlay always-on-top and click-through, the global push-to-talk key, the three service addresses, the bridge each window uses for privileged work |
 | Service clients | Both windows | One typed client per service, built from `contracts/`; reconnecting WebSockets; per-service online/offline status; tolerance of unknown fields and dropped `/ws/state` frames |
 | Design system | Both windows | Tatami, the visual system defined in the Paper file "Kumite — Tatami": tokens, bundled fonts, belts, shared controls, the words the app uses for habits, situations and characters, and the empty, loading and offline state patterns |
-| Overlay | Overlay window | Corner HUD and between-round card |
+| Overlay | Overlay window, when turned on | Corner HUD and between-round card |
 | Main-window screens | Main window | Sessions, replay analysis, learning panel, stats, coach, controls, service status |
-| Voice | Main process and the playing window | ElevenLabs text-to-speech for coach text, push-to-talk speech-to-text for the coach conversation, OpenAI speech as fallback, text-only when both fail |
+| Voice | Main process and the main window | ElevenLabs text-to-speech for the between-round tip and the coach conversation, push-to-talk speech-to-text for the coach conversation, OpenAI speech as fallback, text-only when both fail |
+
+### Round break
+
+The **live set** is the `session_id` of the latest `state` record on the brain's state stream; a round is **live** while those records keep arriving, the latest less than 2 seconds old. A **round break** is Tekken's round-end screen as the app sees it. It starts at a `round_end` event for the live set and ends at the next `round_start` event, at a `state` record for a later round or another set, or when the round stops being live, which covers the end of a set. The between-round voice speaks only during a round break, and so does the overlay's card when the overlay is on. The service clients track the round break once for every window.
 
 ### Where each surface gets its data
 
 | Surface | Source (per `contracts/api.md`) |
 |---|---|
-| Overlay HUD: difficulty, bot character | `GET /config` (brain) |
-| Overlay HUD: live session, round, health, timer | `WS /ws/state` (brain) |
-| Overlay HUD: plan note | `plan` records on `WS /ws/state`, when the brain sends them |
-| Overlay HUD: habit belts and mastery | `GET /learning/{session_id}` (analytics), refetched at each `round_summary` on `WS /ws/coach`, which also names the habit the bot is targeting |
-| Between-round card | `round_end` and `round_start` events on `WS /ws/state` (brain) for when it shows; `coach` and `round_summary` records on `WS /ws/coach` for what it says |
+| Overlay HUD (when on): difficulty, bot character | `GET /config` (brain) |
+| Overlay HUD (when on): live session, round, health, timer | `WS /ws/state` (brain) |
+| Overlay HUD (when on): plan note | `plan` records on `WS /ws/state`, when the brain sends them |
+| Overlay HUD (when on): habit belts and mastery | `GET /learning/{session_id}` (analytics), refetched at each `round_summary` on `WS /ws/coach`, which also names the habit the bot is targeting |
+| Round break (when the between-round voice and card run) | `round_end` and `round_start` events and `state` records on `WS /ws/state` (brain) |
+| Between-round voice | `coach` records on `WS /ws/coach` (brain), spoken through ElevenLabs by the main process |
+| Between-round card (overlay, when on) | `coach` and `round_summary` records on `WS /ws/coach` |
 | Sessions list, timeline and set totals | `GET /sessions`, `GET /sessions/{id}/recording` (brain) |
 | Replay analysis | `GET /reports/{session_id}`, `POST /analyze/{session_id}` (replay) |
 | Learning panel | `GET /learning/{session_id}` (analytics); the bot's current target from the recording's round summaries (brain) |
@@ -113,13 +120,13 @@ flowchart LR
 
 ## Success Metrics
 
-- In an OBS recording of a live round, the HUD and the between-round card are visible, and the game received every click made over the overlay.
-- On a live round end, the coach card appears and its voice starts before the next round begins.
+- During a live set, the game keeps focus and receives every input; with the overlay off, nothing is drawn over it.
+- On a live round end, the coach's voice starts before the next round begins and stops when it begins.
 - With the mock services running, every screen renders real contract-shaped data; with any one service stopped, every screen that depends on it shows its offline state and the rest of the app keeps working.
 - Switching from mocks to Sahil's laptop is done by setting three addresses.
 - A booth judge who has not seen the app goes from choosing a difficulty to reading the post-set report without help.
 
-Falsification signals: the overlay takes a click from the game; coach text arrives after the next round starts; any screen goes blank or crashes when a service is down; a number the learning panel shows cannot be read in a 1080p recording.
+Falsification signals: the app takes focus or a click from the game; the coach's voice is still playing after the next round starts; any screen goes blank or crashes when a service is down; a number the learning panel shows cannot be read in a 1080p recording.
 
 ## Open Questions
 

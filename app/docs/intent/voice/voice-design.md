@@ -7,7 +7,7 @@ prefix: VOICE
 
 ## Context and Design Philosophy
 
-The coach speaks and listens through ElevenLabs. Voice never runs during live play: a voice mid-round distracts, and a spoken answer would land after the moment has passed. So the coach speaks in two places, both outside a round: over the overlay's between-round card, and in the Coach screen after a set, where the player can also ask a question by holding to talk.
+The coach speaks and listens through ElevenLabs. Voice never runs during live play: a voice mid-round distracts, and a spoken answer would land after the moment has passed. So the coach speaks in two places, both outside a round: between rounds of a set, from the main window with nothing on screen, and in the Coach screen after a set, where the player can also ask a question by holding to talk.
 
 The main process makes every ElevenLabs call, because it holds the key (HLD, secrets stay in the main process). The windows play and record audio, because only a page has the audio and microphone APIs. The two meet over two bridge calls: speak, which turns text into a clip, and transcribe, which turns a recording into text.
 
@@ -61,9 +61,9 @@ Each window has one voice player. It plays one clip at a time:
 - It reports whether it is speaking, for the speaking indicators.
 - It ignores requests to speak while the brain config's `voice` is not `true`, and when the bridge is missing or the speak call fails it plays nothing.
 
-The overlay never receives a click or a key press, and Chromium blocks sound from a page the user has not interacted with. So both windows are created with autoplay allowed without a user gesture (shell).
+Chromium blocks sound from a page the user has not interacted with, and between rounds the player's hands are on the game, perhaps before anyone has clicked the main window. So both windows are created with autoplay allowed without a user gesture, and the main window keeps running at full speed while the game covers it (shell).
 
-**Between rounds (overlay).** When the between-round card shows the coach's line for its round, the overlay speaks that line once. When the card closes, the overlay stops the voice, so the coach never talks into the next round. While the clip plays, the card shows its voice indicator: a 40 × 20 indigo waveform and "Coach speaking" at 16 px medium in indigo, under the coach's line.
+**Between rounds (main window).** The main window follows the round break (HLD) through the service clients. When the live set's `coach` record for the break's round is available during the break, the main window speaks it once per break. When the break ends, it stops the voice, so the coach never talks into the next round. Nothing is shown: the game screen belongs to the game, and the main window is behind it. The overlay, when turned on, shows its card silently, so there is only ever one voice.
 
 **Coach screen.** When an answer arrives, the screen speaks it. Asking another question, starting to hold to talk, switching sets or leaving the screen stops it. While an answer is being spoken, its "Coach" label is followed by a 64 × 20 indigo waveform and "Speaking" at 14 px bold in indigo.
 
@@ -94,7 +94,8 @@ Hold to talk is unavailable, and the button drawn disabled, under the same condi
 | Where hold to talk works | The main window, while it has focus | A global key while the game has focus | Electron's global shortcuts report presses but not releases, so holding a key over the game needs a native keyboard hook, a compiled dependency on the booth machine. After a set the player is in the main window anyway. |
 | Voice choice | `ELEVENLABS_VOICE_ID` in `app/.env`, no default | A default premade voice; a picker in Controls | One coach voice is chosen once for the video, the booth and the app, in the ElevenLabs account. It is a per-machine setting beside the key, and a picker would need the account's voice list in a page. |
 | What `voice` in the brain config controls | Speaking only | Speaking and listening | The Controls toggle reads "Speaks between rounds and in the Coach tab". Holding to talk is a deliberate act and needs no second switch. |
-| Voice when the card closes | Stops | Finishes the sentence | Voice never runs during live play. The card is on screen for the whole round-end screen, so a stop only cuts a line that ran long. |
+| Who speaks between rounds | The main window, audio only | The overlay, with its card and a speaking indicator | The game screen belongs to the game, and the overlay is off by default. One speaker means one voice even when the overlay is on. |
+| Voice when the round break ends | Stops | Finishes the sentence | Voice never runs during live play. The break covers the whole round-end screen, so a stop only cuts a line that ran long; keeping round tips short is the replay service's side of this. |
 | Failed speech | Silent | A note on screen | The line it would have spoken is already on screen. |
 
 ## Open Questions & Future Decisions
@@ -108,7 +109,8 @@ Hold to talk is unavailable, and the button drawn disabled, under the same condi
 
 - `../../high-level-design.md`: Voice component; secrets stay in the main process
 - `../shell/shell-design.md`: settings sources, the bridge and its allow-list
-- `../overlay/overlay-design.md`: the between-round card
+- `../service-clients/service-clients-design.md`: the round break (`useRoundBreak`)
+- `../overlay/overlay-design.md`: the between-round card, silent
 - `../main-window/coach/coach-design.md`: the Coach screen's input bar and conversation
-- Paper file "Kumite — Tatami": Overlay · Between rounds (voice indicator); Coach (speaking waveform)
+- Paper file "Kumite — Tatami": Coach (speaking waveform)
 - ElevenLabs API: `POST /v1/text-to-speech/{voice_id}`, `POST /v1/speech-to-text`

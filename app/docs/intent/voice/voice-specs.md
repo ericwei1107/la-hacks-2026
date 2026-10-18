@@ -34,6 +34,12 @@ Design: `voice-design.md`
 - [ ] **VOICE-PLAY-005**: When the brain config's `voice` stops being `true`, the voice player shall stop.
 - [ ] **VOICE-PLAY-006**: If the window has no bridge or the speak call fails, then the voice player shall play nothing.
 
+## Between rounds
+
+- [ ] **VOICE-ROUND-001**: When a round break is open in the main window and a `coach` record for the break's set and round is available, the main window shall ask its voice player to speak that record's `text`, once per round break.
+- [ ] **VOICE-ROUND-002**: When a round break in the main window ends, the main window shall stop its voice player.
+- [ ] **VOICE-ROUND-003**: The main window shall show nothing on screen for the between-round voice.
+
 ## Coach screen voice
 
 - [D] **VOICE-COACH-001**: When an answer arrives on the Coach screen, the screen shall ask the voice player to speak it.
@@ -58,3 +64,4 @@ Design: `voice-design.md`
 |---|---|
 | VOICE-SET-001 – VOICE-SET-003, VOICE-SPEAK-001 – VOICE-SPEAK-007 | `src/main/voice.ts` (`readVoiceSettings`, `handleVoice`) |
 | VOICE-PLAY-001 – VOICE-PLAY-006 | `src/renderer/src/voice.ts` (`useVoice`) |
+| VOICE-ROUND-001 – VOICE-ROUND-003 | `src/renderer/src/voice.ts` (`useBetweenRoundVoice`), called by `src/renderer/src/main-window/MainWindow.tsx` |

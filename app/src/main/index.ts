@@ -32,7 +32,7 @@ function createMainWindow(): BrowserWindow {
     minHeight: 640,
     title: 'Kumite',
     show: false,
-    webPreferences
+    webPreferences: { ...webPreferences, backgroundThrottling: false }
   })
   win.once('ready-to-show', () => win.show())
   win.on('closed', () => {

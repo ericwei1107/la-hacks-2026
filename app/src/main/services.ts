@@ -89,5 +89,5 @@ export function resolveServiceAddresses(fileValues: EnvValues): ServiceAddresses
 
 export function overlayEnabled(fileValues: EnvValues): boolean {
   const raw = (process.env.KUMITE_OVERLAY?.trim() || fileValues.KUMITE_OVERLAY?.trim() || '').toLowerCase()
-  return raw !== '0' && raw !== 'off'
+  return raw === '1' || raw === 'on'
 }

@@ -165,6 +165,45 @@ export function useSummaryListener(listener: (summary: RoundSummary) => void): v
   useListener(roundSummaries.listen, listener)
 }
 
+export interface RoundBreak {
+  sessionId: string
+  round: number
+  openedAt: number
+  matchOver: boolean
+}
+
+const ROUND_LIVE_MS = 2_000
+const LIVENESS_CHECK_MS = 250
+
+export function useRoundBreak() {
+  const state = useLiveState()
+  const liveSet = state?.record.session_id
+  const [now, setNow] = useState(Date.now())
+  const [opened, setOpened] = useState<RoundBreak | null>(null)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), LIVENESS_CHECK_MS)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEventListener((event) => {
+    if (event.kind === 'round_end' && event.session_id === liveSet) {
+      setOpened({ sessionId: event.session_id, round: event.round, openedAt: Date.now(), matchOver: event.detail?.match_over === true })
+    } else if (event.kind === 'round_start') {
+      setOpened((current) => current?.sessionId === event.session_id ? null : current)
+    }
+  })
+
+  const isLive = Boolean(state && now - state.receivedAt < ROUND_LIVE_MS)
+  const ended = opened !== null && (!isLive || !state || state.record.session_id !== opened.sessionId || state.record.round > opened.round)
+
+  useEffect(() => {
+    if (ended) setOpened(null)
+  }, [ended])
+
+  return { state, liveSet, isLive, roundBreak: opened && !ended ? opened : null }
+}
+
 export function useStreamStatus(stream: StreamName) {
   const status = streams[stream].status
   return useSyncExternalStore(status.subscribe, status.get)

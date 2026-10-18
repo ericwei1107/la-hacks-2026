@@ -30,7 +30,7 @@ Design: `shell-design.md`
 
 - [ ] **SHELL-WIN-001**: The main process shall open the main window at 1440 × 900 with a 1024 × 640 minimum, titled "Kumite", loading the renderer's `index.html`, and show it once its first frame is ready.
 - [ ] **SHELL-WIN-002**: Both windows shall load the shared preload with context isolation on, Node integration off and the sandbox on.
-- [ ] **SHELL-WIN-003**: Unless `KUMITE_OVERLAY` is `0` or `off` in the process environment or `app/.env`, the main process shall open the overlay window, loading the renderer's `overlay.html`.
+- [ ] **SHELL-WIN-003**: When `KUMITE_OVERLAY` is `1` or `on` in the process environment or `app/.env`, the main process shall open the overlay window, loading the renderer's `overlay.html`; otherwise it shall not open the overlay window.
 - [ ] **SHELL-WIN-004**: The overlay window shall cover the full bounds of the primary display and be frameless, transparent, shadowless and absent from the taskbar.
 - [ ] **SHELL-WIN-005**: The overlay window shall stay on top at the `screen-saver` level and, on macOS, show on every workspace including full-screen ones.
 - [ ] **SHELL-WIN-006**: The overlay window shall ignore all mouse events and shall not be focusable.
@@ -38,6 +38,7 @@ Design: `shell-design.md`
 - [ ] **SHELL-WIN-008**: The overlay window shall set its zoom factor to the primary display's width divided by 1920.
 - [ ] **SHELL-WIN-009**: When the main window closes on Windows or Linux, the main process shall quit the app, closing the overlay window with it.
 - [ ] **SHELL-WIN-010**: Both windows shall allow media to play without a user gesture.
+- [ ] **SHELL-WIN-011**: The main window shall run with background throttling off.
 
 ## Implemented in
 
@@ -48,6 +49,6 @@ Design: `shell-design.md`
 | SHELL-ADDR-003 | `src/shared/bridge.ts` (`DEFAULT_SERVICE_URLS`) |
 | SHELL-BRIDGE-001 – SHELL-BRIDGE-004 | `src/preload/index.ts`, answered by `src/main/index.ts` (the `SERVICES_CHANNEL` handler) |
 | SHELL-BRIDGE-005 | `src/preload/index.ts`, answered by `src/main/voice.ts` (`handleVoice`) |
-| SHELL-WIN-001, SHELL-WIN-002, SHELL-WIN-009 | `src/main/index.ts` (`createMainWindow`) |
+| SHELL-WIN-001, SHELL-WIN-002, SHELL-WIN-009, SHELL-WIN-011 | `src/main/index.ts` (`createMainWindow`) |
 | SHELL-WIN-010 | `src/main/index.ts` (`webPreferences`) |
 | SHELL-WIN-003 – SHELL-WIN-008 | `src/main/index.ts` (`createOverlayWindow`), `src/main/services.ts` (`overlayEnabled`) |

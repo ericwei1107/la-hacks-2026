@@ -61,11 +61,11 @@ A page opened outside Electron, such as the renderer dev server in a plain brows
 
 ## Windows
 
-The main process opens two windows from the same renderer build, both with the shared preload, context isolation, no Node integration, and the sandbox on. Both let audio play without a user gesture: the overlay never takes a click or a key press, and it speaks the coach's line between rounds (voice design).
+The main process opens two windows from the same renderer build, both with the shared preload, context isolation, no Node integration, and the sandbox on. Both let audio play without a user gesture: the main window speaks the coach's tip between rounds while the player's hands are on the game, possibly before anyone has clicked it (voice design).
 
-**Main window.** 1440 × 900 by default, 1024 × 640 at least, titled "Kumite", shown once its first frame is ready. It loads the renderer's `index.html`. Closing it quits the app on Windows and Linux, overlay included; on macOS the app stays in the dock and reopens the main window when activated.
+**Main window.** 1440 × 900 by default, 1024 × 640 at least, titled "Kumite", shown once its first frame is ready. It loads the renderer's `index.html`. Background throttling is off: during a set the game covers it, and it still has to follow the round break and speak the coach's tip on time (voice design). Closing it quits the app on Windows and Linux, overlay included; on macOS the app stays in the dock and reopens the main window when activated.
 
-**Overlay window.** It loads the renderer's `overlay.html` and is drawn over Tekken 8 (HLD G1):
+**Overlay window, off by default.** The game screen belongs to the game (HLD tenet), so the overlay opens only when `KUMITE_OVERLAY` is `1` or `on`, in the environment or `app/.env`. When on, it loads the renderer's `overlay.html` and is drawn over Tekken 8:
 
 - It covers the full bounds of the primary display, frameless, transparent, without a shadow, and out of the taskbar.
 - It stays on top of other windows at the `screen-saver` level, and on macOS on every workspace, including full-screen ones.
@@ -73,7 +73,6 @@ The main process opens two windows from the same renderer build, both with the s
 - It is visible to screen capture: content protection stays off.
 - It scales the page so the 1920 × 1080 design space fills the display: the zoom factor is the display width over 1920.
 
-`KUMITE_OVERLAY` set to `0` or `off`, in the environment or `app/.env`, skips the overlay window. That keeps a development machine's desktop clear while the mock services stream a round.
 
 ## Decisions & Alternatives
 
@@ -86,7 +85,8 @@ The main process opens two windows from the same renderer build, both with the s
 | An unacceptable override | Skip it, fall through to the next source, keep it as a warning | Refuse to start; pass the bad value through so every request to that service fails | The app stays usable, and the status view still says what went wrong. A refusal to start is worse at a booth than a visible warning. |
 | Overlay window size | The primary display's full bounds, page zoomed from 1920 × 1080 | A window sized to the HUD and card only; the game window's bounds | A full-display window keeps the Paper coordinates valid at any resolution. Finding the game window would need native window enumeration, and the game runs borderless on the primary display. |
 | Overlay focus and input | Never focusable, ignores all mouse events | Forwarding mouse moves for hover effects | The overlay has nothing to click; any focus or input it took would leave the game mid-round. |
-| Disabling the overlay | `KUMITE_OVERLAY=0` | A menu item; always on | A booth machine always wants it, so on is the default. A variable read from the same sources as the addresses is the cheapest switch for development machines. |
+| Turning on the overlay | Off by default; `KUMITE_OVERLAY=1` or `on` | On by default; a menu item | During a set the game screen belongs to the game, and the coach's tip is spoken by the main window. A variable read from the same sources as the addresses keeps the overlay one setting away for a demo that wants it. |
+| Main window in the background | Background throttling off | Chromium's default throttling | Tekken covers the main window during a set. Throttled timers would delay the end of a round break and the voice that depends on it. |
 
 ## Open Questions & Future Decisions
 

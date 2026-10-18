@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react'
-import { useConfig } from './services'
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useConfig, useLatestCoach, useRoundBreak, type RoundBreak } from './services'
 import { Store } from './services/store'
 
 const speaking = new Store(false)
@@ -67,4 +67,27 @@ export function useVoice() {
   }, [enabled])
 
   return { speaking: isSpeaking, speak, stop: stopSpeaking }
+}
+
+export function useBetweenRoundVoice(): void {
+  const { roundBreak } = useRoundBreak()
+  const coach = useLatestCoach()
+  const { speak, stop } = useVoice()
+  const spoken = useRef<RoundBreak | null>(null)
+  const previous = useRef<RoundBreak | null>(null)
+  const line = roundBreak && coach && coach.record.session_id === roundBreak.sessionId && coach.record.round === roundBreak.round
+    ? coach.record.text
+    : null
+
+  useEffect(() => {
+    if (roundBreak && line && spoken.current !== roundBreak) {
+      spoken.current = roundBreak
+      speak(line)
+    }
+  }, [roundBreak, line, speak])
+
+  useEffect(() => {
+    if (previous.current && !roundBreak) stop()
+    previous.current = roundBreak
+  }, [roundBreak, stop])
 }
