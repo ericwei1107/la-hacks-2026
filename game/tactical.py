@@ -1,9 +1,11 @@
 import math
 import random
 
+from game.finetune import laya_prior
 from game.options import ATTACK_CLASSES, CLASSES, MOVEMENT_CLASSES, allowed, default_plan, in_range, step_direction
 from game.reflex import softmax
 from game.state import DOWNED_BIT, JUGGLED_BIT
+from game.words import state_sentence
 
 MIN_GAP = 6
 PREPRESS_SLACK = 2
@@ -21,6 +23,7 @@ PLUS_RULES = {"throw": 1.3, "low": 1.2, "mid": 1.2, "backdash": 0.3, "approach":
 OKI_RULES = {"mid": 1.3, "low": 1.2, "throw": 0.8, "launcher": 0.0, "sidestep": 0.0}
 OUT_OF_RANGE = 0.1
 EPS = 1e-9
+LAYA_WEIGHT = 0.3
 
 
 def log_weights(weights):
@@ -29,6 +32,10 @@ def log_weights(weights):
 
 def target_keys(targets):
     return sorted((t["situation"], t["action"]) for t in targets)
+
+
+def boost_targets(boosts):
+    return {cls: (b["situation"], b["action"]) for cls, b in boosts.items() if b}
 
 
 def weighted_choice(rng, items, weights):
@@ -44,7 +51,8 @@ def weighted_choice(rng, items, weights):
 
 
 class Tactical:
-    def __init__(self, seq, difficulty, latency, options, rng=None, plan=None, learning=None):
+    def __init__(self, seq, difficulty, latency, options, rng=None, plan=None, learning=None, laya=None, laya_weight=LAYA_WEIGHT,
+                 recent=None):
         self.seq = seq
         self.difficulty = difficulty
         self.latency = latency
@@ -58,6 +66,28 @@ class Tactical:
         self.plan_logged = False
         self.decisions = []
         self.last_option = None
+        self.laya = laya
+        self.laya_weight = laya_weight
+        self.recent = recent
+        self.texts = []
+        self.laya_stats = {"decisions": 0, "answered": 0, "changed": 0}
+
+    def ask_laya(self, state, reflex):
+        if self.laya is None:
+            return
+        if not reflex.live(state) or state["derived"]["situation"] not in DECISION_SITUATIONS:
+            self.texts = []
+            return
+        text = state_sentence(state, list(self.recent()) if self.recent else None)
+        self.texts = [(state["round"], state["frame"], text)] + [t for t in self.texts[:1] if t[0] == state["round"] and t[1] == state["frame"] - 1]
+        self.laya.submit(text)
+
+    def laya_answer(self):
+        for round_, frame, text in self.texts:
+            answers = self.laya.answer(text)
+            if answers is not None:
+                return frame, answers
+        return None, None
 
     def plan_record(self, state):
         rec = {"t": "plan", "session_id": state["session_id"], "round": state["round"], "frame": state["frame"]}
@@ -133,6 +163,7 @@ class Tactical:
         if not self.plan_logged and reflex.live(state):
             self.plan_logged = True
             out.append(self.plan_record(state))
+        self.ask_laya(state, reflex)
         if not self.eligible(state, reflex):
             return out
         human = state["human_slot"]
@@ -140,6 +171,31 @@ class Tactical:
         bucket = state["derived"]["distance_bucket"]
         weights = self.class_weights(state)
         boosts = self.learning.boosts(state, weights) if self.learning is not None else {}
+        asked, answers, laya_detail = frame, None, None
+        if self.laya is not None:
+            self.laya_stats["decisions"] += 1
+            asked, answers = self.laya_answer()
+            if answers is None:
+                asked = frame
+                laya_detail = {"ready": False}
+            else:
+                prior = laya_prior(answers)
+                habit = boosts
+                if self.learning is not None:
+                    boosts = self.learning.boosts(state, weights, prior, self.laya_weight)
+                changed = boost_targets(boosts) != boost_targets(habit)
+                self.laya_stats["answered"] += 1
+                self.laya_stats["changed"] += changed
+                laya_detail = {
+                    "ready": True,
+                    "version": self.laya.version,
+                    "weight": self.laya_weight,
+                    "p": {q: None if a.get("p") is None else round(a["p"], 4) for q, a in answers.items()},
+                    "prediction": {fam: {"action": max(dist, key=dist.get), "p": round(max(dist.values()), 4)} for fam, dist in prior.items()},
+                    "changed": changed,
+                }
+                if changed:
+                    laya_detail["habit_boosts"] = {c: f"{b['situation']} {b['action']}" for c, b in habit.items() if b}
         boosted = {cls: w * boosts.get(cls, {}).get("factor", 1.0) for cls, w in weights.items()} if boosts else dict(weights)
         if all(w <= EPS for w in boosted.values()):
             boosted["wait"] = 1.0
@@ -153,7 +209,7 @@ class Tactical:
         self.last_option = chosen
         if self.learning is not None:
             self.learning.decided(chosen, boosts, state, move)
-        source = "habit" if boosts.get(chosen) else "default"
+        source = "laya" if answers is not None else ("habit" if boosts.get(chosen) else "default")
         detail = {
             "move": notation,
             "situation": state["derived"]["situation"],
@@ -170,12 +226,14 @@ class Tactical:
             detail["move_id"] = entry.get("move_id")
         if boosts:
             detail["boosts"] = {c: b for c, b in boosts.items() if b}
+        if laya_detail is not None:
+            detail["laya"] = laya_detail
         rec = {
             "t": "tactical",
             "session_id": state["session_id"],
             "round": state["round"],
             "frame": frame,
-            "frame_asked": frame,
+            "frame_asked": asked,
             "options": list(CLASSES),
             "chosen": chosen,
             "probabilities": {c: round(p, 4) for c, p in probs.items()},

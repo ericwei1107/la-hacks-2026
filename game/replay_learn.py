@@ -21,7 +21,7 @@ from game.replay_reflex import RecordingPad
 from game.sequencer import Sequencer
 from game.state import Tracker
 from game.summarize import CONTRACTS, find_session, load_jsonl
-from game.tactical import Tactical
+from game.tactical import LAYA_WEIGHT, Tactical
 
 REPLAY_DIR = "replay"
 
@@ -88,7 +88,7 @@ class Run:
 
 
 def run_learning(states, player="replay", difficulty=3, mode="practice", rounds_to_win=3, root=None, seed=0,
-                 tactical=False, predictor=True, config=None, fresh=True):
+                 tactical=False, predictor=True, config=None, fresh=True, laya=None, laya_weight=LAYA_WEIGHT):
     versus = mode == "versus"
     sid = states[0]["session_id"] if states else ""
     root = Path(root) if root is not None else default_data()
@@ -115,7 +115,8 @@ def run_learning(states, player="replay", difficulty=3, mode="practice", rounds_
                 latency = config["input_latency_frames"]
                 seq = Sequencer(RecordingPad(config), latency, diff, rng, Timing.from_config(config.get("timing")))
                 reflex = Reflex(seq, diff, latency, load_punishers(bot_char)[0], rng, load_wakeups(bot_char)[0])
-                run.tactical = Tactical(seq, diff, latency, options, rng, learning=run.learning)
+                run.tactical = Tactical(seq, diff, latency, options, rng, learning=run.learning, laya=laya, laya_weight=laya_weight,
+                                        recent=lambda: run.detector.recent)
         found = run.detector.step(state, evs)
         learned = run.learning.step(state, evs + found)
         run.records += learned
@@ -233,7 +234,15 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--tactical", action="store_true", help="also dry-run the tactical layer with the learners (shows habit-driven picks)")
     parser.add_argument("--no-predictor", action="store_true")
+    parser.add_argument("--laya", action="store_true", help="with --tactical: Laya (DATA_DIR/models/laya-ft when present) answers every tactical decision, synchronously")
+    parser.add_argument("--laya-weight", type=float, default=LAYA_WEIGHT)
     args = parser.parse_args(argv)
+    oracle = None
+    if args.laya:
+        from game.laya import Laya, Oracle, current_version, resolve_model
+        model, kind = resolve_model()
+        print(f"laya: {kind} weights from {model}")
+        oracle = Oracle(Laya(model).load(), current_version() if kind == "fine-tuned" else None, threaded=False)
 
     records = load_jsonl(args.recording)
     states = [r for r in records if r.get("t") == "state"]
@@ -248,7 +257,7 @@ def main(argv=None):
         run = None
     else:
         run = run_learning(states, args.player, args.difficulty, mode, root=args.data_dir, seed=args.seed, tactical=args.tactical,
-                           predictor=not args.no_predictor, fresh=not args.keep_profile)
+                           predictor=not args.no_predictor, fresh=not args.keep_profile, laya=oracle, laya_weight=args.laya_weight)
         events, decisions = run.events, run.decisions
         slot = run.detector.subject if run.detector else "?"
         if run.learning is None:
@@ -271,7 +280,7 @@ def main(argv=None):
     if run is not None:
         print_learning(run)
         if args.tactical:
-            picks = [r for r in run.records if r.get("t") == "tactical" and r.get("source") in ("default", "habit")]
+            picks = [r for r in run.records if r.get("t") == "tactical" and r.get("source") in ("default", "habit", "laya")]
             sources = Counter(r["source"] for r in picks)
             by_source = {s: Counter(r["chosen"] for r in picks if r["source"] == s) for s in sources}
             print(f"tactical dry run: {len(picks)} decisions (" + ", ".join(f"{s} {n}" for s, n in sources.most_common()) + ")")
@@ -280,6 +289,9 @@ def main(argv=None):
             habit_moves = Counter((r["tactical"].get("move"), r["chosen"]) for r in picks if r["source"] == "habit")
             if habit_moves:
                 print("  habit picks: " + ", ".join(f"{m} ({c}) {n}" for (m, c), n in habit_moves.most_common(8)))
+            if oracle is not None:
+                changed = sum(1 for r in picks if (r["tactical"].get("laya") or {}).get("changed"))
+                print(f"  laya: {sources['laya']}/{len(picks)} decisions answered, {changed} changed the habit target (weight {args.laya_weight})")
             for rec in run.records:
                 if rec.get("t") == "plan":
                     print(f"  plan r{rec['round']} f{rec['frame']}: {rec['note']!r} targets {rec['target_habits']}")

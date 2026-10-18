@@ -186,6 +186,66 @@ class LayaStartupTest(unittest.TestCase):
         code, starts, waits, sessions = self.run_main(reasons=(MATCH_OVER,))
         self.assertEqual((code, starts, waits, len(sessions)), (0, 1, 0, 1))
 
+    def test_laya_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = bot.parse_args(["--bot", "kazuya"], root=Path(tmp))
+            self.assertEqual((args.laya, args.laya_weight), (False, 0.3))
+            args = bot.parse_args(["--bot", "kazuya", "--laya", "--laya-weight", "0.5"], root=Path(tmp))
+            self.assertEqual((args.laya, args.laya_weight), (True, 0.5))
+            with mock.patch("sys.stderr"):
+                with self.assertRaises(SystemExit):
+                    bot.parse_args(["--bot", "kazuya", "--laya", "--no-laya"], root=Path(tmp))
+                with self.assertRaises(SystemExit):
+                    bot.parse_args(["--bot", "kazuya", "--laya", "--laya-weight", "1.5"], root=Path(tmp))
+
+    def test_laya_off_gives_the_hooks_no_oracle(self):
+        hooks = []
+        with mock.patch.object(bot, "BotHooks", side_effect=lambda *a, **k: hooks.append(k) or SimpleNamespace(player=k["player"], fresh=k["fresh"])):
+            self.run_main("--loop")
+        self.assertEqual([k["oracle"] for k in hooks], [None, None])
+
+    def test_loop_with_laya_parks_checks_for_new_weights_while_waiting_and_resumes(self):
+        calls = []
+
+        class SpyReloader:
+            def __init__(self, oracle):
+                self.oracle = oracle
+
+            def park(self):
+                calls.append("park")
+
+            def check(self):
+                calls.append("check")
+
+            def resume(self):
+                calls.append("resume")
+
+        hooks = []
+        polls = []
+        real_poll = bot.waiting_poll
+
+        def capture(pad, reloader=None):
+            polls.append(real_poll(pad, reloader))
+            calls.append("wait")
+            return polls[-1]
+
+        with mock.patch.object(bot.laya, "Reloader", SpyReloader), mock.patch.object(bot, "waiting_poll", side_effect=capture), \
+                mock.patch.object(bot, "BotHooks", side_effect=lambda *a, **k: hooks.append(k) or SimpleNamespace(player=k["player"], fresh=k["fresh"])):
+            code, starts, waits, sessions = self.run_main("--loop", "--laya")
+        self.assertEqual((code, waits, len(sessions)), (0, 1, 2))
+        self.assertEqual(calls, ["park", "wait", "resume"])
+        polls[0]()
+        polls[0]()
+        self.assertEqual(calls[3:], ["check", "check"])
+        self.assertIsInstance(hooks[0]["oracle"], bot.laya.Oracle)
+        self.assertIs(hooks[0]["oracle"], hooks[1]["oracle"])
+        self.assertEqual(hooks[0]["laya_weight"], 0.3)
+
+    def test_laya_without_loop_has_no_reloader(self):
+        with mock.patch.object(bot.laya, "Reloader") as reloader:
+            code, starts, waits, sessions = self.run_main("--laya", reasons=(MATCH_OVER,))
+        self.assertEqual((code, starts, reloader.call_count), (0, 1, 0))
+
     def test_background_load_failure_does_not_raise(self):
         logs = []
 

@@ -19,14 +19,16 @@ from game.record import add_session_args
 from game.recorder import data_dir
 from game.reflex import Reflex, load_punishers, load_wakeups
 from game.sequencer import Sequencer
-from game.tactical import Tactical
+from game.tactical import LAYA_WEIGHT, Tactical
 
 DEMO_PLAYER = "guest"
 
 
 class BotHooks(Hooks):
-    def __init__(self, pad, difficulty, seed=None, config=None, player="player", fresh=False):
+    def __init__(self, pad, difficulty, seed=None, config=None, player="player", fresh=False, oracle=None, laya_weight=LAYA_WEIGHT):
         self.pad = pad
+        self.oracle = oracle
+        self.laya_weight = laya_weight
         self.difficulty = difficulty
         self.rng = random.Random(seed)
         self.config = config or load_config()
@@ -51,8 +53,9 @@ class BotHooks(Hooks):
         self.reflex = Reflex(self.seq, self.difficulty, latency, punishers, self.rng, wakeups)
         options, option_source = load_options(character)
         self.learning = Learning(self.player, human_character, options, self.difficulty, self.rng, fresh=self.fresh)
-        self.tactical = Tactical(self.seq, self.difficulty, latency, options, self.rng, learning=self.learning)
         self.detector = Detector(snap.human_slot, options)
+        self.tactical = Tactical(self.seq, self.difficulty, latency, options, self.rng, learning=self.learning, laya=self.oracle,
+                                 laya_weight=self.laya_weight, recent=lambda: self.detector.recent)
         short, full = load_play_routes(character)
         self.combos = ComboPlay(self.seq, self.difficulty, self.rng, (short, full))
         print(f"{'demo: fresh ' if self.fresh else ''}profile {self.learning.profile_path} session {self.learning.sessions}, "
@@ -66,6 +69,10 @@ class BotHooks(Hooks):
               f"latency {latency}f; punishers from {source}: {tiers}; wakeups from {wake_source}; "
               f"options from {option_source}: {menu}. Kill key {self.config['kill_key']}.", flush=True)
         print(describe_combos(short, full, self.difficulty), flush=True)
+        if self.oracle is not None:
+            print(f"laya: on, prior weight {self.laya_weight} at tactical decisions; "
+                  + (f"{laya.weights_label(self.oracle.version)} weights loaded" if self.oracle.ready
+                     else "weights still loading, decisions use habits until they are ready"), flush=True)
 
     def poll(self):
         self.pad.check_kill()
@@ -93,6 +100,12 @@ class BotHooks(Hooks):
         for rec in learned:
             if rec.get("t") == "round_summary":
                 print(f"learning r{rec['round']}: {self.learning.status()}", flush=True)
+                if self.oracle is not None:
+                    stats = self.tactical.laya_stats
+                    print(f"laya r{rec['round']}: {stats['answered']}/{stats['decisions']} decisions answered by Laya "
+                          f"({laya.weights_label(self.oracle.version)}), "
+                          f"{stats['decisions'] - stats['answered']} fell back to habits, {stats['changed']} changed the habit target", flush=True)
+                    self.tactical.laya_stats = {"decisions": 0, "answered": 0, "changed": 0}
 
     def finish(self, state, events):
         if self.learning is None:
@@ -126,7 +139,13 @@ def parse_args(argv=None, root=None):
     parser.add_argument("--seed", type=int)
     parser.add_argument("--timing", action="store_true", help="time every frame iteration and print count, p50, p95 and max at session end")
     parser.add_argument("--no-laya", action="store_true", help="do not load Laya at startup (DATA_DIR/models/laya-ft when present, else base)")
+    parser.add_argument("--laya", action="store_true", help="Laya answers the 4 yes/no questions at each tactical decision and its predicted action is blended into the habit estimate")
+    parser.add_argument("--laya-weight", type=float, default=LAYA_WEIGHT, help="weight of Laya's predicted action against the habit estimate (0..1)")
     args = parser.parse_args(argv)
+    if args.laya and args.no_laya:
+        parser.error("--laya needs Laya loaded; drop --no-laya")
+    if not 0.0 <= args.laya_weight <= 1.0:
+        parser.error("--laya-weight must be between 0 and 1")
     args.player_flag = args.player
     args.player = resolve_player(args, root)
     return args
@@ -163,6 +182,14 @@ def describe(cfg, difficulty, player, fresh, root=None):
             f"demo {'on' if fresh else 'off'}")
 
 
+def waiting_poll(pad, reloader=None):
+    def poll():
+        pad.check_kill()
+        if reloader is not None:
+            reloader.check()
+    return poll
+
+
 def main(argv=None):
     tracing = trace.init()
     args = parse_args(argv)
@@ -178,7 +205,12 @@ def main(argv=None):
             print(f"brain API on http://{args.host}:{api.PORT} (DATA_DIR {data_dir().resolve()}); coach at {replay_url()}/coach/round", flush=True)
             outlet = Outlet(api.publish)
 
-    if not args.no_laya:
+    oracle = reloader = None
+    if args.laya:
+        oracle = laya.Oracle().start()
+        reloader = laya.Reloader(oracle) if args.loop else None
+        laya.start_background(on_ready=oracle.attach)
+    elif not args.no_laya:
         laya.start_background()
     reader = Reader(args.offsets)
     pad = None
@@ -192,11 +224,16 @@ def main(argv=None):
             args.difficulty = difficulty.level
             args.player = player
             print(describe(cfg, difficulty, player, fresh) + (" (--loop: re-read before every match)" if args.loop else ""), flush=True)
-            reason = run_session(reader, args, BotHooks(pad, difficulty, args.seed, player=player, fresh=fresh), outlet)
+            hooks = BotHooks(pad, difficulty, args.seed, player=player, fresh=fresh, oracle=oracle, laya_weight=args.laya_weight)
+            reason = run_session(reader, args, hooks, outlet)
             if not args.loop or reason != MATCH_OVER:
                 return 0
             print("loop: waiting for the next match's round 1; POST /config now to change the next session (Ctrl+C to quit)", flush=True)
-            wait_for_match(reader, pacer, pad.check_kill)
+            if reloader is not None:
+                reloader.park()
+            wait_for_match(reader, pacer, waiting_poll(pad, reloader))
+            if reloader is not None:
+                reloader.resume()
     except KillSwitch as e:
         print(f"stopped: {e}", flush=True)
         return 1
@@ -204,6 +241,8 @@ def main(argv=None):
         print("stopped: Ctrl+C while waiting for the next match", flush=True)
         return 0
     finally:
+        if oracle is not None:
+            oracle.close()
         if pad is not None:
             pad.release_all()
         reader.close()

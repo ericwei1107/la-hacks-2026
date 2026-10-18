@@ -2,15 +2,19 @@ import os
 import statistics
 import threading
 import time
+from collections import OrderedDict
 from pathlib import Path
 
-from game.finetune import QUESTIONS
+from game.finetune import QUESTIONS, model_version
 
 MODEL = "convaiinnovations/laya"
 WARMUP_TEXT = "The opponent is standing at close range. The bot is healthy. It is early in the round. The stage is open."
 LATENCY_KEEP = 500
 FINETUNED_NAME = "laya-ft"
 BENCH_ROUNDS = 50
+CACHE_SIZE = 512
+RELOAD_CHECK_S = 1.0
+PARK_MAX_S = 60.0
 
 
 def question_set(keys=None):
@@ -52,9 +56,19 @@ def resolve_model():
     return MODEL, "base"
 
 
-def startup(log=print, rounds=BENCH_ROUNDS, factory=None):
+def weights_label(version):
+    return "base" if version is None else f"fine-tuned v{version}"
+
+
+def current_version():
+    path = finetuned_dir()
+    return model_version(path) if has_weights(path) else None
+
+
+def startup(log=print, rounds=BENCH_ROUNDS, factory=None, on_ready=None):
     model, kind = resolve_model()
-    log(f"laya: loading {kind} weights from {model}", flush=True)
+    version = current_version() if kind == "fine-tuned" else None
+    log(f"laya: loading {kind} weights from {model}" + (f" (v{version})" if version is not None else ""), flush=True)
     try:
         laya = (factory or Laya)(model)
         stats = laya.bench([WARMUP_TEXT], rounds)
@@ -63,13 +77,215 @@ def startup(log=print, rounds=BENCH_ROUNDS, factory=None):
         return None
     log(f"laya: {kind} weights loaded in {laya.load_seconds or 0.0:.1f} s; {len(QUESTIONS)}-question batch over {stats['n']} calls: "
         f"p50 {stats['p50_ms']} ms, p95 {stats['p95_ms']} ms", flush=True)
+    if on_ready is not None:
+        on_ready(laya, version)
     return laya
 
 
-def start_background(log=print, rounds=BENCH_ROUNDS, factory=None):
-    thread = threading.Thread(target=startup, kwargs={"log": log, "rounds": rounds, "factory": factory}, name="laya-load", daemon=True)
+def start_background(log=print, rounds=BENCH_ROUNDS, factory=None, on_ready=None):
+    thread = threading.Thread(target=startup, kwargs={"log": log, "rounds": rounds, "factory": factory, "on_ready": on_ready},
+                              name="laya-load", daemon=True)
     thread.start()
     return thread
+
+
+class Oracle:
+    def __init__(self, laya=None, version=None, log=print, cache=CACHE_SIZE, threaded=True):
+        self.laya = laya
+        self.version = version
+        self.log = log
+        self.size = cache
+        self.threaded = threaded
+        self.cache = OrderedDict()
+        self.lock = threading.Lock()
+        self.wake = threading.Event()
+        self.wanted = None
+        self.closed = False
+        self.failed = False
+        self.parked = False
+        self.thread = None
+
+    @property
+    def ready(self):
+        return self.laya is not None
+
+    def park(self):
+        with self.lock:
+            laya = self.laya
+            if laya is None or not hasattr(laya, "park"):
+                return False
+            self.parked = True
+            self.wanted = None
+        if laya.park():
+            return True
+        with self.lock:
+            if self.laya is laya:
+                self.parked = False
+        return False
+
+    def unpark(self):
+        with self.lock:
+            laya = self.laya
+        if laya is None:
+            return False
+        laya.unpark()
+        with self.lock:
+            if self.laya is laya:
+                self.parked = False
+        return True
+
+    def start(self):
+        if self.threaded and self.thread is None:
+            self.thread = threading.Thread(target=self._run, name="laya-oracle", daemon=True)
+            self.thread.start()
+        return self
+
+    def attach(self, laya, version=None):
+        with self.lock:
+            old = self.laya
+            self.laya = laya
+            self.version = version
+            self.cache.clear()
+            self.wanted = None
+            self.failed = False
+            self.parked = False
+        if old is not None and old is not laya:
+            old.release()
+
+    def submit(self, text):
+        if self.laya is None or self.parked or not text:
+            return
+        with self.lock:
+            if text in self.cache or text == self.wanted:
+                return
+            self.wanted = text
+        if self.threaded:
+            self.wake.set()
+        else:
+            self._answer_wanted()
+
+    def answer(self, text):
+        with self.lock:
+            return self.cache.get(text)
+
+    def close(self):
+        self.closed = True
+        self.wake.set()
+
+    def _answer_wanted(self):
+        with self.lock:
+            text, laya = self.wanted, self.laya
+        if text is None or laya is None or self.parked:
+            return False
+        try:
+            answers = laya.predict(text)
+        except Exception as e:
+            with self.lock:
+                if self.wanted == text:
+                    self.wanted = None
+                first = not self.failed
+                self.failed = True
+            if first:
+                self.log(f"laya: predict failed ({e!r}); those decisions fall back to habits", flush=True)
+            return False
+        with self.lock:
+            if self.laya is laya:
+                self.cache[text] = answers
+                while len(self.cache) > self.size:
+                    self.cache.popitem(last=False)
+            if self.wanted == text:
+                self.wanted = None
+            return self.wanted is not None
+
+    def _run(self):
+        while not self.closed:
+            self.wake.wait()
+            self.wake.clear()
+            while not self.closed and self._answer_wanted():
+                pass
+
+
+class Reloader:
+    def __init__(self, oracle, log=print, factory=None, version_of=current_version, every=RELOAD_CHECK_S, clock=time.monotonic,
+                 park_max=PARK_MAX_S):
+        self.oracle = oracle
+        self.park_max = park_max
+        self.parked_at = None
+        self.unparking = None
+        self.log = log
+        self.factory = factory or (lambda model: Laya(model).load())
+        self.version_of = version_of
+        self.every = every
+        self.clock = clock
+        self.last = None
+        self.thread = None
+        self.staged = None
+        self.failed = None
+
+    def _load(self, version):
+        try:
+            laya = self.factory(str(finetuned_dir()))
+            laya.warmup()
+        except (SystemExit, Exception) as e:
+            self.failed = version
+            self.log(f"laya: fine-tuned weights v{version} not reloaded ({e}); keeping the {weights_label(self.oracle.version)} weights", flush=True)
+            return
+        self.staged = (laya, version)
+
+    def park(self):
+        if self.oracle.park():
+            self.parked_at = self.clock()
+            self.log(f"laya: parked on the CPU until new fine-tuned weights land (at most {self.park_max:.0f} s), so the fine-tune has the GPU",
+                     flush=True)
+            return True
+        return False
+
+    def unpark(self):
+        self.parked_at = None
+        self.unparking = threading.Thread(target=self.oracle.unpark, name="laya-unpark", daemon=True)
+        self.unparking.start()
+        return self.unparking
+
+    def resume(self):
+        if self.parked_at is not None:
+            self.unpark()
+            self.log("laya: next match started; moving the current weights back to the GPU (habits answer until then)", flush=True)
+
+    def check(self):
+        if self.thread is not None and self.thread.is_alive():
+            return None
+        if self.staged is not None:
+            laya, version = self.staged
+            self.staged = None
+            self.parked_at = None
+            self.oracle.attach(laya, version)
+            self.log(f"laya: reloaded fine-tuned weights v{version}", flush=True)
+            return version
+        now = self.clock()
+        if self.last is not None and now - self.last < self.every:
+            return None
+        self.last = now
+        if self.parked_at is not None and now - self.parked_at >= self.park_max:
+            self.unpark()
+            self.log(f"laya: no new fine-tuned weights after {self.park_max:.0f} s; {weights_label(self.oracle.version)} weights back on the GPU",
+                     flush=True)
+        if not self.oracle.ready:
+            return None
+        version = self.version_of()
+        if version is None or version == self.oracle.version or version == self.failed:
+            return None
+        self.thread = threading.Thread(target=self._load, args=(version,), name="laya-reload", daemon=True)
+        self.thread.start()
+        return None
+
+
+def empty_cuda():
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except ImportError:
+        pass
 
 
 def percentile(values, q):
@@ -118,6 +334,7 @@ class Laya:
         self.latencies = []
         self.load_seconds = None
         self.warmup_seconds = None
+        self.parked = False
 
     @property
     def loaded(self):
@@ -186,14 +403,29 @@ class Laya:
                 results = [self.agent.predict(s, questions) for s in states]
         return [self._answers(r, questions) for r in results]
 
+    def park(self):
+        model = getattr(self.agent, "model", None)
+        if model is None or not hasattr(model, "to"):
+            return False
+        with self.lock:
+            model.to("cpu")
+            self.parked = True
+        empty_cuda()
+        return True
+
+    def unpark(self):
+        with self.lock:
+            if not self.parked or self.agent is None:
+                return False
+            self.agent.model.to(self.agent.device)
+            self.parked = False
+        return True
+
     def release(self):
-        self.agent = None
-        try:
-            import torch
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except ImportError:
-            pass
+        with self.lock:
+            self.agent = None
+            self.parked = False
+        empty_cuda()
 
     def latency(self):
         ms = [v * 1000 for v in self.latencies]
