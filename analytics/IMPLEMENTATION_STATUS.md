@@ -17,6 +17,7 @@ Implementation date: October 18, 2026. Work began at `dc1f90c`; Chloe's C1/C2 ar
 | E4 native host/B5 | Pending external evidence | Host layout confirmed: all services share `C:\Users\sahil\la-hacks-2026\data`, no remote exec. Chloe's app also runs on the laptop (127.0.0.1). Sahil runs the one-command source check in the next live `--loop` session (analytics `--file-only`, no `DATABASE_URL`) and pastes output; reconnect/shutdown/audio still pending. Brain B5 complete: trace verified, waterfall retained, timings recorded, Sahil accepts overhead provided timing is unaffected ([record](evidence/brain-decision-2026-10-18.md)) |
 | Mock live scenario (E2) | Implemented | `serve.py --live-dir` grows a real session for the real analytics service, with delayed learning, duplicate summaries and socket drops; end-to-end run at 2x had 45/45 `/insights` 200s and per-round pending → current |
 | E5 B7 export/claim package | Implemented draft | Same export supplies numbers; claim ledger and Devpost/Sentry/Tiger Data drafts await owner/final evidence review |
+| Fine-tune before/after (Sahil) | Delivered by owner; format verified | `561bcb0` writes `eval/2026-10-18T07-30-06_sahil_djin_vs_kaz.json` (balanced accuracy 0.45 → 0.50 vs 0.40 majority); a record of that shape is served by `/learning` unchanged. File itself not seen by Track D |
 | History, pilot, diagnosis | Deferred | DA6/DA7/DA9 remain later releases; no invented producer trials/retests/evaluation |
 
 ## Verification

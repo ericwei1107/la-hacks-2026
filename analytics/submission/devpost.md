@@ -10,4 +10,4 @@ The new internal export explains observed fractions with source line, round/fram
 
 Existing Stats/Learning improvements are the first-release UI direction. The proposed shared insights API and optional focus UI remain gated on owner agreement/capacity. The grounded local coaching fallback and one-second provider budget are approved; a provider response is not required every round.
 
-Evidence and exact commands are in the claim ledger. Before submission, insert the reviewed demo/video and actual host observations. Do not claim improved human defense, deliberate retesting, held-out fine-tune benefit, the Luna migration, or complete brain monitoring without their separate evidence.
+Evidence and exact commands are in the claim ledger. Before submission, insert the reviewed demo/video and actual host observations. Do not claim improved human defense, deliberate retesting or the Luna migration without their separate evidence. The held-out fine-tune result (balanced accuracy 45.0% → 50.0% vs a 40.0% majority baseline, one held-out session) and brain monitoring evidence are recorded in the claim ledger with their limits.

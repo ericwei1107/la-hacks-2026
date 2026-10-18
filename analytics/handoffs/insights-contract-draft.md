@@ -7,7 +7,7 @@
 | Owner | Status |
 | --- | --- |
 | Sahil | **Approved with conditions** (October 18): the route is additive on :8767; it reads only files the brain already writes under `DATA_DIR` (recordings, sessions, learning, profiles, eval); nothing under `contracts/` changes. One point needs his confirmation, below |
-| Garrett | Wording and punish-audit review received October 18; explicit route approval still pending |
+| Garrett | **Approved** (October 18, Track C): no additional fields; keep it opt-in until all four approve; this does not approve the current punish calculation |
 | Chloe | Pending (asleep; Eric collects later) |
 | Eric | Proposer |
 
