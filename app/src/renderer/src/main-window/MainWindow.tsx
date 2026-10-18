@@ -18,10 +18,15 @@ function CurrentScreen() {
   return <Sessions />
 }
 
-export function MainWindow() {
+function BetweenRoundVoice() {
   useBetweenRoundVoice()
+  return null
+}
+
+export function MainWindow() {
   return (
     <FrameProvider>
+      <BetweenRoundVoice />
       <div className="mat-ground flex h-full overflow-hidden">
         <Sidebar />
         <div className="flex grow basis-0 flex-col overflow-auto">

@@ -7,9 +7,13 @@ prefix: OVERLAY
 
 ## Context and Design Philosophy
 
-The overlay is an optional layer over Tekken 8 during a set, off by default: the game screen belongs to the game (HLD tenet), and the shell opens the overlay only when `KUMITE_OVERLAY` turns it on. Paper: the Overlay page, "Overlay · In round" and "Overlay · Between rounds", drawn at 1920 × 1080 over a placeholder of the game (the game's own health bars, timer and fighters are placeholders, not overlay content). The overlay draws two things on the night palette and the mat: the corner HUD during a round, and the between-round card after it. Everything else is transparent so the game shows through, and the window passes every click to the game (shell).
+The overlay is the layer over Tekken 8 for demo mode. The game screen belongs to the game in normal play (HLD tenet), but the demo video needs the HUD and the between-round card over the fight. Paper: the Overlay page, "Overlay · In round" and "Overlay · Between rounds", drawn at 1920 × 1080 over a placeholder of the game (the game's own health bars, timer and fighters are placeholders, not overlay content). The overlay draws two things on the night palette and the mat: the corner HUD during a round, and the between-round card after it. Everything else is transparent so the game shows through, and the window passes every click to the game (shell).
 
 The overlay never steals attention mid-round. The HUD is small, quiet and fixed in the top left, under the game's health bar. The card is the only loud moment, and it comes when the round is over.
+
+## When it draws
+
+The page draws only while the brain's config has `demo_mode` set to `true`, read from the same config query the HUD uses (refetched every 5 s), or when the bridge's overlay mode is `always` (`KUMITE_OVERLAY=1`, shell). Otherwise it draws nothing at all, and the window over the game stays empty and click-through. Turning demo mode on or off takes effect within the next config refetch, with no restart. A page without the bridge, such as a plain browser, follows demo mode.
 
 ## Layout
 
@@ -53,6 +57,7 @@ On the mat ground:
 | Countdown | 10 seconds from the `round_end` event, holding at 0 | No number; only "Round <n + 1> next" | Paper draws a number. The round-end screen runs 8 to 10 seconds, so the next round's start usually ends the card before 0, and a hold at 0 covers the rest. |
 | Card before the coach line | "Coach is reviewing the round…" in mat muted | Leave the line empty until it lands | The replay service may take up to 8 seconds. An empty card reads as broken on video. |
 | Final round label | "Set over" when the `round_end` event's `detail` carries `match_over: true`; "Round <n + 1>" otherwise | Infer the last round from wins and match length | The contracts carry no match length; only the brain knows a set is over, and it marks every `round_end` with `match_over`. The event's `detail` is a free-form object, so the flag fits the existing schema. |
+| What the overlay follows | The brain's `demo_mode`, or the overlay mode `always` | Only the `KUMITE_OVERLAY` setting | Demo mode is already a mode of the bot, chosen where the demo is run. Following it means the video gets its overlay without anyone changing the app, and normal play stays clean. |
 | HUD mastery source | Learning metrics, refetched per round summary | Round summary `top_habits` only | The metrics hold every habit's mastery and fixed flag. Top habits may list only some habits and may omit mastery. |
 | Plan row | Shown only when `plan` records arrive | Always shown with a placeholder | The brain does not stream plans yet (HLD open question). An empty row would look broken on video. |
 

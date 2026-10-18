@@ -87,7 +87,7 @@ The brain has two WebSocket streams: **state** (`/ws/state`) and **coach** (`/ws
 
 **Lifecycle.** A stream's socket opens when the first subscriber in a window subscribes. From then on it stays open for the window's lifetime, reconnecting as needed.
 
-**Reconnecting.** When a socket closes or fails to open, the stream tries again after 0.5 s, doubling the wait up to 5 s. A successful open resets the wait to 0.5 s. A stream keeps trying for as long as its window lives.
+**Reconnecting.** When a socket closes or fails to open, the stream tries again after 0.5 s, doubling the wait up to 5 s. A successful open resets the wait to 0.5 s. A stream keeps trying for as long as its window lives. An attempt that has not opened within 3 s is abandoned and counts as a failed open: the live brain runs only during a match, on a laptop whose firewall drops connections to the closed port instead of refusing them, and such an attempt would otherwise hang for over a minute. With the timeout, the app picks up a brain that starts within about 8 s.
 
 **Stream status.** Each stream is in one of three states:
 
@@ -183,6 +183,7 @@ All of it lives under `src/renderer/src/services/`, shared by every window's ren
 | Reading a stream's status | Counts as a subscriber and opens the stream | An `idle` status before any subscriber | A status view showing `connecting` while nothing is trying would mislead. Opening the stream makes the status it shows real. |
 | Concurrent `analyze` calls for one session | Share one request | Let each call through | One analysis is minutes of scoring and writes `data/reports/`. A double press should not start two. |
 | 404 from `GET /reports/{id}` | Resolves `null` | A `not_found` failure | The contract defines that 404 as "not analyzed yet", a normal state the replay analysis screen designs for by offering to analyze. |
+| Opening a stream socket | Abandon an attempt after 3 s | The browser's own connect timeout | A host that drops packets to a closed port leaves the attempt pending until the operating system gives up, about 75 s on macOS. The brain's API comes and goes with each match, so the app must notice it within seconds. 3 s is far above a connect over the venue link or Tailscale. |
 | Where the round break is tracked | One hook in the service clients | In each consumer (the overlay's card, the main window's voice) | The voice and the card must start and end on the same records. One definition keeps them from drifting. |
 | End of the last round break of a set | When the round stops being live (2 seconds without states), or at a state for another set | Held until the next set starts | No `round_start` follows a set's final KO; the brain stops the state stream once the game leaves the match. A break held over the results screen and menus would keep the coach's voice and the card alive past the set. |
 

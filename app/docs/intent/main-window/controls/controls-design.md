@@ -11,7 +11,7 @@ The Controls screen sets up the next set: how hard the bot plays and who is play
 
 ## Difficulty
 
-Five preset cards: 1 Rookie, 2 Novice, 3 Intermediate, 4 Advanced, 5 Tekken God. The config's `difficulty` card fills indigo. Choosing a preset saves the difficulty together with the preset's three knob values, so the sliders below show the preset:
+Five preset cards: 1 Rookie, 2 Novice, 3 Intermediate, 4 Advanced, 5 Tekken God. The bot reads difficulty when a match starts, so beside the heading a muted line says changes apply from the next match, and a change mid-set does not look broken. The config's `difficulty` card fills indigo. Choosing a preset saves the difficulty together with the preset's three knob values, so the sliders below show the preset:
 
 | Preset | Reaction delay | Punish accuracy | Exploit weight |
 |---|---|---|---|

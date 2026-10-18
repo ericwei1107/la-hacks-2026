@@ -68,6 +68,6 @@ Design: `voice-design.md`
 |---|---|
 | VOICE-SET-001 – VOICE-SET-003, VOICE-SPEAK-001 – VOICE-SPEAK-007 | `src/main/voice.ts` (`readVoiceSettings`, `handleVoice`) |
 | VOICE-PLAY-001 – VOICE-PLAY-006 | `src/renderer/src/voice.ts` (`useVoice`) |
-| VOICE-ROUND-001 – VOICE-ROUND-003 | `src/renderer/src/voice.ts` (`useBetweenRoundVoice`), called by `src/renderer/src/main-window/MainWindow.tsx` |
+| VOICE-ROUND-001 – VOICE-ROUND-003 | `src/renderer/src/voice.ts` (`useBetweenRoundVoice`), called by `src/renderer/src/main-window/MainWindow.tsx` (`BetweenRoundVoice`) |
 | VOICE-HEAR-001 – VOICE-HEAR-004, VOICE-TALK-009 | `src/main/voice.ts` (`handleVoice`, `handleMicrophone`) |
 | VOICE-TALK-001 – VOICE-TALK-008, VOICE-TALK-010 – VOICE-TALK-013 | `src/renderer/src/voice.ts` (`useHoldToTalk`), used by `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`) |

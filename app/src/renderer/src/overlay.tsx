@@ -119,10 +119,11 @@ function OverlayContent() {
   const learningRounds = [...(learning.data?.rounds ?? [])].sort((a, b) => a.round - b.round)
   const lastRound = learningRounds[learningRounds.length - 1]
   const showingCard = openCard !== null
+  const drawing = window.kumite?.overlay === 'always' || config.data?.demo_mode === true
 
   return (
     <div className="relative h-[1080px] w-[1920px] overflow-hidden bg-transparent">
-      {isLive && sessionId && !showingCard && (
+      {drawing && isLive && sessionId && !showingCard && (
         <section className="absolute top-[136px] left-12 w-hud overflow-hidden border-t-4 border-solid border-overlay-line bg-overlay/[0.90] text-overlay-text">
           <header className="flex items-baseline justify-between px-4 pt-3 pb-2">
             <h1 className="font-display text-xl leading-7">{characterName(config.data?.bot_character)}</h1>
@@ -134,7 +135,7 @@ function OverlayContent() {
           </div>
         </section>
       )}
-      {openCard && <BetweenRounds
+      {drawing && openCard && <BetweenRounds
         card={openCard}
         coach={cardCoach}
         summary={cardSummary}

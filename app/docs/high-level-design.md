@@ -8,8 +8,8 @@ Kumite's bot learns a player's habits, exploits them, and its services explain w
 
 One Electron desktop app built around one window and one design system.
 
-- **Main window.** The place for everything before and after a set: sessions, replay analysis, the learning panel, stats, the coach conversation by text or voice, and the bot's controls. During a set it stays out of sight and speaks the coach's tip between rounds; nothing is drawn over the game.
-- **Overlay window, off by default.** A transparent, always-on-top, click-through window that can draw a corner HUD and a between-round card over Tekken 8 (borderless windowed). The app runs without it; `KUMITE_OVERLAY=1` turns it on.
+- **Main window.** The place for everything before and after a set: sessions, replay analysis, the learning panel, stats, the coach conversation by text or voice, and the bot's controls. During a set it stays out of sight and speaks the coach's tip between rounds; outside demo mode nothing is drawn over the game.
+- **Overlay window, for demo mode.** A transparent, always-on-top, click-through window over Tekken 8 (borderless windowed). While the brain's config has `demo_mode` on, it draws a corner HUD and a between-round card, as the demo video needs; in normal play it draws nothing. `KUMITE_OVERLAY=1` forces it on and `KUMITE_OVERLAY=0` leaves it out.
 
 The app is a view over other tracks' services. It renders what the brain (:8765), replay analysis (:8766) and analytics (:8767) services return, in the shapes fixed by `contracts/`, and adds voice through ElevenLabs. It never touches the game.
 
@@ -22,7 +22,7 @@ The app is a view over other tracks' services. It renders what the brain (:8765)
 
 ## Goals
 
-- G1. During a set, the app takes no focus or input from the game and, unless the overlay is turned on, draws nothing over it.
+- G1. During a set, the app takes no focus or input from the game. Outside demo mode it draws nothing over the game; in demo mode its overlay appears in an OBS capture.
 - G2. Between rounds, the coach's voice starts within the 8–10 second round-end screen and stops when the next round starts.
 - G3. After a set, a player can open the session, read its report and decision points, see the learning panel, and ask the coach a question by voice or text and hear the answer.
 - G4. The learning panel shows, in large numbers, that the bot learned: prediction accuracy by round, time to detect and time to mastery per habit, exploit hit rates, and player-changed markers. It is the video's closing shot and is never cut.
@@ -45,7 +45,7 @@ The app is a view over other tracks' services. It renders what the brain (:8765)
 
 - **Legible over dense.** When a screen could show more data or show it larger, show it larger; detail sits behind a click or is left out.
 - **Polish over breadth.** When time runs short, finish fewer screens to full design quality rather than every screen roughly.
-- **The game screen belongs to the game.** During a set the app speaks and draws nothing; anything visual waits for the main window after the set.
+- **The game screen belongs to the game.** During a set the app speaks and draws nothing, except in demo mode, where the video needs the HUD and the between-round card; anything else visual waits for the main window after the set.
 - **Arithmetic in the app, judgment in the services.** The app may count, sum, subtract, divide and threshold the values the contracts carry in order to show them, and may build sentences from those values with fixed templates. Anything that decides what a player did, what they should do, or what the bot learned comes from the service that owns it.
 
 ## System Design
@@ -54,7 +54,7 @@ The app is a view over other tracks' services. It renders what the brain (:8765)
 flowchart LR
     subgraph App["Kumite desktop app (Electron)"]
         MP["Main process\nwindows · overlay click-through\nglobal push-to-talk key\nElevenLabs calls (holds the key)\nservice addresses"]
-        OV["Overlay window, off by default\nHUD · between-round card"]
+        OV["Overlay window, draws in demo mode\nHUD · between-round card"]
         MW["Main window\nsessions · replay analysis · learning panel\nstats · coach · controls · service status\nbetween-round voice"]
         SC["Shared service clients\nbrain · replay · analytics"]
         OV --- SC
@@ -76,28 +76,28 @@ flowchart LR
 
 | Component | Runs in | Owns |
 |---|---|---|
-| Shell | Main process | Creating and placing the windows (the overlay only when turned on), overlay always-on-top and click-through, the global push-to-talk key, the three service addresses, the bridge each window uses for privileged work |
+| Shell | Main process | Creating and placing the windows, overlay always-on-top and click-through, the global push-to-talk key, the three service addresses, the bridge each window uses for privileged work |
 | Service clients | Both windows | One typed client per service, built from `contracts/`; reconnecting WebSockets; per-service online/offline status; tolerance of unknown fields and dropped `/ws/state` frames |
 | Design system | Both windows | Tatami, the visual system defined in the Paper file "Kumite — Tatami": tokens, bundled fonts, belts, shared controls, the words the app uses for habits, situations and characters, and the empty, loading and offline state patterns |
-| Overlay | Overlay window, when turned on | Corner HUD and between-round card |
+| Overlay | Overlay window, drawing in demo mode | Corner HUD and between-round card |
 | Main-window screens | Main window | Sessions, replay analysis, learning panel, stats, coach, controls, service status |
 | Voice | Main process and the main window | ElevenLabs text-to-speech for the between-round tip and the coach conversation, push-to-talk speech-to-text for the coach conversation, OpenAI speech as fallback, text-only when both fail |
 
 ### Round break
 
-The **live set** is the `session_id` of the latest `state` record on the brain's state stream; a round is **live** while those records keep arriving, the latest less than 2 seconds old. A **round break** is Tekken's round-end screen as the app sees it. It starts at a `round_end` event for the live set and ends at the next `round_start` event, at a `state` record for a later round or another set, or when the round stops being live, which covers the end of a set. The between-round voice speaks only during a round break, and so does the overlay's card when the overlay is on. The service clients track the round break once for every window.
+The **live set** is the `session_id` of the latest `state` record on the brain's state stream; a round is **live** while those records keep arriving, the latest less than 2 seconds old. A **round break** is Tekken's round-end screen as the app sees it. It starts at a `round_end` event for the live set and ends at the next `round_start` event, at a `state` record for a later round or another set, or when the round stops being live, which covers the end of a set. The between-round voice speaks only during a round break, and so does the overlay's card in demo mode. The service clients track the round break once for every window.
 
 ### Where each surface gets its data
 
 | Surface | Source (per `contracts/api.md`) |
 |---|---|
-| Overlay HUD (when on): difficulty, bot character | `GET /config` (brain) |
-| Overlay HUD (when on): live session, round, health, timer | `WS /ws/state` (brain) |
-| Overlay HUD (when on): plan note | `plan` records on `WS /ws/state`, when the brain sends them |
-| Overlay HUD (when on): habit belts and mastery | `GET /learning/{session_id}` (analytics), refetched at each `round_summary` on `WS /ws/coach`, which also names the habit the bot is targeting |
+| Overlay HUD (demo mode): difficulty, bot character, demo mode itself | `GET /config` (brain) |
+| Overlay HUD (demo mode): live session, round, health, timer | `WS /ws/state` (brain) |
+| Overlay HUD (demo mode): plan note | `plan` records on `WS /ws/state`, when the brain sends them |
+| Overlay HUD (demo mode): habit belts and mastery | `GET /learning/{session_id}` (analytics), refetched at each `round_summary` on `WS /ws/coach`, which also names the habit the bot is targeting |
 | Round break (when the between-round voice and card run) | `round_end` and `round_start` events and `state` records on `WS /ws/state` (brain) |
 | Between-round voice | `coach` records on `WS /ws/coach` (brain), spoken through ElevenLabs by the main process |
-| Between-round card (overlay, when on) | `coach` and `round_summary` records on `WS /ws/coach` |
+| Between-round card (overlay, demo mode) | `coach` and `round_summary` records on `WS /ws/coach` |
 | Sessions list, timeline and set totals | `GET /sessions`, `GET /sessions/{id}/recording` (brain) |
 | Replay analysis | `GET /reports/{session_id}`, `POST /analyze/{session_id}` (replay) |
 | Learning panel | `GET /learning/{session_id}` (analytics); the bot's current target from the recording's round summaries (brain) |
@@ -120,7 +120,8 @@ The **live set** is the `session_id` of the latest `state` record on the brain's
 
 ## Success Metrics
 
-- During a live set, the game keeps focus and receives every input; with the overlay off, nothing is drawn over it.
+- During a live set, the game keeps focus and receives every input; outside demo mode, nothing is drawn over it.
+- In demo mode, an OBS recording of a live round shows the HUD and the between-round card over the game, and the game received every click made over the overlay.
 - On a live round end, the coach's voice starts before the next round begins and stops when it begins.
 - With the mock services running, every screen renders real contract-shaped data; with any one service stopped, every screen that depends on it shows its offline state and the rest of the app keeps working.
 - Switching from mocks to Sahil's laptop is done by setting three addresses.

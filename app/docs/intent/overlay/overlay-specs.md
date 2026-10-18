@@ -31,8 +31,13 @@ Design: `overlay-design.md`
 - [ ] **OVERLAY-031**: While the card's `round_end` event carries `detail.match_over: true`, the between-round card shall not draw the bottom bar.
 - [ ] **OVERLAY-035**: The overlay shall not play the coach's line or any other audio.
 
+## Demo mode
+
+- [ ] **OVERLAY-036**: While `window.kumite.overlay` is not `always` and the brain config's `demo_mode` is not `true`, the overlay page shall draw nothing.
+- [ ] **OVERLAY-037**: When the brain config's `demo_mode` changes, the overlay page shall start or stop drawing at the next config refetch, without a restart.
+
 ## Implemented in
 
 | Spec IDs | Entry point |
 |---|---|
-| OVERLAY-001 – OVERLAY-035 | `src/renderer/src/overlay.tsx` (`OverlayContent`, `Habits`, `BetweenRounds`), reading the live set and round break from `useRoundBreak` |
+| OVERLAY-001 – OVERLAY-037 | `src/renderer/src/overlay.tsx` (`OverlayContent`, `Habits`, `BetweenRounds`), reading the live set and round break from `useRoundBreak` |
