@@ -26,8 +26,11 @@ BKT = {"l0": 0.2, "t": 0.15, "g": 0.2, "s": 0.1, "f": 0.02}
 P_MAX = 0.98
 P_MIN = 0.02
 FIXED_P = 0.85
-FIXED_N = 6
+FIXED_N = 4
+FIXED_STREAK = 3
 REGRESS_P = 0.5
+REGRESS_MISSES = 2
+PRAISE_HIT_RATE = 0.5
 RETEST_ROUNDS = 2
 DISCOUNT = 0.9
 REWARD_DAMAGE = 25
@@ -221,23 +224,47 @@ class Mastery:
         self.skills = {}
         for key, row in (data or {}).items():
             self.skills[key] = {"p_learned": float(row.get("p_learned", BKT["l0"])), "observations": int(row.get("observations", 0)),
-                                "fixed": bool(row.get("fixed", False)), "last_retest": row.get("last_retest")}
+                                "fixed": False, "last_retest": row.get("last_retest")}
         self.retest_round = {}
+        self.session = {}
 
     def skill(self, key):
         return self.skills.setdefault(key, {"p_learned": BKT["l0"], "observations": 0, "fixed": False, "last_retest": None})
 
+    def session_row(self, key):
+        return self.session.setdefault(key, {"correct": 0, "total": 0, "recent": deque(maxlen=FIXED_STREAK), "misses": 0})
+
     def observe(self, key, correct):
         row = self.skill(key)
+        seen = self.session_row(key)
         row["p_learned"] = bkt_update(row["p_learned"], correct)
         row["observations"] += 1
-        if not row["fixed"] and row["p_learned"] >= FIXED_P and row["observations"] >= FIXED_N:
-            row["fixed"] = True
-            return "fixed"
-        if row["fixed"] and row["p_learned"] <= REGRESS_P:
+        seen["total"] += 1
+        seen["recent"].append(bool(correct))
+        if correct:
+            seen["correct"] += 1
+        else:
+            seen["misses"] += 1
+        if not row["fixed"]:
+            streak = len(seen["recent"]) == FIXED_STREAK and all(seen["recent"])
+            if row["p_learned"] >= FIXED_P and seen["correct"] >= FIXED_N and streak:
+                row["fixed"] = True
+                seen["misses"] = 0
+                return "fixed"
+        elif row["p_learned"] <= REGRESS_P and seen["misses"] >= REGRESS_MISSES:
             row["fixed"] = False
             return "regressed"
         return None
+
+    def hit_rate(self, key):
+        seen = self.session.get(key)
+        if not seen or seen["total"] == 0:
+            return None
+        return 1.0 - seen["correct"] / seen["total"]
+
+    def praiseworthy(self, key):
+        rate = self.hit_rate(key)
+        return self.fixed(key) and rate is not None and rate <= PRAISE_HIT_RATE
 
     def forget(self):
         for row in self.skills.values():
@@ -442,6 +469,7 @@ class Learning:
         self.exploited = set()
         self.newly_fixed = []
         self.regressed = []
+        self.announced = set()
         self.player_changed = False
         self.detected_round = {}
         self.fixed_round = {}
@@ -661,11 +689,14 @@ class Learning:
         for key in keys:
             change = self.mastery.observe(key, correct)
             if change == "fixed":
-                self.newly_fixed.append(key)
+                if key not in self.newly_fixed:
+                    self.newly_fixed.append(key)
                 self.fixed_round.setdefault(key, state["round"])
                 out.append(self._record(state, event="fixed", situation=key, mastery=round(self.mastery.p(key), 3)))
             elif change == "regressed":
-                self.regressed.append(key)
+                if key not in self.regressed:
+                    self.regressed.append(key)
+                self.announced.discard(key)
                 out.append(self._record(state, event="regressed", situation=key, mastery=round(self.mastery.p(key), 3)))
         start = self._state_at(ev["round"], detail.get("start_frame")) or state
         hit, changed = self.predictor.observe(features(keys[0], start, self.recent, self.last_option), action)
@@ -879,7 +910,7 @@ class Learning:
             if state["round"] != pull["round"] or state["frame"] - pull["frame"] > limit:
                 self._settle(pull, self._final_reward(pull, human_health))
 
-    def habit_rows(self, keys=None):
+    def habit_rows(self, keys=None, coach=False):
         rows = {}
         for key in sorted(keys if keys is not None else self.habits.counts):
             action, p = self.habits.top(key)
@@ -887,14 +918,14 @@ class Learning:
                 continue
             rows[key] = {"action": action, "p": round(p, 4), "n": int(self.habits.seen[key]),
                          "mastery": round(self.mastery.p(key) if self.mastery.p(key) is not None else BKT["l0"], 4),
-                         "fixed": self.mastery.fixed(key)}
+                         "fixed": self.mastery.praiseworthy(key) if coach else self.mastery.fixed(key)}
         return rows
 
     def pooled_keys(self):
         return [k for k in self.habits.counts if not k.startswith(AFTER_BLOCK) or k in (PLUS_KEY, MINUS_KEY, ANY_KEY)]
 
     def top_habits(self):
-        rows = self.habit_rows(self.pooled_keys())
+        rows = self.habit_rows(self.pooled_keys(), coach=True)
         ranked = sorted(rows.items(), key=lambda kv: (kv[1]["n"] >= ACTIVE_N and kv[1]["p"] >= ACTIVE_P, kv[1]["n"], kv[1]["p"]), reverse=True)
         return [{"situation": k, "action": r["action"], "p": r["p"], "n": r["n"], "mastery": r["mastery"], "fixed": r["fixed"]}
                 for k, r in ranked[:TOP_HABITS]]
@@ -948,9 +979,17 @@ class Learning:
             "top_habits": self.top_habits(),
             "biggest_moments": sorted(moments, key=lambda m: m["frame"]),
             "exploited": sorted(self.exploited),
-            "newly_fixed": list(self.newly_fixed),
-            "regressed": list(self.regressed),
+            "newly_fixed": self.announce(),
+            "regressed": [k for k in self.regressed if not self.mastery.fixed(k)],
         }
+
+    def announce(self):
+        out = []
+        for key in self.fixed_round:
+            if key not in self.announced and self.mastery.praiseworthy(key):
+                out.append(key)
+        self.announced.update(out)
+        return out
 
     def round_end(self, state, ev=None):
         self._begin(state)

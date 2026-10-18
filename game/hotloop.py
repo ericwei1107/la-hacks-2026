@@ -7,6 +7,9 @@ from game.recorder import Recorder, iso_utc, result_text, session_meta
 
 STALL_S = 2.0
 COUNTER_CAP = 0xFFFF
+MATCH_OVER = "match_over"
+INTERRUPTED = "interrupted"
+STOPPED = "stopped"
 
 
 def fmt_event(ev):
@@ -102,6 +105,35 @@ def frames(reader, pacer, on_poll=None, log=print):
         pacer.wait()
 
 
+def round_live(players):
+    return all(p["health"] >= p["max_health"] and p["free_movement"] for p in players)
+
+
+def wait_for_match(reader, pacer, on_poll=None, log=print):
+    prev = None
+    gap = False
+    fresh = False
+    while True:
+        snap = reader.snapshot()
+        if snap is None:
+            if not gap:
+                log("players not readable: waiting for the next match")
+            gap = True
+            fresh = True
+        else:
+            if gap or (prev is not None and snap.round_frame < prev):
+                fresh = True
+                log(f"new scene at round frame {snap.round_frame}; starting once both players are free at full health")
+            gap = False
+            prev = snap.round_frame
+            if fresh and round_live(snap.players):
+                log(f"new match: both players free at full health at round frame {snap.round_frame}")
+                return snap
+        if on_poll:
+            on_poll()
+        pacer.wait()
+
+
 class Hooks:
     def start(self, snap, sid):
         pass
@@ -141,6 +173,7 @@ def run_session(reader, args, hooks=None, outlet=None):
     gaps = 0
     skipped_states = 0
     last = None
+    reason = STOPPED
 
     def on_poll():
         recorder.tick()
@@ -156,6 +189,7 @@ def run_session(reader, args, hooks=None, outlet=None):
             if tracker.match_over and tracker.prev is not None and gs["frame"] < tracker.prev["frame"]:
                 score = "-".join(str(tracker.wins[i]) for i in (human, 1 - human))
                 print(f"match over ({score} for the human): the counter reset into the post-match scene; stopping", flush=True)
+                reason = MATCH_OVER
                 break
             count += 1
             last = gs
@@ -172,7 +206,7 @@ def run_session(reader, args, hooks=None, outlet=None):
             if any(ev["kind"] == "round_end" for ev in events):
                 recorder.write_session(tracker.rounds)
     except KeyboardInterrupt:
-        pass
+        reason = INTERRUPTED
     finally:
         hooks.close()
         final = tracker.finish()
@@ -200,3 +234,4 @@ def run_session(reader, args, hooks=None, outlet=None):
         print(f"events: {kinds}", flush=True)
         print(f"unknown codes: {unknown}", flush=True)
         print(f"wrote {recorder.recording_path} ({recorder.lines} lines) and {recorder.session_path}", flush=True)
+    return reason

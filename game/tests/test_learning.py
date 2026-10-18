@@ -73,10 +73,11 @@ def round_end(frame, winner, round_=1):
 
 
 class LearningRig:
-    def __init__(self, predictor=False, difficulty=L3, seed=0):
+    def __init__(self, predictor=False, difficulty=L3, seed=0, profile=None):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.learning = Learning("tester", "devil_jin", OPTIONS, difficulty, random.Random(seed), self.root, predictor=predictor)
+        self.learning = Learning("tester", "devil_jin", OPTIONS, difficulty, random.Random(seed), self.root, predictor=predictor,
+                                 profile=profile)
         self.frame = 100
         self.round = 1
         self.records = []
@@ -170,11 +171,97 @@ class MasteryTest(unittest.TestCase):
         m = Mastery({"throw_break": {"p_learned": 0.9, "observations": 10, "fixed": True, "last_retest": None}})
         m.forget()
         self.assertAlmostEqual(m.p("throw_break"), 0.9 * 0.98)
+        self.assertFalse(m.retest_due("throw_break", 1))
+        for _ in range(FIXED_N):
+            m.observe("throw_break", True)
         self.assertTrue(m.retest_due("throw_break", 1))
         m.stamp_retest("throw_break", 1)
         self.assertFalse(m.retest_due("throw_break", 2))
         self.assertTrue(m.retest_due("throw_break", 3))
         self.assertIsInstance(m.skills["throw_break"]["last_retest"], str)
+
+
+class HysteresisTest(unittest.TestCase):
+    CARRIED = {MINUS_KEY: {"p_learned": 0.7645, "observations": 37, "fixed": False, "last_retest": None},
+               ANY_KEY: {"p_learned": 0.7042, "observations": 43, "fixed": False, "last_retest": None}}
+
+    def test_carried_profile_starts_unfixed_and_one_correct_does_not_fix(self):
+        m = Mastery({MINUS_KEY: {"p_learned": 0.7645, "observations": 37, "fixed": True, "last_retest": None}})
+        self.assertFalse(m.fixed(MINUS_KEY))
+        self.assertIsNone(m.observe(MINUS_KEY, True))
+        self.assertFalse(m.fixed(MINUS_KEY))
+        self.assertEqual(m.skills[MINUS_KEY]["observations"], 38)
+        self.assertGreaterEqual(m.p(MINUS_KEY), 0.85)
+
+    def test_fixed_needs_four_correct_with_the_last_three_in_a_row(self):
+        m = Mastery()
+        changes = [m.observe("low_defense", c) for c in (True, True, True, False, True, True, True)]
+        self.assertEqual(changes, [None] * 6 + ["fixed"])
+        self.assertGreaterEqual(m.p("low_defense"), 0.85)
+
+    def test_regress_needs_two_misses_since_fixed(self):
+        m = Mastery()
+        for _ in range(FIXED_N):
+            m.observe("low_defense", True)
+        m.skills["low_defense"]["p_learned"] = 0.8
+        self.assertIsNone(m.observe("low_defense", False))
+        self.assertLessEqual(m.p("low_defense"), 0.5)
+        self.assertTrue(m.fixed("low_defense"))
+        self.assertEqual(m.observe("low_defense", False), "regressed")
+        self.assertFalse(m.fixed("low_defense"))
+
+    def test_live_pattern_on_a_carried_profile_does_not_flap(self):
+        rig = LearningRig(profile={"mastery": self.CARRIED})
+        try:
+            for correct in (True, False, False, True, True, False, False, True, True, False, False, True, True):
+                rig.feed("after_block:df1", "block_high" if correct else "press", correct, adv=3)
+            summary = rig.end_round()[0]
+            events = [(r["event"], r["situation"]) for r in rig.records if r.get("t") == "learning_event" and r["event"] != "player_changed"]
+            self.assertEqual(events, [])
+            self.assertEqual((summary["newly_fixed"], summary["regressed"]), ([], []))
+            self.assertFalse(rig.learning.mastery.fixed(MINUS_KEY))
+        finally:
+            rig.close()
+
+    def test_summary_lists_each_habit_once_and_only_its_end_state(self):
+        rig = LearningRig()
+        try:
+            plan = [True] * 4 + [False] * 3 + [True] * 3 + [False] * 3
+            for correct in plan:
+                rig.feed("low_defense", "blocked" if correct else "hit", correct)
+            events = [r["event"] for r in rig.records if r.get("t") == "learning_event" and r["situation"] == "low_defense"]
+            self.assertEqual(events, ["fixed", "regressed", "fixed", "regressed"])
+            summary = rig.end_round()[0]
+            self.assertEqual(summary["newly_fixed"], [])
+            self.assertEqual(summary["regressed"], ["low_defense"])
+            for correct in [True] * 4 + [False] * 3 + [True] * 3:
+                rig.feed("low_defense", "blocked" if correct else "hit", correct)
+            summary = rig.end_round()[0]
+            self.assertEqual(summary["newly_fixed"], ["low_defense"])
+            self.assertEqual(summary["regressed"], [])
+        finally:
+            rig.close()
+
+    def test_coach_never_sees_a_fix_while_the_session_hit_rate_is_above_half(self):
+        rig = LearningRig()
+        try:
+            for correct in [False] * 5 + [True] * 4:
+                rig.feed("low_defense", "blocked" if correct else "hit", correct)
+            L = rig.learning
+            self.assertTrue(L.mastery.fixed("low_defense"))
+            self.assertAlmostEqual(L.mastery.hit_rate("low_defense"), 5 / 9)
+            summary = rig.end_round()[0]
+            self.assertEqual(summary["newly_fixed"], [])
+            self.assertFalse(any(h["fixed"] for h in summary["top_habits"] if h["situation"] == "low_defense"))
+            for _ in range(2):
+                rig.feed("low_defense", "blocked", True)
+            summary = rig.end_round()[0]
+            self.assertEqual(summary["newly_fixed"], ["low_defense"])
+            self.assertTrue(any(h["fixed"] for h in summary["top_habits"] if h["situation"] == "low_defense"))
+            rig.feed("low_defense", "blocked", True)
+            self.assertEqual(rig.end_round()[0]["newly_fixed"], [])
+        finally:
+            rig.close()
 
 
 class BanditTest(unittest.TestCase):
@@ -326,7 +413,7 @@ class LearningTest(unittest.TestCase):
         try:
             for _ in range(5):
                 rig.feed("low_defense", "hit", False)
-            for _ in range(FIXED_N + 2):
+            for _ in range(FIXED_N + 4):
                 rig.feed("low_defense", "blocked", True)
             L = rig.learning
             fixed = [r for r in rig.records if r.get("t") == "learning_event" and r["event"] == "fixed"]
@@ -518,7 +605,7 @@ class LearningTest(unittest.TestCase):
             L = rig.learning
             for _ in range(FIXED_N):
                 rig.feed("after_block:df1", "press", False, adv=-4)
-            for _ in range(3):
+            for _ in range(FIXED_N):
                 rig.feed("after_block:b4", "block_high", True, adv=-4)
             self.assertTrue(L.mastery.fixed(PLUS_KEY))
             for _ in range(8):
