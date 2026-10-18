@@ -1,6 +1,12 @@
 # Report integration: exact PR #8 synthetic fixture
 
-The published `replay/` implementation now exposes health, round coaching, `/analyze/{session_id}` and `/reports/{session_id}`. Its real report API still needs the integration checks below before Track D claims runtime acceptance. The incoming owner handoff describes labelled decision counts and observed frequencies; source presence alone does not establish those results. Mastery/learning integration remains separate work, and mock reports are a separate implementation.
+## Track D local acceptance — October 18, 2026
+
+`analytics/tests/report_smoke.py` ran the actual replay FastAPI service over loopback HTTP against temporary copies of the synthetic and real M3 bundles. Schema validation, POST analysis / saved GET equality and source preservation passed. Synthetic: 35 decision points and 59 checked source citations; real: 58 decision points and 101 checked citations. All returned decisions were honestly labelled unscored, with `best=unavailable` and no model option probabilities. The test disabled OpenAI/Jev keys, database and Sentry and shut down both child processes.
+
+This local check used the root Python environment plus replay's pinned OpenAI SDK installed in an isolated temporary directory. With replay requirements available in the chosen environment, repeat `python analytics/tests/report_smoke.py`. Native Windows host integration and actual Jev/provider activity remain separate; the new insight export does not trust report revision identity or use report recommendations yet.
+
+The published `replay/` implementation exposes health, round coaching, `/analyze/{session_id}` and `/reports/{session_id}`. Local runtime acceptance is recorded above; the commands below remain the owner-host reproduction path. Mastery/learning interpretation remains separate work, and mock reports are a separate implementation.
 
 PR #8 is merged as `843dcb1d3f8ca231ee1fdb163ce690e66f48e550`; it includes the following single synthetic bundle. It is generated test data, not measured model learning or fine-tune performance.
 
@@ -44,4 +50,4 @@ The learning response should match the planted values above. It does not imply t
 
 ## Reply to forward
 
-PR #8 is merged. Use session `2026-10-17T13-05-00_synth_djin_vs_kaz` and `DATA_DIR=./data/samples/synthetic`. The recording, session metadata and learning filenames are the session id with `.jsonl`, `.json` and `.jsonl` extensions under that directory's `recordings/`, `sessions/` and `learning/`; the profile is `profiles/synth_devil_jin.json`. The table above gives the full paths. This is a generated three-round fixture, so keep counts/frequencies labelled as synthetic. The published report API is ready for the integration checks above; this handoff does not claim they have run.
+PR #8 is merged. Use session `2026-10-17T13-05-00_synth_djin_vs_kaz` and `DATA_DIR=./data/samples/synthetic`. The recording, session metadata and learning filenames are the session id with `.jsonl`, `.json` and `.jsonl` extensions under that directory's `recordings/`, `sessions/` and `learning/`; the profile is `profiles/synth_devil_jin.json`. The table above gives the full paths. This is a generated three-round fixture, so keep counts/frequencies labelled as synthetic. Track D's local actual-service checks now pass; owner-host/native integration remains pending.

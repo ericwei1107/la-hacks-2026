@@ -44,7 +44,7 @@ from analytics.repository import DataError, FileRepository
 logger = logging.getLogger(__name__)
 
 
-def create_app(data_dir=None):
+def create_app(data_dir=None, experimental_insights=None):
     app = FastAPI(title="kumite-analytics", version=VERSION)
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
     root = data_dir if data_dir is not None else DATA_DIR
@@ -81,6 +81,10 @@ def create_app(data_dir=None):
     @app.get("/trends/{player}/{character}")
     def trends(player: str, character: str, stat: str | None = None):
         return app.state.repository.trends(player, character, stat)
+
+    if experimental_insights if experimental_insights is not None else os.environ.get("KUMITE_EXPERIMENTAL_INSIGHTS") == "1":
+        from analytics.insights import register
+        app.state.insights = register(app, root)
 
     return app
 

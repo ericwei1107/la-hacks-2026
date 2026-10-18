@@ -256,8 +256,11 @@ class FileRepository:
                     continue
                 recording = sample
             else:
-                reference = Path(meta.get('recording') or self.root / 'recordings' / f'{sid}.jsonl')
+                default = self.root / 'recordings' / f'{sid}.jsonl'
+                reference = Path(meta.get('recording') or default)
                 recording = reference if reference.is_absolute() else ROOT / reference
+                if not reference.is_absolute() and not recording.is_file() and default.is_file():
+                    recording = default
             found[sid] = (path, stamp, meta, recording.resolve())
         self.results = {key: value for key, value in self.results.items() if key[0] in found}
         if requested in self.invalid_sessions:

@@ -1,5 +1,7 @@
 # Fine-tune before/after for the learning panel (from Eric)
 
+**Delivered October 18 (code `561bcb0` on main):** `python -m game.finetune eval` writes `DATA_DIR/eval/2026-10-18T07-30-06_sahil_djin_vs_kaz.json` with `before`/`after` = balanced accuracy (0.45 → 0.50; majority baseline 0.40) plus extra detail fields. Track D verified that this record shape is served unchanged by `GET /learning/{session_id}` as `finetune`. The panel display is Chloe's request (`finetune-panel.md`).
+
 You own the Laya harness, the dataset, the fine-tune and the before/after eval. The analytics service already serves the result as `finetune` in `GET /learning/{session_id}` (`contracts/metrics.schema.json`). It just needs a file to read.
 
 ## Where to write it

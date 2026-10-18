@@ -1,0 +1,420 @@
+{
+  "calculation_version": 4,
+  "focus": {
+    "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
+    "action_status": "reviewed",
+    "metric": "low_defense",
+    "min_opportunities": 5,
+    "mode": "automatic",
+    "population": "completed_rounds",
+    "reason": "0/6 successful observed opportunities; 6 failures",
+    "rule_version": 1,
+    "state": "observed"
+  },
+  "format_version": 1,
+  "freshness": {
+    "completed_rounds": [
+      1
+    ],
+    "latest_learning_round": 1,
+    "latest_recording_round": 1,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "learning": {
+    "bandit_estimates": {},
+    "finetune": {
+      "after": null,
+      "before": null
+    },
+    "habits": {},
+    "prediction_accuracy": [
+      {
+        "eligible_count": null,
+        "player_changed": false,
+        "round": 1,
+        "value": null
+      }
+    ]
+  },
+  "metrics": {
+    "low_defense": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1,
+            "line": 1,
+            "round": 1,
+            "session_id": "insight-example",
+            "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 2,
+            "line": 2,
+            "round": 1,
+            "session_id": "insight-example",
+            "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "event": {
+            "actor": 1,
+            "damage": 10,
+            "hit_level": "low",
+            "kind": "hit",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 3,
+            "line": 3,
+            "round": 1,
+            "session_id": "insight-example",
+            "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 6,
+      "failures": 6,
+      "label": "Low defense",
+      "opportunities": 6,
+      "state": "observed",
+      "successes": 0,
+      "value": 0.0
+    },
+    "punish_conversion": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": true,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Estimated punish conversion",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    },
+    "throw_defense": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Throw defense",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    }
+  },
+  "moments": [
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 1,
+        "line": 1,
+        "round": 1,
+        "session_id": "insight-example",
+        "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 2,
+        "line": 2,
+        "round": 1,
+        "session_id": "insight-example",
+        "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 3,
+        "line": 3,
+        "round": 1,
+        "session_id": "insight-example",
+        "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 4,
+        "line": 4,
+        "round": 1,
+        "session_id": "insight-example",
+        "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 10,
+        "hit_level": "low",
+        "kind": "hit",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 5,
+        "line": 5,
+        "round": 1,
+        "session_id": "insight-example",
+        "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+        "source": "recording"
+      },
+      "response": null
+    }
+  ],
+  "moments_total": 6,
+  "population": "completed_rounds",
+  "quality": {
+    "deliberate_retests": "unavailable",
+    "invalid_line_positions": [],
+    "skipped_recording_lines": 0,
+    "state": "observed",
+    "unsupported_records": 0
+  },
+  "report": {
+    "status": "unavailable",
+    "used_for_recommendation": false
+  },
+  "rounds": [
+    {
+      "metrics": {
+        "low_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 1,
+                "line": 1,
+                "round": 1,
+                "session_id": "insight-example",
+                "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            },
+            {
+              "opportunity": {
+                "frame": 2,
+                "line": 2,
+                "round": 1,
+                "session_id": "insight-example",
+                "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            },
+            {
+              "opportunity": {
+                "frame": 3,
+                "line": 3,
+                "round": 1,
+                "session_id": "insight-example",
+                "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            }
+          ],
+          "evidence_total": 6,
+          "failures": 6,
+          "label": "Low defense",
+          "opportunities": 6,
+          "state": "observed",
+          "successes": 0,
+          "value": 0.0
+        },
+        "punish_conversion": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": true,
+          "evidence": [],
+          "evidence_total": 0,
+          "failures": 0,
+          "label": "Estimated punish conversion",
+          "opportunities": 0,
+          "state": "no_opportunities",
+          "successes": 0,
+          "value": null
+        },
+        "throw_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [],
+          "evidence_total": 0,
+          "failures": 0,
+          "label": "Throw defense",
+          "opportunities": 0,
+          "state": "no_opportunities",
+          "successes": 0,
+          "value": null
+        }
+      },
+      "round": 1
+    }
+  ],
+  "rounds_total": 1,
+  "rule_version": 1,
+  "session_id": "insight-example",
+  "snapshot_id": "4ded2c4ddf0bde47d080773992a202a524bf8e4aa157a4b10e5a91a318980ac8",
+  "sources": {
+    "evaluation": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    },
+    "learning": {
+      "available": true,
+      "consumed_bytes": 112,
+      "pending_tail": false,
+      "sha256": "70aeeafbe217390beae6cd126b226066a70c764765879b95df1d9cdd04bc2c0b"
+    },
+    "metadata": {
+      "available": true,
+      "consumed_bytes": 230,
+      "pending_tail": false,
+      "sha256": "06a1c10e3096f88701daebe93bb1825a6dc5ea66dd6ff448e37f36c06ada8ea5"
+    },
+    "recording": {
+      "available": true,
+      "consumed_bytes": 1021,
+      "pending_tail": false,
+      "sha256": "b36848a04cac2c659212a17a22407ae098011cfedf4e2f74f1754db7f4ea5911"
+    },
+    "report": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    }
+  },
+  "synthetic": true,
+  "tactical": {
+    "chosen_counts": {},
+    "habit_driven_decisions": 0,
+    "interpretation": "Recorded choices, not hit rates or calibrated probabilities",
+    "reflex_records": 0
+  }
+}

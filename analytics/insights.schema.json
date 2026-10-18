@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InternalSessionInsightsDraft",
+  "description": "Internal export format. Not an approved shared API contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "calculation_version", "rule_version", "snapshot_id", "session_id", "synthetic", "population", "sources", "freshness", "quality", "metrics", "rounds", "rounds_total", "focus", "learning", "tactical", "moments", "moments_total", "report"],
+  "properties": {
+    "format_version": {"const": 1},
+    "calculation_version": {"const": 4},
+    "rule_version": {"const": 1},
+    "snapshot_id": {"$ref": "#/$defs/hash"},
+    "session_id": {"type": "string", "minLength": 1},
+    "synthetic": {"type": ["boolean", "null"]},
+    "population": {"const": "completed_rounds"},
+    "sources": {
+      "type": "object", "additionalProperties": false,
+      "required": ["metadata", "recording", "learning", "evaluation", "report"],
+      "properties": {
+        "metadata": {"$ref": "#/$defs/source"}, "recording": {"$ref": "#/$defs/source"},
+        "learning": {"$ref": "#/$defs/source"}, "evaluation": {"$ref": "#/$defs/source"},
+        "report": {"$ref": "#/$defs/source"}
+      }
+    },
+    "freshness": {
+      "type": "object", "additionalProperties": false,
+      "required": ["latest_recording_round", "completed_rounds", "latest_learning_round", "pending_learning_rounds", "learning_ahead_rounds"],
+      "properties": {
+        "latest_recording_round": {"type": ["integer", "null"], "minimum": 1},
+        "latest_learning_round": {"type": ["integer", "null"], "minimum": 1},
+        "completed_rounds": {"$ref": "#/$defs/rounds"},
+        "pending_learning_rounds": {"$ref": "#/$defs/rounds"},
+        "learning_ahead_rounds": {"$ref": "#/$defs/rounds"}
+      }
+    },
+    "quality": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "skipped_recording_lines", "invalid_line_positions", "unsupported_records", "deliberate_retests"],
+      "properties": {
+        "state": {"enum": ["observed", "pending", "invalid"]},
+        "skipped_recording_lines": {"type": "integer", "minimum": 0},
+        "invalid_line_positions": {"type": "array", "maxItems": 50, "items": {"type": "integer", "minimum": 1}},
+        "unsupported_records": {"type": "integer", "minimum": 0},
+        "deliberate_retests": {"const": "unavailable"}
+      }
+    },
+    "metrics": {"$ref": "#/$defs/metrics"},
+    "rounds": {"type": "array", "maxItems": 50, "items": {"type": "object", "required": ["round", "metrics"], "additionalProperties": false, "properties": {"round": {"type": "integer", "minimum": 1}, "metrics": {"$ref": "#/$defs/metrics"}}}},
+    "rounds_total": {"type": "integer", "minimum": 0},
+    "focus": {
+      "type": "object", "required": ["rule_version", "mode", "metric", "reason", "action"],
+      "properties": {
+        "rule_version": {"const": 1}, "mode": {"enum": ["automatic", "manual"]},
+        "metric": {"enum": ["low_defense", "throw_defense", "punish_conversion", null]},
+        "reason": {"type": "string"}, "action": {"type": ["string", "null"]}
+      }
+    },
+    "learning": {
+      "type": "object", "required": ["habits", "prediction_accuracy", "bandit_estimates", "finetune"],
+      "properties": {
+        "habits": {"type": "object"},
+        "prediction_accuracy": {"type": "array", "maxItems": 50},
+        "bandit_estimates": {"type": "object"},
+        "finetune": {"type": "object", "required": ["before", "after"], "properties": {"before": {"type": ["number", "null"], "minimum": 0, "maximum": 1}, "after": {"type": ["number", "null"], "minimum": 0, "maximum": 1}}}
+      }
+    },
+    "tactical": {"type": "object", "required": ["chosen_counts", "habit_driven_decisions", "reflex_records", "interpretation"]},
+    "moments": {"type": "array", "maxItems": 50, "items": {"type": "object", "required": ["reference", "metrics", "outcome", "response", "event"], "properties": {"reference": {"$ref": "#/$defs/reference"}, "response": {"anyOf": [{"$ref": "#/$defs/reference"}, {"type": "null"}]}, "event": {"type": "object"}}}},
+    "moments_total": {"type": "integer", "minimum": 0},
+    "report": {"type": "object", "additionalProperties": false, "required": ["status", "used_for_recommendation"], "properties": {"status": {"enum": ["unavailable", "invalid", "available_unverified_revision"]}, "used_for_recommendation": {"const": false}}}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "rounds": {"type": "array", "uniqueItems": true, "items": {"type": "integer", "minimum": 1}},
+    "source": {"type": "object", "additionalProperties": false, "required": ["available", "sha256", "consumed_bytes", "pending_tail"], "properties": {"available": {"type": "boolean"}, "sha256": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}, "consumed_bytes": {"type": "integer", "minimum": 0}, "pending_tail": {"type": "boolean"}}},
+    "reference": {"type": "object", "additionalProperties": false, "required": ["session_id", "source", "sha256", "line", "round", "frame"], "properties": {"session_id": {"type": "string"}, "source": {"const": "recording"}, "sha256": {"$ref": "#/$defs/hash"}, "line": {"type": "integer", "minimum": 1}, "round": {"type": "integer", "minimum": 1}, "frame": {"type": ["integer", "null"], "minimum": 0}}},
+    "metrics": {"type": "object", "additionalProperties": false, "required": ["low_defense", "throw_defense", "punish_conversion"], "properties": {"low_defense": {"$ref": "#/$defs/metric"}, "throw_defense": {"$ref": "#/$defs/metric"}, "punish_conversion": {"$ref": "#/$defs/metric"}}},
+    "metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "definition_version", "successes", "opportunities", "failures", "value", "state", "estimated", "anomalies", "evidence", "evidence_total"],
+      "properties": {
+        "label": {"type": "string"}, "definition_version": {"const": 1},
+        "successes": {"type": "integer", "minimum": 0}, "opportunities": {"type": "integer", "minimum": 0},
+        "failures": {"type": ["integer", "null"], "minimum": 0}, "value": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "state": {"enum": ["observed", "early_signal", "no_opportunities", "invalid"]},
+        "estimated": {"type": "boolean"}, "anomalies": {"type": "array"},
+        "evidence_total": {"type": "integer", "minimum": 0},
+        "evidence": {"type": "array", "maxItems": 3, "items": {"type": "object", "additionalProperties": false, "required": ["opportunity", "response", "outcome"], "properties": {"opportunity": {"$ref": "#/$defs/reference"}, "response": {"anyOf": [{"$ref": "#/$defs/reference"}, {"type": "null"}]}, "outcome": {"enum": ["success", "failure"]}, "event": {"type": "object"}}}}
+      }
+    }
+  }
+}

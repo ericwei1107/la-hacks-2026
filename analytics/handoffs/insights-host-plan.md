@@ -1,0 +1,31 @@
+# Insights review and demo-data remediation
+
+Requested October 18, 2026. Scope: publish Eric's existing implementation and concrete examples for Chloe's review, and make analytics' access to Sahil's live data verifiable. This covers the original C3 prerequisite and E4 host task; the revised parallel plan calls these E0/E1/E6.
+
+## Context checked
+
+Refreshed `origin/chloe` at `6e66871` and `origin/chloe-eric` at `914fc5e`. Both contributions are already present on Eric at `c87dcbe`; neither branch has newer work. Chloe's static acceptance note confirms throw/history display behavior, and explicitly leaves growing-session flushes and live refresh unobserved. C2 also reached main in PR #21 while this handoff was being published, with the same `6e66871` head; the C1 contribution remains part of the Eric baseline used here.
+
+## Implementation sequence and acceptance
+
+1. Publish the existing shared reducer, evidence/focus builder, internal schema, proposal and tests. Preserve calculation version 4 and existing APIs. Chloe must be able to fetch a named commit and run the exporter without receiving local files.
+2. Generate review fixtures through `InsightRepository`, including real and synthetic sessions, early/no opportunities, invalid data, pending/current learning, manual focus and event-only moments. Check them into `analytics/fixtures/insights/` with a regeneration/drift test. Supply field/display rules and a TypeScript sketch. Preserve draft advice status and distinguish this review from Chloe's acceptance.
+3. Run analytics on Sahil's Windows host with the brain's absolute `DATA_DIR`. Add a portable launcher that validates the existing directory and sets it before importing analytics. Add a read-only proof that local metadata/recording content matches the brain, and that remote stats/learning match that local source. A healthy `/health` alone cannot prove any of these.
+4. Verify a temporary growing canonical data folder through actual brain/analytics HTTP routes: recording flush first, learning flush later, partial tails, and a deliberate wrong-folder/content case. Unit tests cover fixture drift, bad paths, source races, missing learning, identities and diagnostics. Run the full offline suites, frozen example validation and existing smokes on the combined change.
+5. Publish named commits on an isolated review branch based on Eric and open a review PR. Record exact commands and remaining host observations. The native live run still requires Sahil's actual directory, reachable host and a growing session. Retain source parity, advancement, reconnect, session-switch and shutdown observations before closing E4/native acceptance.
+
+## Decisions and dependencies
+
+Use host-local files on Sahil's laptop; Chloe's app connects over the existing service URLs. This avoids making a remote file-sync mechanism part of the live path. Existing HTTP recording access is used only for read-only identity verification. No filesystem path or credentials are added to `/health`.
+
+The insight format and examples remain review drafts. A public route and app live consumer require the existing four-owner interface agreement. Experimental routes and producer changes are separate decisions in the parallel plan. The checker reset issue remains documented for its owner; this remediation adds an independent snapshot/source check and does not claim to correct that watcher.
+
+Host-specific inputs, answered by Sahil on October 18: brain, replay and analytics all run on the laptop and share `C:\Users\sahil\la-hacks-2026\data`. There is no remote execution before the demo, so no Tailscale address is needed for the source check: Sahil runs the exact command in [INTEGRATION.md](../INTEGRATION.md#prove-the-live-folder-is-shared-sahil-runs-pastes-output) during a live session and pastes the output. He agreed to PR #22 provided it stays within `analytics/` and `tools/`. Never publish credentials.
+
+Follow-up changes for that constraint, all in `analytics/`: the check accepts `--session-id latest` and `--wait-for-round-seconds N`, so one run captures before and after a real completed round. While files grow mid-round it compares only completed rounds and confirms the earlier bytes are unchanged, instead of failing as "changing". Recorder metadata with a `recording` path relative to the brain's working directory resolves to `DATA_DIR/recordings/<session_id>.jsonl`, so the check runs from a separate detached worktree without touching the deployed checkout. Main's analytics and this branch produce identical stats and learning on both shipped samples.
+
+## Publication isolation
+
+Another writer changed the shared builder/schema and added experimental API files after the passing regression run. The tested builder and schema were recovered into an isolated checkout, with SHA-256 hashes exactly matching the verified originals. Later API changes and their new schema/generator remain intact in the original workspace. This handoff branch includes the internal export and examples, launcher and source proof; it changes no existing HTTP handler. The isolated tree is revalidated before publication.
+
+Published review entry point: [PR #22](https://github.com/ericwei1107/la-hacks-2026/pull/22), branch `track-d-insights-host-handoff`, based on Eric. Chloe can fetch the implementation/examples from that branch now. Native data-folder/access inputs and the actual host run remain pending.
