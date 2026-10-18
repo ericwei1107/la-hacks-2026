@@ -1,0 +1,8 @@
+fastapi==0.143.3
+uvicorn==0.54.0
+jsonschema==4.17.3
+python-dotenv==1.2.4
+openai==2.26.0
+httpx==0.28.1
+pydantic==2.11.7
+pytest==9.1.1
