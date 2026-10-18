@@ -32,6 +32,7 @@ Design: `voice-design.md`
 - [ ] **VOICE-PLAY-003**: The voice player shall report speaking from the moment its clip starts playing until the clip ends, is stopped, or fails to play.
 - [ ] **VOICE-PLAY-004**: While the brain config's `voice` is not `true`, the voice player shall ignore requests to speak.
 - [ ] **VOICE-PLAY-005**: When the brain config's `voice` stops being `true`, the voice player shall stop.
+- [ ] **VOICE-PLAY-007**: The voice player shall take a tag with each request to speak, report the tag of the clip playing, and, when asked to stop clips whose tag starts with a given prefix, stop only a matching clip.
 - [ ] **VOICE-PLAY-006**: If the window has no bridge or the speak call fails, then the voice player shall play nothing.
 
 ## Between rounds
@@ -42,9 +43,9 @@ Design: `voice-design.md`
 
 ## Coach screen voice
 
-- [D] **VOICE-COACH-001**: When an answer arrives on the Coach screen, the screen shall ask the voice player to speak it.
-- [D] **VOICE-COACH-002**: When the player asks another question, starts to hold to talk, switches sets or leaves the Coach screen, the screen shall stop the voice player.
-- [D] **VOICE-COACH-003**: While the voice player speaks an answer, the Coach screen shall show a 64 × 20 waveform and "Speaking" at 14 px bold in `--color-primary` after that answer's "Coach" label.
+- [ ] **VOICE-COACH-001**: When an answer arrives on the Coach screen, the screen shall ask the voice player to speak it.
+- [ ] **VOICE-COACH-002**: When the player asks another question, switches sets or leaves the Coach screen, the screen shall stop the voice player if it is playing or fetching one of that screen's answers, and leave any other clip playing.
+- [ ] **VOICE-COACH-003**: While the voice player speaks an answer, the Coach screen shall show a 64 × 20 waveform and "Speaking" at 14 px bold in `--color-primary` after that answer's "Coach" label.
 
 ## Hold to talk
 
@@ -67,7 +68,8 @@ Design: `voice-design.md`
 | Spec IDs | Entry point |
 |---|---|
 | VOICE-SET-001 – VOICE-SET-003, VOICE-SPEAK-001 – VOICE-SPEAK-007 | `src/main/voice.ts` (`readVoiceSettings`, `handleVoice`) |
-| VOICE-PLAY-001 – VOICE-PLAY-006 | `src/renderer/src/voice.ts` (`useVoice`) |
+| VOICE-PLAY-001 – VOICE-PLAY-007 | `src/renderer/src/voice.ts` (`useVoice`, `stopSpeaking`) |
+| VOICE-COACH-001 – VOICE-COACH-003 | `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`, `CoachAnswer`) |
 | VOICE-ROUND-001 – VOICE-ROUND-003 | `src/renderer/src/voice.ts` (`useBetweenRoundVoice`), called by `src/renderer/src/main-window/MainWindow.tsx` (`BetweenRoundVoice`) |
 | VOICE-HEAR-001 – VOICE-HEAR-004, VOICE-TALK-009 | `src/main/voice.ts` (`handleVoice`, `handleMicrophone`) |
 | VOICE-TALK-001 – VOICE-TALK-008, VOICE-TALK-010 – VOICE-TALK-013 | `src/renderer/src/voice.ts` (`useHoldToTalk`), used by `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`) |

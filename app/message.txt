@@ -1,0 +1,171 @@
+# Eric + Chloe: concurrent Track D completion plan
+
+Prepared October 18, 2026. The reviewed Track D evidence and roadmap baseline was committed as `dc1f90c` during preparation of this plan, following the initial inspection at `c7e11f2`. This is a proposed work allocation, not a claim that the tasks have been implemented or that Chloe has accepted a delivery date.
+
+Give Eric roughly **75–80% of the remaining engineering and coordination work**. Give Chloe a small independent implementation first, then a bounded app pass. These are scope targets, not token or time estimates. Eric absorbs backend surprises, shared integration, sponsor evidence and final packaging; Chloe does not become responsible for finishing all analytics UI ideas.
+
+## Scope and current baseline
+
+Use this plan with [the analytics roadmap](ANALYTICS_ROADMAP.md), [live-learning verification](LIVE_LEARNING_VERIFICATION.md), [Tiger Data verification](tigerdata/VERIFICATION.md), [Sentry verification](SENTRY_VERIFICATION.md), and [the app handoff](handoffs/app-stats.md). Locally, also read `prep/local_context.md`, `prep/eric-track-d.md` and design-doc sections 16, 18.4 and 24. `prep/` is ignored and is not a deliverable Chloe must have to work from this document.
+
+The original hardening change and the broader analytics roadmap are different scopes. Finish original B5/B6/B7/B9 readiness work while building the roadmap's first release, DA1–DA5. Keep DA6–DA7 as a subsequent release and DA9 as gated follow-up. Evaluation/training/Veri remain Sahil's work. Submission drafts are part of the remaining Track D backlog, not a reason to expand the hardening patch.
+
+| Already implemented or verified | Remaining work |
+| --- | --- |
+| Shared stats/mock calculations, ingestion hardening, portable shutdown handling and synthetic bundle | Native Windows observation, occupied-port/Ctrl-C/reconnect checks on the demo host |
+| Calculation version 4, plain-low semantics, Tiger Data aggregates/fallback and repeated real-sample backfill parity | Advance versions and rebuild only when new stored calculations require it; maintain parity |
+| B4 real learning sample, local smoke/regressions and approved cloud verification | Explicit deliberate-retest evidence is still absent |
+| Analytics Sentry and accepted replay HTTP → agent → provider traces | Sahil's decision waterfall, screenshot, tracing on/off measurements and demo-environment evidence |
+| B8 streaming Parquet archive | Reuse it; optional Spaces backup is outside the critical path |
+| Existing Stats/Learning screens and M4 brain/coach forwarding | Truthful counts/status/freshness, source-linked insights and real host/app integration |
+
+Older prep checkboxes and remediation prose contain stale branch, sample and calculation-version statements. Use current code and dated verification records when deciding what still needs implementation. Preserve historical verification dates rather than presenting old evidence as a fresh run.
+
+## File ownership: avoid concurrent edits
+
+Eric's request explicitly invites Chloe to contribute to Track D. The narrow delegated Track D scope is the checker and its tests below. Root ownership rules otherwise remain in force; no `CLAUDE.md` edit is needed.
+
+| Owner | Exclusive write area during this plan |
+| --- | --- |
+| Eric | Existing `analytics/` implementation, reducers, repository, API, Tiger Data, archive, mocks and their tests; all analytics docs/evidence except Chloe's two files below; shared status changes already authorized by Eric |
+| Chloe | **New** `analytics/integration_check.py` and **new** `analytics/tests/test_integration_check.py`; her existing `app/` ownership, following `app/AGENTS.md` |
+| Sahil | `game/`: decision tracing, actual producer counters/retests, recording sets, evaluation/fine-tuning and host execution |
+| Garrett | `replay/`, `characters/`: published report behavior, move/advice interpretation and text-model migration |
+| Shared | Frozen `contracts/` require all four owners' agreement; shared root README changes go through owner review |
+
+Eric reserves the names `analytics/evidence.py`, `analytics/insights.py`, `analytics/focus.py`, `analytics/history.py`, `analytics/INSIGHTS_PROPOSAL.md`, `analytics/METRICS.md` and `analytics/INTEGRATION.md` for his lane. These are proposed new files, not existing entry points. He may adjust internal boundaries without moving work into Chloe's files. Keep the existing `analytics/evidence/` evidence directory intact if adding the module.
+
+Chloe's checker imports no new insight implementation and changes no service or mock behavior. If it exposes a backend defect, she records the response and hands it to Eric rather than editing his reducer. Eric supplies runbook prose and shared README/status edits so Chloe need not compete for those files. Neither person edits the other's worktree or generated output.
+
+## Work that starts immediately
+
+### Eric E1 — Metric definitions, counters and source evidence
+
+Roadmap DA1. Own the difficult calculation work in `analytics/stats.py`, a focused evidence module and reducer tests. Write `analytics/METRICS.md` with populations, denominators, null/invalid states and limitations. Reuse the shared reducer; do not create separate export or mock formulas.
+
+Expose source-linked successes, opportunities and failures for low defense, throw defense and estimated punish conversion. Evidence includes session, round, frame, source identity and record position; a frame alone is not a unique event. Preserve human-slot authority, summary winners, derived situations, one-hit/one-opportunity matching, provisional punish timing and producer-authoritative `fixed` flags. Keep special lows outside the version-4 low metric. Audit orphan breaks and malformed/skipped data explicitly.
+
+Done when independently enumerated real-source counts agree with the reducer, every contributing event can be found, and focused cases cover both human slots, side switches, frame resets, overlapping windows, no opportunities and source corrections. Expected current real-fixture values are **0/16 low blocks, 1/4 throw breaks and 0/6 estimated punish conversions**; independently validate the new denominators rather than simply copying these assertions. Investigate any discrepancy before changing production semantics.
+
+### Chloe C1 — Small read-only readiness checker
+
+Original B6 / roadmap DA8. Implement only `analytics/integration_check.py` and its test file. This can finish while Eric changes the reducer because it consumes the frozen APIs.
+
+Proposed command, **available only after C1 is implemented**:
+
+```sh
+.venv/bin/python -m analytics.integration_check --session-id 2026-10-18T05-14-03_sahil_djin_vs_kaz
+```
+
+Requirements:
+
+- Read `KUMITE_BRAIN_URL`, `KUMITE_REPLAY_URL` and `KUMITE_ANALYTICS_URL`, defaulting to localhost ports 8765, 8766 and 8767. Check all three `/health` responses and the requested analytics `/stats/{id}` and `/learning/{id}`. Verify response identity and basic structure; distinguish missing session, unavailable data and unreachable service.
+- Default mode reports a healthy **snapshot**, not proof of live writes. Add `--watch-seconds`, `--poll-seconds`, `--timeout-seconds` and `--require-advance`. Bound requests and total observation time; use monotonic deadlines. No new dependency is needed.
+- In advance-required mode, compare round identifiers in stats and learning with the initial snapshot. Require a later completed round in both within the observation window, allowing their flushes to arrive separately. Do not require every damage/rate value to grow. An idle/static recording can be healthy without satisfying advancement. A reset or session mismatch must not count as advancement.
+- Print a concise summary; `--json` provides the same outcomes in machine-readable form. Use exit 0 for requirements satisfied, 1 for failed/unusable responses, and 2 for an otherwise healthy session whose required advancement timed out. Missing learning after the allowed wait is incomplete, not a measured zero. Do not infer Sentry environment, database use or Windows compatibility from `/health`.
+- Make only GET requests. Do not start/stop services, change files/configuration, trigger analysis, upload telemetry or display credentials. Include bounded, credential-free diagnostics.
+
+Done when tests using local stub HTTP responses or a local test server cover all-healthy, one service unavailable, malformed response, 404/503, alternate base URLs, unchanged data, delayed learning catch-up, valid round advance and timeout. No game installation, new insight fields, live cloud access or app automated tests are needed. Eric runs the actual host check and owns the runbook.
+
+### Chloe C2 — Existing app correctness and clarity
+
+In `app/` only, follow its required linked-intent workflow and owner review. Inspect current code first; retain already-correct behavior rather than assuming an old handoff still describes it. Start this independently of E1/E2 using the existing APIs and fixture.
+
+Bound the first pass to these items:
+
+1. Correct the throw denominator if still needed: attempts already include escaped throws. Two attempts plus one break means 1/2, including human slot 1 and a side switch.
+2. Display null/no-opportunity values as unavailable. Show fine-tune comparison only with actual numeric before/after values; the real sample has neither.
+3. Distinguish historical first-fixed from current habit status. The real sample's after-block habit regresses after first being fixed; low defense has never been fixed.
+4. Verify existing round/session refresh and reconnect behavior. Repair stale session results, query invalidation and pending companion-learning states within the existing screens. Leave exact insight snapshot freshness for C3.
+
+Done when Chloe completes spec/code coherence review, app typecheck/build, and a manual pass against real analytics plus mock brain/replay. Retain screenshots or a short acceptance note in her app documentation. Test provider-selected and approved local-fallback spoken wording/timing during the host rehearsal; no provider call is required for every tip. No new navigation or complete dashboard redesign is in this assignment.
+
+## Eric's larger dependent lane
+
+| Package | Concrete deliverable and acceptance | Dependency |
+| --- | --- | --- |
+| **E2: snapshot/export** | DA2 + B7: write exact examples and field definitions in `INSIGHTS_PROPOSAL.md`, then implement an internal deterministic export in `analytics/insights.py`. Include source identity/hash, calculation/format versions, observed counts, learning history, current/first-fixed state, quality/freshness and a bounded set of cited moments. Write generated output atomically under ignored `DATA_DIR/analytics/`. Regression-check append, partial tail, replacement, deletion and missing companion/report files. Reuse this output for demo numbers rather than starting a second exporter. | E1; shared transport waits for all-owner agreement |
+| **E3: focus, moments and API/mock integration** | DA3–DA5 backend: deterministic focus ranking from observed failed opportunities, transparent reasons and vetted advice; source-linked event/context selection; bounded evidence and stale-selection behavior. Propose five observations as the initial eligibility threshold, clearly a provisional product rule. Validate with Eric before shipping. Real/mock/export agree; missing report/database does not disable core insights. Add any public route only after contract agreement. | E2; advice validation from Garrett; interface gate below |
+| **E4: runtime and sponsor completion** | B5/B6 + DA8: `INTEGRATION.md`, Windows commands and authoritative DATA_DIR setup, bounded flush/reconnect/outage checks, C1 execution on Sahil's host, and real report integration using the existing handoff. Collect Sahil's 5%-sampled read/decode/reflex/tactical/input trace, waterfall and on/off timing evidence. Record actual release/environment and demo readiness; verify outstanding Sentry organization access manually. Preserve accepted replay traces; independently retained traces do not prove cross-service propagation. | C1 for checker; real host/services and owner evidence |
+| **E5: final evidence and packaging** | B7/B9: produce real-fixture/demo exports, reconcile stale analytics/mocks docs and status, draft Devpost and sponsor write-ups under `analytics/submission/`, trace every numerical claim to a source/command/trace, and coordinate final review. Eric owns final README/shared-file integration and publication preparation. Drafts can begin now; final completion claims wait for the evidence. | E2/E4 and Chloe's acceptance observations |
+
+Eric also owns all underlying loader/reducer defects found during these packages, calculation-version decisions, new backend tests, mock fidelity, Tiger Data changes and final regression runs. A change to stored calculations must invalidate affected fingerprints/aggregates; use scoped backfill and prove a repeated unchanged run imports zero. Do not rebuild the existing cloud architecture or rerun writes solely because a planning document was added.
+
+## Interface handoff, then Chloe's optional small follow-up
+
+E2's first deliverable is examples and an explicit missing-data/refresh policy, before the entire implementation is finished. Eric and Chloe review those examples together. Proposed snapshot content includes session/source/version identity; metric successes/opportunities/value/state; current and historical habit observations; focus reason; bounded evidence references; and last completed recording/learning round. Exact names and schema belong in `INSIGHTS_PROPOSAL.md`, not a second competing contract here.
+
+Until all four owners approve a shared interface, Eric keeps new snapshots internal and Chloe completes C1/C2 against existing routes. Do not use a shared sidecar read as a way around contract agreement. Neither Chloe nor Garrett needs to wait for new insights to verify existing endpoints.
+
+**C3, only after C1/C2 and interface readiness:** integrate one focus card and its existing-screen evidence detail, with count, short action, first/current habit distinction and freshness/pending state. Eric implements all ranking and evidence logic. Chloe renders supplied values and hooks existing query refresh; she does not duplicate metric definitions in TypeScript. Limit the first increment to one recommendation and a few selectable moments. Full timeline controls, history UI and new charts remain later slices. If her capacity runs out, ship C1/C2 plus Eric's export and defer C3 explicitly.
+
+## Work after the first release
+
+| Backlog | Primary owner and boundary | Gate |
+| --- | --- | --- |
+| DA6 comparable history | Eric implements matching, pooled counts, missing-context labels, file/mock parity and any necessary Tiger Data extension; Chloe's history presentation is a separately bounded later task | First release works; comparable sessions exist; no future leakage or mixed synthetic/real baselines |
+| DA7 practice/retention/transfer pilot | Eric designs analysis and evidence capture with Sahil; Chloe contributes a small readability/usability review | Agreed collection/share scope and recorded conditions, prompts, trials and opportunities |
+| DA9 advanced diagnosis/retests | Eric implements only validated analyses; Sahil supplies actual attempts/trials/timing/retest signals; Garrett checks mechanics | Reliable producer semantics and demonstrated need; regression alone is not a deliberate retest |
+| Fine-tune/eval/Veri | Sahil produces valid measured artifacts; Eric validates/exports and Chloe displays them when present | Real eval data; online round accuracy does not substitute for held-out results |
+| Extra demo sets and improvement story | Sahil captures; Eric validates and derives numbers; Chloe reviews presentation | Actual L1/L5 or habit-fix/retention recordings, not invented values |
+| Optional backup, G2 and extra presentation work | Deferred; no critical-path assignment | Separate capacity/scope decision |
+
+This leaves Eric with the heavier roadmap after the demo, too. Do not make completion of history, a pilot or an owner-blocked sponsor item a prerequisite for merging an independently correct checker or app fix.
+
+## Parallel delivery and merge sequence
+
+| Stage | Eric | Chloe | Handoff/gate |
+| --- | --- | --- | --- |
+| **Start now** | E1; draft E2 examples; prepare E4 owner evidence requests | C1 checker, then independent C2 fixes | Existing frozen APIs and real fixture are sufficient |
+| **Backend grows** | E2 export; E3 backend after examples; E4 runbook/evidence in separate changes | Finish C1/C2; review examples and flag unclear states | Shared interface approval before new consumer code |
+| **Integrate** | Run team status, integrate scoped changes, validate report/host/database fallback and collect evidence | Optional C3; app/audio/video review | Real host run; pending learning/reconnect and offline behavior demonstrated |
+| **Finish** | E5 claims/docs/package and all regression checks | Review final 1080p readability and report blockers | Separate verified, partial, blocked and deferred status |
+
+Use separate clones/worktrees/branches, for example `eric/track-d-insights` and `chloe/track-d-readiness`. The roadmap/evidence baseline was committed as `dc1f90c` while this plan was being written. Eric shares the exact published baseline and this plan with Chloe through the existing review process; confirm both are available remotely before she branches. She must not start from an older `main` assuming those files are present. Preserve any other uncommitted work and ignored prep.
+
+Keep C1 as its own small Track D PR and C2/C3 as app PRs. Eric splits metric evidence, snapshot transport and operational/submission work into reviewable changes. Merge independent C1/C2 when ready, then agreed backend transport, then its UI consumer. Run `python3 tools/status/status.py` before integration/merge; use `--no-fetch` only when necessary and label cached refs. Avoid broad staging commands and copying entire folders between branches. Resolve a cross-lane issue through a concrete handoff: failing command, expected/actual response, source session and relevant file.
+
+There is no promised deadline in this allocation. If time is tight, prioritize C1/C2, E1/E2, host readiness and truthful evidence. Keep new UI, historical analysis and experimental pilot work visibly deferred rather than silently expanding Chloe's assignment.
+
+## Shared acceptance fixture and claim boundaries
+
+Use `DATA_DIR=./data/samples/live_learning`, session **`2026-10-18T05-14-03_sahil_djin_vs_kaz`**, and read its [README](../data/samples/live_learning/README.md) first. Four rounds; online prediction accuracy 0.60 → 1.00; plain lows connected 16/16; bot low picks 6/8/8/17. The habit's final producer observation count is 15, a different population from the 16 raw contacts. Low defense is detected in round 3 and is never fixed. `after_block:any` is first fixed in round 2 and regresses in round 3. Fine-tune values and deliberate-retest evidence remain unavailable.
+
+The [synthetic bundle](../data/samples/synthetic/README.md) provides a separate deterministic three-round walkthrough; label its planted learning/mastery values synthetic in the app, exports and submission text. A real improvement claim needs an additional real recording. Preserve original `learning_event` records without treating an unsupported extension as a supported retest API.
+
+Existing approval covered the named live-learning session's upload to the configured Tiger Data store. It is not blanket approval for new participant data, destinations or account changes. Eric coordinates those separately if needed. Local planning files are not sent messages or published submissions.
+
+## Validation and commands
+
+These commands exist now and provide the baseline. Use separate terminals for analytics and mocks; start only processes you intend to own and stop them after the check. The local example disables cloud/Sentry to keep it reproducible.
+
+```sh
+DATA_DIR=./data/samples/live_learning DATABASE_URL= SENTRY_DSN= .venv/bin/python -m uvicorn analytics.main:app --host 127.0.0.1 --port 8767
+```
+
+```sh
+DATA_DIR=./data/samples/live_learning SENTRY_DSN= .venv/bin/python tools/mock/serve.py --services brain,replay
+```
+
+Expect real analytics on 8767 and mock brain/replay on 8765/8766, all using the named real sample. A static mock loop does not prove new completed-round writes. Eric documents native PowerShell equivalents and the real host process layout in E4. Remote brain access does not by itself give analytics access to the recording files; choose and verify one authoritative DATA_DIR on the host or a working synchronized/shared copy.
+
+After implementation, Chloe runs the checker in snapshot mode against this setup and advance-required mode against a genuinely growing real session. She also runs the following app checks from `app/`, following its intent/spec review; no new app automated tests:
+
+```sh
+npm run typecheck
+npm run build
+```
+
+Eric runs the relevant new focused tests and finishes with the existing offline checks:
+
+```sh
+.venv/bin/python -m unittest discover -s analytics/tests -v
+.venv/bin/python -m unittest discover -s tools/mock/tests -v
+.venv/bin/python contracts/validate.py
+.venv/bin/python analytics/tests/smoke.py
+.venv/bin/python analytics/tests/live_learning_smoke.py
+```
+
+Expect passing offline suites and contracts, an explicit skip for the opt-in cloud test unless configured, two PASS messages from each smoke program, and clean shutdown of temporary servers. Record the exact commit, commands and outcomes for new work; historical passing totals are not a promise about a future branch. Cloud verification is separate when stored calculations change. First-release completion additionally requires Chloe's manual app review and Eric/Sahil's actual demo-host observation; local tests alone cannot satisfy those gates.
+
+**First actions:** Eric starts E1 and shares the preserved baseline commit; Chloe starts C1 from that commit, then C2. Neither needs to wait for the other person's full lane.

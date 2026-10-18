@@ -3,10 +3,13 @@ import type { TranscribeResult } from '../../shared/bridge'
 import { useConfig, useLatestCoach, useRoundBreak, type RoundBreak } from './services'
 import { Store } from './services/store'
 
-const speaking = new Store(false)
+const speaking = new Store<string | null>(null)
 let audio: HTMLAudioElement | null = null
 let clipUrl: string | null = null
 let request = 0
+let currentTag: string | null = null
+
+const ROUND_TAG = 'round'
 
 function release(): void {
   if (audio) {
@@ -19,26 +22,37 @@ function release(): void {
     URL.revokeObjectURL(clipUrl)
     clipUrl = null
   }
-  if (speaking.get()) speaking.set(false)
+  currentTag = null
+  if (speaking.get() !== null) speaking.set(null)
 }
 
-export function stopSpeaking(): void {
+export function stopSpeaking(tagPrefix?: string): void {
+  if (tagPrefix !== undefined && !currentTag?.startsWith(tagPrefix)) return
   request += 1
   release()
 }
 
-async function play(text: string): Promise<void> {
+async function play(text: string, tag: string): Promise<void> {
   stopSpeaking()
+  currentTag = tag
   const id = request
   const bridge = window.kumite
-  if (!bridge?.speak) return
+  if (!bridge?.speak) {
+    currentTag = null
+    return
+  }
   let result: Awaited<ReturnType<typeof bridge.speak>>
   try {
     result = await bridge.speak(text)
   } catch {
+    if (id === request) currentTag = null
     return
   }
-  if (id !== request || !result.ok) return
+  if (id !== request) return
+  if (!result.ok) {
+    currentTag = null
+    return
+  }
   clipUrl = URL.createObjectURL(new Blob([result.audio], { type: 'audio/mpeg' }))
   const clip = new Audio(clipUrl)
   audio = clip
@@ -46,7 +60,7 @@ async function play(text: string): Promise<void> {
   clip.onerror = release
   clip.play().then(
     () => {
-      if (id === request) speaking.set(true)
+      if (id === request) speaking.set(tag)
     },
     () => {
       if (id === request) release()
@@ -57,17 +71,17 @@ async function play(text: string): Promise<void> {
 export function useVoice() {
   const config = useConfig()
   const enabled = config.data?.voice === true
-  const isSpeaking = useSyncExternalStore(speaking.subscribe, speaking.get)
+  const playing = useSyncExternalStore(speaking.subscribe, speaking.get)
 
   useEffect(() => {
     if (!enabled) stopSpeaking()
   }, [enabled])
 
-  const speak = useCallback((text: string) => {
-    if (enabled) void play(text)
+  const speak = useCallback((text: string, tag: string) => {
+    if (enabled) void play(text, tag)
   }, [enabled])
 
-  return { speaking: isSpeaking, speak, stop: stopSpeaking }
+  return { speaking: playing !== null, speakingTag: playing, speak, stop: stopSpeaking }
 }
 
 export function useBetweenRoundVoice(): void {
@@ -83,12 +97,12 @@ export function useBetweenRoundVoice(): void {
   useEffect(() => {
     if (roundBreak && line && spoken.current !== roundBreak) {
       spoken.current = roundBreak
-      speak(line)
+      speak(line, ROUND_TAG)
     }
   }, [roundBreak, line, speak])
 
   useEffect(() => {
-    if (previous.current && !roundBreak) stop()
+    if (previous.current && !roundBreak) stop(ROUND_TAG)
     previous.current = roundBreak
   }, [roundBreak, stop])
 }
