@@ -30,3 +30,9 @@ Design: `stats-design.md`
 - [ ] **MAIN-STATS-030**: While the stats are loading for the first time, the Stats screen shall show skeleton headline numbers and bars.
 - [ ] **MAIN-STATS-031**: While the brain lists no sets, the Stats screen shall show the empty state "No stats yet." with "Play a set against Kumite and its numbers show up here."
 - [ ] **MAIN-STATS-032**: While analytics is offline, the Stats screen shall show the offline banner for analytics above any stats it already holds.
+
+## Implemented in
+
+| Spec IDs | Entry point |
+|---|---|
+| MAIN-STATS-001 – MAIN-STATS-032 | `src/renderer/src/main-window/screens/Stats.tsx` (`Stats`, `StatsBody`, `Headline`, `DamageBySituation`, `AcrossSessions`) |

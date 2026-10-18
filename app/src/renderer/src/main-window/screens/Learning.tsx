@@ -35,6 +35,7 @@ function AccuracyChart({ rounds, detection }: { rounds: LearningRound[]; detecti
   const lastX = xFor(last)
   const lastY = yFor(values[last])
   const detected = detection ? points.findIndex((round) => round.round === detection[1]) : -1
+  const changedLast = Boolean(points[last]?.player_changed)
   return (
     <section className="flex grow basis-0 flex-col gap-4 rounded-md border-2 border-solid border-primary bg-surface px-6 pt-[20px] pb-4">
       <h2 className="text-base/sm font-bold text-text">Prediction accuracy by round</h2>
@@ -72,12 +73,19 @@ function AccuracyChart({ rounds, detection }: { rounds: LearningRound[]; detecti
         ))}
         {points.map((round, index) =>
           round.player_changed ? (
-            <span key={`adapted-${round.round}`} className="absolute top-[22px] text-sm leading-[18px] font-bold whitespace-nowrap text-bot" style={{ left: Math.min(xFor(index) + 10, 520) }}>
+            <span
+              key={`adapted-${round.round}`}
+              className="absolute top-[22px] text-sm leading-[18px] font-bold whitespace-nowrap text-bot"
+              style={xFor(index) > 480 ? { right: 600 - xFor(index) + 10 } : { left: xFor(index) + 10 }}
+            >
               you adapted
             </span>
           ) : null
         )}
-        <span className="absolute w-[60px] text-right font-mono text-base/sm font-bold text-primary-text" style={{ left: lastX - 44, top: lastY - 33 }}>
+        <span
+          className="absolute w-[60px] text-right font-mono text-base/sm font-bold text-primary-text"
+          style={changedLast ? { left: lastX - 72, top: lastY + 14 } : { left: lastX - 44, top: lastY - 33 }}
+        >
           {Math.round(values[last] * 100)}%
         </span>
         {detection && detected >= 0 && (

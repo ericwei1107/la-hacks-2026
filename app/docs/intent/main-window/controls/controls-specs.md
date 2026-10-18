@@ -29,3 +29,10 @@ Design: `controls-design.md`
 
 - [ ] **MAIN-CONTROLS-030**: While the config is loading for the first time, the Controls screen shall show skeleton cards and sliders.
 - [ ] **MAIN-CONTROLS-031**: While the brain is offline, the Controls screen shall show the offline banner for the brain and disable every control except the push-to-talk key.
+
+## Implemented in
+
+| Spec IDs | Entry point |
+|---|---|
+| MAIN-CONTROLS-001 – MAIN-CONTROLS-031 | `src/renderer/src/main-window/screens/Controls.tsx` (`Controls`, `KnobSlider`) |
+| MAIN-CONTROLS-013, MAIN-CONTROLS-014 | `src/renderer/src/main-window/pushToTalk.ts` |

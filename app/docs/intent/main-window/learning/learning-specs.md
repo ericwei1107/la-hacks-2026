@@ -29,3 +29,9 @@ Design: `learning-design.md`
 - [ ] **MAIN-LEARNING-032**: When the learning metrics have no rounds, the Learning screen shall show the empty state "Round 1 is still going." with "Learning shows up when the round ends."
 - [ ] **MAIN-LEARNING-033**: While analytics is offline, the Learning screen shall show the offline banner for analytics above any metrics it already holds.
 - [ ] **MAIN-LEARNING-034**: While the brain is offline and analytics is not, the Learning screen shall show "Can't reach the brain." with "This is your last saved set. Live learning picks up when it reconnects." above the metrics.
+
+## Implemented in
+
+| Spec IDs | Entry point |
+|---|---|
+| MAIN-LEARNING-001 – MAIN-LEARNING-034 | `src/renderer/src/main-window/screens/Learning.tsx` (`Learning`, `LearningBody`, `AccuracyChart`, `Milestones`, `HabitsTable`) |

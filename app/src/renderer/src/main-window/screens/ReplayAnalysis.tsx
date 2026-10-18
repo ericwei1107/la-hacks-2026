@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Check, Chip, EmptyState, Meter, optionName, RowChevron, Skeleton, withCommand } from '../../design'
+import { Button, Check, Chip, EmptyState, Meter, optionName, RowChevron, situationName, Skeleton, withCommand } from '../../design'
 import { useAnalyze, useReport, type DecisionPoint, type Report, type ReportHabit } from '../../services'
 import { useFrame, type Focus } from '../frame'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
@@ -18,10 +18,6 @@ const DIRECTIONS: Record<string, Direction> = {
   db: [-1, 1],
   d: [0, 1],
   df: [1, 1]
-}
-
-function sentenceCase(text: string): string {
-  return text ? `${text[0].toUpperCase()}${text.slice(1)}` : text
 }
 
 function leadingDirection(command: string): { direction: Direction; alone: boolean } | null {
@@ -125,7 +121,7 @@ function ExpandedPoint({ point }: { point: DecisionPoint }) {
           <span className="text-[15px] leading-[18px] font-medium text-text-muted">
             Round {point.round}, frame {point.frame}
           </span>
-          <span className="text-[22px] leading-[30px] font-bold text-text">{sentenceCase(point.situation)}</span>
+          <span className="text-[22px] leading-[30px] font-bold text-text">{situationName(point.situation)}</span>
         </div>
         {point.cost !== undefined && (
           <span className="flex items-baseline gap-2">
@@ -180,7 +176,7 @@ function CollapsedPoint({ point, onOpen }: { point: DecisionPoint; onOpen: () =>
       <span className="w-[160px] shrink-0 text-[15px] leading-[18px] font-medium text-text-muted">
         Round {point.round}, frame {point.frame}
       </span>
-      <span className="grow basis-0 truncate text-base/sm font-bold text-text">{sentenceCase(point.situation)}</span>
+      <span className="grow basis-0 truncate text-base/sm font-bold text-text">{situationName(point.situation)}</span>
       {point.good ? (
         <span className="flex w-[260px] shrink-0 items-center gap-2 text-base/sm font-bold text-good">
           <Check />
@@ -242,7 +238,7 @@ function DecisionPoints({ report, focus }: { report: Report; focus: Focus | null
         <span className="pr-2 text-base/sm font-medium text-text-muted">Situation</span>
         <Chip label="All" count={report.decision_points.length} selected={filter === ALL} onSelect={() => choose(ALL)} />
         {situations.map(([situation, count]) => (
-          <Chip key={situation} label={sentenceCase(situation)} count={count} selected={filter === situation} onSelect={() => choose(situation)} />
+          <Chip key={situation} label={situationName(situation)} count={count} selected={filter === situation} onSelect={() => choose(situation)} />
         ))}
       </div>
       <div className="flex flex-col gap-4">
