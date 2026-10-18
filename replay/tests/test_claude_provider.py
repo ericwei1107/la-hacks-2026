@@ -75,10 +75,10 @@ def test_round_provider_composes_with_structured_output_and_low_effort(monkeypat
     result = asyncio.run(claude_provider.ClaudeRoundProvider()(json.loads('{"round": 1}'), candidate_advice()))
     assert isinstance(result, Composition) and result.moves == ["2"]
     request = log[0]
-    assert request["model"] == "claude-haiku-5-5"
+    assert request["model"] == "claude-sonnet-5-5"
     assert request["output_config"]["effort"] == "low"
     assert request["output_config"]["format"]["schema"]["required"] == ["text", "moves"]
-    assert "fallbacks" not in request
+    assert request["fallbacks"] == "default"
     assert "Double High Sweep" in request["messages"][0]["content"]
 
 
@@ -159,3 +159,5 @@ def test_app_uses_claude_when_the_key_is_present(monkeypatch, tmp_path):
     app = create_app()
     assert isinstance(app.state.coach.provider, claude_provider.ClaudeRoundProvider)
     assert isinstance(app.state.chat.provider, claude_provider.ClaudeChatProvider)
+    assert app.state.coach.timeout == claude_provider.ROUND_TIMEOUT
+    assert app.state.chat.timeout == claude_provider.CHAT_TIMEOUT

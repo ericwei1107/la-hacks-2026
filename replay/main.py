@@ -32,11 +32,13 @@ def create_app() -> FastAPI:
     )
     app.state.settings = settings
     provider = chat_provider = None
+    round_timeout = chat_timeout = None
     if settings.llm == "anthropic":
-        from replay.claude_provider import ClaudeChatProvider, ClaudeRoundProvider
+        from replay.claude_provider import CHAT_TIMEOUT, ROUND_TIMEOUT, ClaudeChatProvider, ClaudeRoundProvider
 
         provider = ClaudeRoundProvider(settings.anthropic_round_model)
         chat_provider = ClaudeChatProvider(settings.anthropic_chat_model)
+        round_timeout, chat_timeout = ROUND_TIMEOUT, CHAT_TIMEOUT
         workspace = os.getenv("ANTHROPIC_WORKSPACE_ID", "").strip()
         print(f"coach model: Claude ({settings.anthropic_round_model} between rounds, {settings.anthropic_chat_model} in chat)"
               + (f", workspace {workspace}" if workspace else ", no ANTHROPIC_WORKSPACE_ID (needed for an organization key)"), flush=True)
@@ -46,10 +48,11 @@ def create_app() -> FastAPI:
         print(f"coach model: OpenAI ({settings.model})", flush=True)
     else:
         print("coach model: none (local tips); set ANTHROPIC_API_KEY or OPENAI_API_KEY in the root .env to enable one", flush=True)
-    app.state.coach = RoundCoach(provider, data_dir=settings.data_dir)
+    app.state.coach = RoundCoach(provider, data_dir=settings.data_dir, **({"timeout": round_timeout} if round_timeout else {}))
     app.state.reports = ReportService(settings.data_dir)
     app.state.chat = ChatService(app.state.reports, chat_provider,
-                                 os.getenv("KUMITE_ANALYTICS_URL", "http://127.0.0.1:8767"))
+                                 os.getenv("KUMITE_ANALYTICS_URL", "http://127.0.0.1:8767"),
+                                 **({"timeout": chat_timeout} if chat_timeout else {}))
 
     @app.get("/health")
     async def health():

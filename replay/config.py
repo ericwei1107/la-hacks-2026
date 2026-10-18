@@ -16,7 +16,7 @@ class Settings:
     api_key: str = field(repr=False)
     model: str
     llm: str = "local"
-    anthropic_round_model: str = "claude-haiku-5-5"
+    anthropic_round_model: str = "claude-sonnet-5-5"
     anthropic_chat_model: str = "claude-opus-5-5"
 
     @classmethod
@@ -57,6 +57,6 @@ class Settings:
             api_key=api_key,
             model=os.getenv("OPENAI_COACH_MODEL") or os.getenv("OPENAI_MODEL") or "gpt-4.1-mini",
             llm=llm,
-            anthropic_round_model=os.getenv("ANTHROPIC_COACH_MODEL", "").strip() or "claude-haiku-5-5",
+            anthropic_round_model=os.getenv("ANTHROPIC_COACH_MODEL", "").strip() or "claude-sonnet-5-5",
             anthropic_chat_model=os.getenv("ANTHROPIC_CHAT_MODEL", "").strip() or "claude-opus-5-5",
         )
