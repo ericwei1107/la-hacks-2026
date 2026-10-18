@@ -19,4 +19,3 @@ at most two relevant topics over raw analytics keys or per-round value dumps.
 - [x] Run focused/full tests, contract checks and provider-disabled checks on
   the downloaded real demos. Independently review the changes.
 - [x] Document behavior, commit/push the focused branch and open a PR.
-
