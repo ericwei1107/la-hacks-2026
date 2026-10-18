@@ -6,6 +6,7 @@ from collections import Counter, deque
 from datetime import datetime, timezone
 from pathlib import Path
 
+from game.options import ATTACK_CLASSES
 from game.recorder import data_dir, dumps, iso_utc
 from game.reflex import softmax
 from game.words import ACTION_WORDS, frame_words, lead_words, timer_words
@@ -122,6 +123,7 @@ MAX_PULLS = 4
 THROW_START = 30
 THROW_CLEAR = 5
 THROW_LIMIT_FRAMES = 180
+CONNECT_LAG = 2
 INPUT_IDS = {0x53, 0x58, 0x5A, 0x5B, 0x5A7, 0x5C1, 0x5C2, 0x5C6, 0x5C7, 0x5C8, 0x5DB, 0x5DC, 0x5DD, 0x6F2, 0x6F4, 0x6F5, 0x6F7, 0x6F8,
              0x90E, 0x914, 0x915}
 
@@ -579,13 +581,14 @@ class Learning:
             if pending["round"] != state["round"] or age > THROW_LIMIT_FRAMES or (not pending["thrown"] and age > THROW_START):
                 self.throw_moments.remove(pending)
                 continue
-            pending["moment"]["damage"] = max(0, pending["health"] - state["players"][human]["health"])
+            if not pending["thrown"] or thrown_now or pending["clear"] < THROW_CLEAR:
+                pending["moment"]["damage"] = max(0, pending["health"] - state["players"][human]["health"])
             if thrown_now:
                 pending["thrown"] = True
                 pending["clear"] = 0
             elif pending["thrown"]:
                 pending["clear"] += 1
-                if pending["clear"] >= THROW_CLEAR:
+                if pending["clear"] >= THROW_CLEAR + CONNECT_LAG:
                     self.throw_moments.remove(pending)
 
     def _attribute(self, decision):
@@ -683,9 +686,9 @@ class Learning:
         chosen = self.bandit.pull(f"{key}|{action}", arms, difficulty.mixup_temperature, rng)
         entry = next(e for e in fitting if e["notation"] == chosen)
         ids = entry_ids(entry) | self.learned_ids.get(chosen, set())
-        self.next_pull = {"key": f"{key}|{action}", "arm": chosen, "entry": entry, "ids": ids, "start_ids": ids - INPUT_IDS,
+        self.next_pull = {"key": f"{key}|{action}", "arm": chosen, "cls": cls, "entry": entry, "ids": ids, "start_ids": ids - INPUT_IDS,
                           "frame": None, "round": None, "health": None, "started": False, "start_frame": None, "base_move": None,
-                          "thrown": False, "move": None}
+                          "busy": False, "thrown": False, "move": None}
         return entry
 
     @property
@@ -704,7 +707,8 @@ class Learning:
                     self.mastery.stamp_retest(PLUS_KEY, state["round"])
         if boost and self.next_pull is not None:
             pull = self.next_pull
-            pull.update(frame=state["frame"], round=state["round"], health=state["players"][human]["health"], move=move)
+            pull.update(frame=state["frame"], round=state["round"], health=state["players"][human]["health"], move=move,
+                        base_move=state["players"][1 - human]["move_id"])
             if move is None and not pull["ids"]:
                 self._start(pull, state)
             while len(self.pulls) >= MAX_PULLS:
@@ -716,7 +720,8 @@ class Learning:
         bot = state["players"][1 - state["human_slot"]]
         pull["started"] = True
         pull["start_frame"] = state["frame"]
-        pull["base_move"] = bot["move_id"]
+        if pull["base_move"] is None:
+            pull["base_move"] = bot["move_id"]
         pull["health"] = state["players"][state["human_slot"]]["health"]
 
     def _settle(self, pull, reward):
@@ -733,9 +738,22 @@ class Learning:
         return max(0, pull["health"] - human_health) / REWARD_DAMAGE
 
     def _learn_id(self, pull, bot):
-        if pull["ids"] or not pull["started"] or bot["move_id"] == pull["base_move"] or bot["free_movement"] or bot["hit_level"] == "none":
+        if pull["cls"] not in ATTACK_CLASSES or not pull["started"] or pull["move"] is None or bot["move_id"] == pull["base_move"]:
             return
-        pull["ids"] = {bot["move_id"]}
+        if bot["free_movement"] or bot["hit_reaction"] != 0:
+            pull["busy"] = False
+            return
+        if bot["hit_level"] == "none" or bot["move_id"] in INPUT_IDS:
+            return
+        if bot["move_id"] in pull["ids"]:
+            pull["busy"] = True
+            return
+        if any(bot["move_id"] in other["ids"] for other in self.pulls if other is not pull):
+            return
+        if not pull["busy"] and pull["ids"] and entry_ids(pull["entry"]):
+            return
+        pull["ids"].add(bot["move_id"])
+        pull["busy"] = True
         self.learned_ids.setdefault(pull["arm"], set()).add(bot["move_id"])
         entry = pull.get("entry")
         if entry is not None:
@@ -743,6 +761,7 @@ class Learning:
 
     def _track_bot_move(self, state):
         bot = state["players"][1 - state["human_slot"]]
+        human_health = state["players"][state["human_slot"]]["health"]
         for pull in list(self.pulls):
             if state["round"] != pull["round"] or state["frame"] < pull["frame"]:
                 continue
@@ -755,6 +774,9 @@ class Learning:
                     self._start(pull, state)
             elif not pull["started"] and bot["move_id"] in pull["start_ids"]:
                 self._start(pull, state)
+            if pull["started"] and pull["cls"] in ATTACK_CLASSES and not pull["thrown"] and bot["hit_reaction"] != 0 and not bot["free_movement"]:
+                self._settle(pull, 0.0)
+                continue
             self._learn_id(pull, bot)
 
     def _resolve(self, ev, state):
