@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 
 from replay.coach import CoachTip, OpenAIProvider, RoundCoach
 from replay.config import ROOT, Settings
+from replay.learning import finite_numbers
 from replay.reports import REPORT_SCHEMA, ReportService
 from replay.chat import ChatReply, ChatRequest, ChatService, OpenAIChatProvider
 from replay.observability import initialize
@@ -49,6 +50,8 @@ def create_app() -> FastAPI:
         }}
     })
     async def coach_round(summary: Annotated[dict, Body(examples=[EXAMPLE])], response: Response):
+        if not finite_numbers(summary):
+            raise HTTPException(status_code=422, detail="Round summary numbers must be finite")
         errors = list(VALIDATOR.iter_errors(summary))
         if errors:
             raise HTTPException(status_code=422, detail=[

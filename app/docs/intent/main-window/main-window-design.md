@@ -36,7 +36,7 @@ A screen showing the set being played refreshes its set data when a `round_summa
 | Coach | `coach/` | replay, brain |
 | Controls | `controls/` | brain |
 
-The frame and its shared parts are the `frame/` leaf.
+The frame and its shared parts are the `frame/` leaf. The focus card, with its evidence and moments, is the `focus/` leaf: it sits at the top of the Stats screen and reads the analytics service's insights, while `KUMITE_INSIGHTS=1` turns it on.
 
 A screen whose services are unreachable shows the offline state for the first unreachable service in its list, per the design system's state patterns.
 

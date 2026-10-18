@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { EmptyState, KeyCap, Microphone, PlayMark, SendArrow, Toggle } from '../../design'
 import { useChat, useConfig, usePostConfig, type ChatCitation, type SessionMeta } from '../../services'
+import { answerBlocks, type AnswerBlock } from '../coachAnswer'
 import { useFrame } from '../frame'
 import { keyLabel, usePushToTalkKey } from '../pushToTalk'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
-import { stopSpeaking, useHoldToTalk, useVoice } from '../../voice'
+import { useHoldToTalk, useVoice } from '../../voice'
 
 interface Turn {
   role: 'user' | 'coach'
@@ -18,6 +19,41 @@ const WAVEFORM = [[0, 8, 4], [5, 5, 10], [10, 1, 18], [15, 4, 12], [20, 0, 20], 
 
 function answerTag(sessionId: string, index: number): string {
   return `coach:${sessionId}:${index}`
+}
+
+function AnswerBody({ text }: { text: string }) {
+  const blocks = answerBlocks(text)
+  if (!blocks.some((entry) => entry.kind !== 'text')) return <p className="text-lg leading-[30px] text-text">{text}</p>
+  return (
+    <div className="flex flex-col gap-3">
+      {blocks.map((entry: AnswerBlock, index) => {
+        if (entry.kind === 'priority') {
+          return (
+            <section key={index} className="flex flex-col gap-2 rounded-md border-[1.5px] border-solid border-[#1D1B1626] bg-surface px-5 py-4">
+              <span className="text-sm leading-[18px] font-bold text-primary-text">{entry.order}</span>
+              <h3 className="text-[22px] leading-[28px] font-bold text-text">{entry.title}</h3>
+              {entry.observation && <p className="text-lg leading-[28px] text-text">{entry.observation}</p>}
+              {entry.drill && (
+                <p className="text-lg leading-[28px] text-text">
+                  <span className="mr-2 font-bold text-primary-text">Drill</span>
+                  {entry.drill}
+                </p>
+              )}
+            </section>
+          )
+        }
+        if (entry.kind === 'moment') {
+          return (
+            <div key={index} className="flex gap-4 border-t border-solid border-t-[#1D1B161F] pt-3 first:border-t-0 first:pt-0">
+              <span className="w-[164px] shrink-0 pt-[3px] font-mono text-sm leading-[24px] text-text-muted">{entry.label}</span>
+              <p className="text-lg leading-[28px] text-text">{entry.text}</p>
+            </div>
+          )
+        }
+        return <p key={index} className="text-lg leading-[28px] text-text">{entry.text}</p>
+      })}
+    </div>
+  )
 }
 
 function CoachAnswer({ turn, speaking, onCitation }: { turn: Turn; speaking: boolean; onCitation: (citation: ChatCitation) => void }) {
@@ -34,7 +70,7 @@ function CoachAnswer({ turn, speaking, onCitation }: { turn: Turn; speaking: boo
           </span>
         )}
       </div>
-      <p className={`text-lg leading-[30px] ${turn.failed ? 'text-text-muted' : 'text-text'}`}>{turn.text}</p>
+      {turn.failed ? <p className="text-lg leading-[30px] text-text-muted">{turn.text}</p> : <AnswerBody text={turn.text} />}
       {turn.citations && turn.citations.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {turn.citations.map((citation) => (
@@ -65,7 +101,6 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
   const end = useRef<HTMLDivElement>(null)
   const player = useVoice()
   const mounted = useRef(true)
-  const answers = `coach:${session.session_id}:`
 
   useEffect(() => {
     threads.set(session.session_id, turns)
@@ -76,13 +111,11 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
     mounted.current = true
     return () => {
       mounted.current = false
-      stopSpeaking(answers)
     }
-  }, [answers])
+  }, [])
 
   const ask = async (message: string) => {
     if (!message || chat.isPending) return
-    stopSpeaking(answers)
     const history = turns.filter((turn) => !turn.failed).map(({ role, text }) => ({ role, text }))
     const answerIndex = turns.length + 1
     setTurns((current) => [...current, { role: 'user', text: message }])

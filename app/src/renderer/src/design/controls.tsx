@@ -152,7 +152,7 @@ interface MeterProps {
 
 export function Meter({ value, strong = true }: MeterProps) {
   return (
-    <div className="flex h-3 grow basis-0 overflow-clip rounded-[3px] bg-track">
+    <div className="flex h-3 grow basis-0 overflow-clip rounded-[3px] bg-track" aria-hidden="true">
       <div
         className={`h-full ${strong ? 'bg-primary' : 'bg-text-muted'}`}
         style={{ width: `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%` }}

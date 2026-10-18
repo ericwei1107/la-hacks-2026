@@ -40,7 +40,7 @@ function AccuracyChart({ rounds, detection }: { rounds: LearningRound[]; detecti
     <section className="flex grow basis-0 flex-col gap-4 rounded-md border-2 border-solid border-primary bg-surface px-6 pt-[20px] pb-4">
       <h2 className="text-base/sm font-bold text-text">How often the bot guessed your next move</h2>
       <div className="relative h-[236px] w-[600px] shrink-0">
-        <svg width="600" height="236" viewBox="0 0 600 236" className="absolute top-0 left-0" role="img" aria-label="How often the bot guessed your next move, by round">
+        <svg width="600" height="236" viewBox="0 0 600 236" className="absolute top-0 left-0" role="img" aria-label={`How often the bot guessed your next move: ${points.map((round) => `round ${round.round} ${Math.round((round.prediction_accuracy as number) * 100)}%`).join(', ')}`}>
           <path d={gridValues.map((value) => `M${CHART_LEFT} ${yFor(value)}H${CHART_RIGHT}`).join('')} fill="none" stroke="#1D1B161F" />
           <path d={`M${CHART_LEFT} ${BASELINE}H${CHART_RIGHT}`} fill="none" stroke="#1D1B1666" />
           {points.map((round, index) =>
@@ -75,7 +75,7 @@ function AccuracyChart({ rounds, detection }: { rounds: LearningRound[]; detecti
           round.player_changed ? (
             <span
               key={`adapted-${round.round}`}
-              className="absolute top-[22px] text-sm leading-[18px] font-bold whitespace-nowrap text-bot"
+              className="absolute top-[22px] text-sm leading-[18px] font-bold whitespace-nowrap text-bot-text"
               style={xFor(index) > 480 ? { right: 600 - xFor(index) + 10 } : { left: xFor(index) + 10 }}
             >
               you adapted
@@ -131,7 +131,10 @@ function Milestones({ metrics, rounds, exploited }: { metrics: LearningMetrics; 
       </div>
       {arms.length > 0 && (
         <div className="flex flex-col gap-3 border-t border-solid border-t-[#1D1B1626] pt-4">
-          <h3 className="text-base/sm font-bold text-text">When the bot went for your habit</h3>
+          <div className="flex flex-col gap-1">
+            <h3 className="text-base/sm font-bold text-text">When the bot went for your habit</h3>
+            <span className="text-sm leading-[18px] text-text-muted">Estimated effectiveness</span>
+          </div>
           {arms.map(([arm, rate]) => (
             <div key={arm} className="flex items-center gap-3">
               <span className="w-[112px] shrink-0 text-base/sm text-text">{optionName(arm)}</span>
@@ -139,6 +142,7 @@ function Milestones({ metrics, rounds, exploited }: { metrics: LearningMetrics; 
               <span className="w-[52px] shrink-0 text-right text-lg/base font-[900] text-text">{Math.round(rate * 100)}%</span>
             </div>
           ))}
+          <p className="text-sm leading-[18px] text-text-muted">The bot's estimate of how often each option works. Options it hasn&apos;t tried yet can keep their starting values.</p>
         </div>
       )}
     </section>
@@ -173,7 +177,7 @@ function HabitsTable({ metrics, rounds, exploited }: { metrics: LearningMetrics;
             </span>
             <span className="flex grow basis-0 flex-col">
               <span className="text-base leading-[22px] font-bold text-text">{habitName(key)}</span>
-              <span className={`text-sm/sm ${target ? 'font-bold text-bot' : 'text-text-muted'}`}>
+              <span className={`text-sm/sm ${target ? 'font-bold text-bot-text' : 'text-text-muted'}`}>
                 {beltName(level)}
                 {level.rank === 'black' ? ', fixed' : ''}
                 {slipped ? `. Fixed in round ${master}, slipped since` : ''}
@@ -181,7 +185,7 @@ function HabitsTable({ metrics, rounds, exploited }: { metrics: LearningMetrics;
               </span>
             </span>
             <span className="w-[118px] shrink-0">
-              <BeltSquares rounds={history.map((round) => round.habits[key] ?? {})} />
+              <BeltSquares rounds={history.map((round) => ({ round: round.round, ...(round.habits[key] ?? {}) }))} />
             </span>
             <span className={`w-[76px] shrink-0 text-right font-mono text-lg/base font-[600] ${detect === undefined ? 'text-text-muted' : 'text-text'}`}>
               {detect ?? '—'}

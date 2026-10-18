@@ -462,3 +462,115 @@ def test_uncertain_human_context_never_becomes_a_drill_recommendation(client):
     assert "not enough" in response.json()["text"].lower()
     assert "crouch-blocking" not in response.json()["text"]
     assert response.json()["citations"] == []
+
+
+@pytest.mark.parametrize("question", [
+    "Did my low-blocking practice improve?", "Did my practice make me better?",
+    "Has practicing throw breaks helped me improve?", "Is my low-blocking practice getting better?",
+    "Did my low-blocking practice help?", "Did my low-blocking practice work?",
+    "Is my throw-break practice working?", "Did practicing low blocking help?",
+])
+def test_retrospective_practice_questions_use_learning_evidence(client, question):
+    repeated_practice_decisions(client)
+    requests = []
+
+    def respond(request):
+        requests.append(str(request.url))
+        return httpx.Response(503)
+
+    client.app.state.chat.analytics_transport = httpx.MockTransport(respond)
+    reply = client.post("/coach/chat", json={**QUESTION, "message": question}).json()
+    assert requests == [f"http://127.0.0.1:8767/learning/{SESSION}"]
+    assert "unavailable" in reply["text"].lower()
+    assert "Start with" not in reply["text"]
+
+
+def test_prospective_practice_help_question_still_gives_a_drill(client):
+    repeated_practice_decisions(client)
+    client.app.state.chat.analytics_transport = httpx.MockTransport(
+        lambda request: pytest.fail("Prospective practice advice must not request a learning curve"))
+    reply = client.post("/coach/chat", json={**QUESTION, "message": "How can practice help me improve?"}).json()
+    assert "Start with low blocking" in reply["text"]
+
+
+def test_retrospective_own_move_question_keeps_frame_lookup(client):
+    client.app.state.chat.analytics_transport = httpx.MockTransport(
+        lambda request: pytest.fail("An explicit own-move question must retain its frame lookup"))
+    reply = client.post("/coach/chat", json={**QUESTION, "message": "Did my Hellsweep work?"}).json()
+    assert "Spinning Demon" in reply["text"]
+    assert "Startup is 16 frames" in reply["text"]
+
+
+@pytest.mark.parametrize("question,defensive", [
+    ("Give me advice for my Hellsweep", False),
+    ("How should I practice my Jab?", False),
+    ("How should I practice against their move db+2?", True),
+    ("Give me advice for his move 1", True),
+])
+def test_move_advice_respects_ownership(client, question, defensive):
+    reply = client.post("/coach/chat", json={**QUESTION, "message": question}).json()
+    assert "Character data lists" in reply["text"]
+    has_defensive_drill = any(text in reply["text"] for text in (
+        "Practice recognizing and crouch-blocking", "Practice guarding before pressing"))
+    assert has_defensive_drill is defensive
+    assert "does not establish timing, range or a punish" in reply["text"]
+
+
+def test_absent_round_has_explicit_no_matching_moments(client):
+    reply = client.post("/coach/chat", json={**QUESTION, "message": "What happened in round 11?"}).json()
+    assert "No matching recorded moments" in reply["text"]
+    assert reply["citations"] == []
+
+
+@pytest.mark.parametrize("change", ["unchanged", "state", "event", "options", "legacy"])
+def test_saved_preference_requires_identical_source_and_menu(client, monkeypatch, change):
+    from replay import chat_tools
+
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        questions = json.loads(request.content)["questions"]
+        return httpx.Response(200, json={"answers": {
+            key: {"type": "choice", "choice": next(iter(question["criteria"])), "probabilities": {
+                name: 0.6 if index == 0 else 0.4 / (len(question["criteria"]) - 1)
+                for index, name in enumerate(question["criteria"])}}
+            for key, question in questions.items()}})
+
+    client.app.state.reports.scorer = JevScorer("test-key", transport=httpx.MockTransport(respond))
+    assert client.post(f"/analyze/{SESSION}").status_code == 200
+    count = len(requests)
+    path = client.app.state.settings.data_dir / "recordings" / f"{SESSION}.jsonl"
+    if change in ("state", "event"):
+        rows = [json.loads(line) for line in path.read_text().splitlines()]
+        if change == "state":
+            rows[0]["players"][0]["health"] -= 1
+        else:
+            rows[1]["detail"] = {"string_continued": True}
+        path.write_text("\n".join(map(json.dumps, rows)) + "\n")
+    elif change == "options":
+        original = chat_tools.generate_options
+
+        def changed_options(character, moment):
+            generated = copy.deepcopy(original(character, moment))
+            generated["options"][0]["description"] += " Updated candidate context."
+            return generated
+
+        monkeypatch.setattr(chat_tools, "generate_options", changed_options)
+    elif change == "legacy":
+        saved = client.app.state.reports.get(SESSION)
+        for point in saved["decision_points"]:
+            point.pop("evidence_fingerprint", None)
+        client.app.state.reports.save(SESSION, saved)
+
+    async def provider(request, tools, initial):
+        facts = (await tools.call("find_moments", {"round": 1, "limit": 1}))["facts"]
+        preference = next((fact for fact in facts if "analysis preferred" in fact["text"]), None)
+        return [(preference or facts[-1])["id"]]
+
+    client.app.state.chat.provider = provider
+    reply = client.post("/coach/chat", json=QUESTION).json()
+    assert ("analysis preferred" in reply["text"]) is (change == "unchanged")
+    if change != "unchanged":
+        assert "No validated saved Jev preference" in reply["text"]
+    assert len(requests) == count

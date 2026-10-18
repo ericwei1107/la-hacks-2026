@@ -1,4 +1,4 @@
-import { BELT_COLORS, beltFor, type BeltLevel } from './belts'
+import { BELT_COLORS, beltFor, beltName, type BeltLevel } from './belts'
 
 const LIGHT_OUTLINE = 'rgb(0 0 0 / 35%)'
 const STRIPE_X: Record<1 | 2, number[]> = { 1: [53], 2: [50, 55] }
@@ -25,22 +25,22 @@ export function Belt({ level, night = false, className }: BeltProps) {
 }
 
 interface BeltSquaresProps {
-  rounds: { mastery?: number; fixed?: boolean }[]
+  rounds: { round: number; mastery?: number; fixed?: boolean }[]
 }
 
 export function BeltSquares({ rounds }: BeltSquaresProps) {
+  const levels = rounds.map((round) => ({ round: round.round, level: beltFor(round.mastery, round.fixed) }))
+  const description = levels.map(({ round, level }) => `Round ${round}: ${beltName(level)}`).join(', ')
   return (
-    <div className="flex gap-1">
-      {rounds.map((round, index) => {
-        const { rank } = beltFor(round.mastery, round.fixed)
-        return (
-          <div
-            key={index}
-            className={`size-4 shrink-0 rounded-[3px] ${rank === 'white' ? 'border border-[#1D1B164D]' : ''}`}
-            style={{ backgroundColor: BELT_COLORS[rank] }}
-          />
-        )
-      })}
+    <div className="flex gap-1" role="img" aria-label={description}>
+      {levels.map(({ round, level }) => (
+        <div
+          key={round}
+          title={`Round ${round}: ${beltName(level)}`}
+          className={`size-4 shrink-0 rounded-[3px] ${level.rank === 'white' ? 'border border-[#1D1B164D]' : ''}`}
+          style={{ backgroundColor: BELT_COLORS[level.rank] }}
+        />
+      ))}
     </div>
   )
 }

@@ -15,10 +15,10 @@ Design: `frame-design.md`
 - [ ] **MAIN-FRAME-010**: The frame shall hold one selected set shared by the Replay analysis, Learning, Stats and Coach screens.
 - [ ] **MAIN-FRAME-011**: While the player has not chosen a set in this window, the selected set shall be the newest set in the brain's set list.
 - [ ] **MAIN-FRAME-012**: When the player chooses a set in the set picker or opens a set from the Sessions screen, the frame shall make it the selected set and keep it selected until the player chooses another.
-- [ ] **MAIN-FRAME-013**: When a `round_summary` for any set arrives on the brain's coach stream, the frame shall refetch the set list, that set's session, recording, stats, learning metrics and report, and the trends.
+- [ ] **MAIN-FRAME-013**: When a `round_summary` for any set arrives on the brain's coach stream, the frame shall refetch the set list, that set's session, recording, stats, learning metrics, insights and report, and the trends.
 - [ ] **MAIN-FRAME-014**: When the live set on the state stream changes to a set it was not before, the frame shall refetch the set list.
-- [ ] **MAIN-FRAME-015**: When the round stops being live, the frame shall refetch the set list and the live set's session, recording, stats and learning metrics.
-- [ ] **MAIN-FRAME-016**: When a `round_summary` for round <n> of a set arrives, the frame shall wait for round <n>: while that set's stats or learning metrics lack round <n>, it shall refetch the lacking ones every 2 seconds, and it shall stop waiting once both include round <n> or 20 seconds have passed.
+- [ ] **MAIN-FRAME-015**: When the round stops being live, the frame shall refetch the set list and the live set's session, recording, stats, learning metrics and insights.
+- [ ] **MAIN-FRAME-016**: When a `round_summary` for round <n> of a set arrives, the frame shall wait for round <n>: while that set's stats or learning metrics lack round <n>, it shall refetch the lacking ones, and that set's insights, every 2 seconds, and it shall stop waiting once both include round <n> or 20 seconds have passed.
 
 ## Page header and set picker
 

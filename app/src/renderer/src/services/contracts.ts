@@ -382,3 +382,89 @@ export interface Trends {
   character: string
   series: TrendPoint[]
 }
+
+export type InsightMetricKey = 'low_defense' | 'throw_defense' | 'punish_conversion'
+
+export type InsightMetricState = 'observed' | 'early_signal' | 'no_opportunities' | 'invalid'
+
+export interface InsightLocation {
+  line: number
+  round: number
+  frame: number | null
+}
+
+export interface InsightEvent {
+  kind: string
+  actor?: number
+  target?: number
+  damage?: number
+  hit_level?: string
+  move_id?: number | string
+  frame_advantage?: number
+}
+
+export interface InsightEvidence {
+  opportunity: InsightLocation
+  response: InsightLocation | null
+  outcome: 'success' | 'failure'
+  event: InsightEvent
+}
+
+export interface InsightMetric {
+  label: string
+  successes: number
+  opportunities: number
+  failures: number | null
+  value: number | null
+  state: InsightMetricState
+  estimated: boolean
+  evidence_total: number
+  evidence: InsightEvidence[]
+}
+
+export interface InsightHabit {
+  first_detected_round: number | null
+  first_fixed_round: number | null
+  current_round: number
+  fixed: boolean | null
+  regressed: boolean
+  last_regressed_round: number | null
+}
+
+export interface InsightMoment {
+  reference: InsightLocation
+  metrics: InsightMetricKey[]
+  outcome: 'success' | 'failure' | 'mixed' | 'damage'
+  response: InsightLocation | null
+  event: InsightEvent
+  metric_outcomes: Partial<Record<InsightMetricKey, { outcome: 'success' | 'failure'; response: InsightLocation | null }>>
+}
+
+export interface InsightsV1 {
+  format_version: 1
+  snapshot_id: string
+  session_id: string
+  synthetic: boolean | null
+  recording_sha256: string | null
+  freshness: {
+    latest_completed_round: number | null
+    latest_recording_round: number | null
+    latest_learning_round: number | null
+    pending_learning_rounds: number[]
+    learning_ahead_rounds: number[]
+  }
+  quality: 'observed' | 'pending' | 'invalid'
+  metrics: Record<InsightMetricKey, InsightMetric>
+  focus: {
+    mode: 'automatic' | 'manual'
+    metric: InsightMetricKey | null
+    state: 'observed' | 'early_signal' | null
+    reason: string
+    action: string | null
+    action_reviewed: boolean
+    min_opportunities?: number
+  }
+  habits: Record<string, InsightHabit>
+  moments: InsightMoment[]
+  moments_total: number
+}

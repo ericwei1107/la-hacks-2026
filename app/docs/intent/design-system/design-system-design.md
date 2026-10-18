@@ -24,6 +24,7 @@ The tokens are the Paper file's design tokens, copied into a Tailwind v4 `@theme
 | Muted text | `--color-text-muted` | `#5C5744` |
 | Indigo, the mat border | `--color-primary` | `#26365C` |
 | Rust, only what the bot is targeting | `--color-bot` | `#B5462B` |
+| Rust for text on the mat, same rule | `--color-bot-text` | `#AA4128` (4.5:1 on the mat; `--color-bot` reaches only 4.1:1 for small text) |
 | Night (overlay ground, line, text, muted) | `--color-overlay*` | `#1A2034` at 90%, `#3A4A72`, `#EDE7CB`, `#B9B394` |
 | Online | `--color-ok` | `#5BB86E` |
 | Right call (a Paper literal, kept as a token) | `--color-good` | `#2E6B3B` |

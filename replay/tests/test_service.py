@@ -211,3 +211,37 @@ def test_single_grounded_tip_does_not_wait_for_model(client):
     assert response.status_code == 200
     assert "Crouch Shin Kick" in response.json()["text"]
     assert calls == []
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+@pytest.mark.parametrize("field", ["probability", "extension"])
+def test_nonfinite_round_numbers_are_rejected_before_coaching(client, value, field):
+    summary = copy.deepcopy(EXAMPLE)
+    if field == "probability":
+        summary["top_habits"][0]["p"] = value
+    else:
+        summary["future_field"] = {"measurements": [value]}
+    response = client.post("/coach/round", content=json.dumps(summary),
+                           headers={"Content-Type": "application/json"})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("suffix", ["bot_minus", "any", "unknown", "b4", "0x674"])
+def test_after_block_pressing_without_disadvantage_is_not_a_weakness(client, suffix):
+    summary = copy.deepcopy(EXAMPLE)
+    summary["top_habits"][0].update(situation=f"after_block:{suffix}", action="press")
+    summary["biggest_moments"] = []
+    response = client.post("/coach/round", json=summary)
+    assert response.status_code == 200
+    assert response.json()["severity"] == "info"
+    assert "guard" not in response.json()["text"].lower()
+
+
+def test_bot_plus_pressing_retains_grounded_guarding_advice(client):
+    summary = copy.deepcopy(EXAMPLE)
+    summary["top_habits"][0].update(situation="after_block:bot_plus", action="press")
+    summary["biggest_moments"] = []
+    response = client.post("/coach/round", json=summary)
+    assert response.status_code == 200
+    assert response.json()["severity"] == "warn"
+    assert "guard" in response.json()["text"].lower()

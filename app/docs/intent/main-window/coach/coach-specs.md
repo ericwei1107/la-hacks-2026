@@ -12,6 +12,10 @@ Design: `coach-design.md`
 - [ ] **MAIN-COACH-006**: The Coach screen shall show each citation of an answer as a chip reading "Round <r>, frame <f>" with a play mark.
 - [ ] **MAIN-COACH-007**: When the player activates a citation chip, the main window shall open Replay analysis on the selected set focused at that round and frame.
 - [ ] **MAIN-COACH-008**: If a question fails, then the Coach screen shall show "Couldn't reach the coach." with the failure's message in place of the answer.
+- [ ] **MAIN-COACH-013**: When a coach answer contains sentences beginning "Start with <priority>." or "Next, work on <priority>.", the Coach screen shall show each such priority as a card on `--color-surface` with "First" or "Next" in `--color-primary-text`, the priority as its title with a capital first letter, the text up to the sentence beginning "In Practice," as its observation, and that sentence onward after a bold "Drill".
+- [ ] **MAIN-COACH-014**: When a coach answer contains sentences beginning "Round <r>, frame <f>:", the Coach screen shall show each as a row with "Round <r>, frame <f>" in mono at the left and the rest of its text beside it.
+- [ ] **MAIN-COACH-015**: The Coach screen shall show any other text of a coach answer as paragraphs in the order it appears, and an answer with no priority or moment as a single paragraph.
+- [ ] **MAIN-COACH-016**: The Coach screen shall show all of an answer's citation chips together under the answer, whatever cards or rows it shows.
 - [ ] **MAIN-COACH-009**: While the selected set's conversation is empty, the Coach screen shall show "Ask about this set. Try: Why did I lose round 2?" in muted text.
 
 ## Input bar
@@ -30,4 +34,5 @@ Design: `coach-design.md`
 | Spec IDs | Entry point |
 |---|---|
 | MAIN-COACH-001 – MAIN-COACH-021 | `src/renderer/src/main-window/screens/Coach.tsx` (`Coach`, `Conversation`) |
+| MAIN-COACH-013 – MAIN-COACH-016 | `src/renderer/src/main-window/coachAnswer.ts` (`answerBlocks`), rendered by `src/renderer/src/main-window/screens/Coach.tsx` (`CoachAnswer`) |
 | MAIN-COACH-010 | `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`), with the key from `src/renderer/src/main-window/pushToTalk.ts` (`usePushToTalkKey`) |

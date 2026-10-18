@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 
 from replay.character_data import CharacterDataError, MOVE_ALIASES, load_character, normalize_character
 from replay.config import ROOT
+from replay.evidence import decision_fingerprint
 from replay.inspection import build_inspection
 from replay.learning import finite_numbers, latest_mastery
 from replay.move_coaching import labeled_move
@@ -64,9 +65,17 @@ def question_situation(question):
     return ""
 
 
+def asks_about_practice_results(question):
+    question = question.lower()
+    return bool(re.search(r"^\s*(?:did|has|have|is|was|were)\b", question)
+                and re.search(r"\bpracti[cs](?:e|ing)\b", question)
+                and re.search(r"\b(?:help(?:ed|ing)?|work(?:ed|ing)?)\b", question))
+
+
 def asks_for_practice(question):
     question = question.lower()
-    if re.search(r"^\s*(?:have i|am i|did i|has my|is my|show (?:my )?(?:mastery|learning|progress))\b", question):
+    if (asks_about_practice_results(question)
+            or re.search(r"^\s*(?:have i|am i|did (?:i|my|practi[cs]ing)|has (?:my|practi[cs]ing)|is my|show (?:my )?(?:mastery|learning|progress))\b", question)):
         return False
     return bool(re.search(r"\b(?:advice|drills?|tips|practi[cs]e)\b", question)
                 or re.search(r"\b(?:how|what)\b.*\b(?:can|could|should|do)\s+i\b.*\b(?:improve|work on|get better|do better)\b", question)
@@ -226,6 +235,8 @@ class ChatTools:
         if not match or match.get("scoring", {}).get("status") != "scored" or not match["options"]:
             return None
         generated = generate_options(moment["context"]["human"]["character"], moment)
+        if match.get("evidence_fingerprint") != decision_fingerprint(moment, generated["options"]):
+            return None
         allowed = {(option["name"], option["command"]) for option in generated["options"]}
         pairs = [(option["name"], option.get("command", "")) for option in match["options"]]
         probabilities = [option["p"] for option in match["options"]]
@@ -248,6 +259,8 @@ class ChatTools:
         moments = [moment for moment in self.inspection["moments"]
                    if (not situation or situation in (moment["situation"] or ""))
                    and (round is None or moment["round"] == round)]
+        if not moments:
+            return [self.fact("No matching recorded moments are available; an action or outcome cannot be inferred.")]
         facts = []
         has_preference = False
         for moment in moments[:limit]:
@@ -305,9 +318,10 @@ class ChatTools:
             description += f" Startup is {startup} frames."
         if type(advantage) is int:
             description += f" Its on-block value is {advantage:+d}."
-        if type(advantage) is int and advantage > 0:
+        opponent_move = name == self.bot and name != self.human
+        if opponent_move and type(advantage) is int and advantage > 0:
             description += " Practice guarding before pressing after it."
-        elif resolved.get("hit_level") == "low":
+        elif opponent_move and resolved.get("hit_level") == "low":
             description += " Practice recognizing and crouch-blocking it."
         description += " This listing does not establish timing, range or a punish in a recorded exchange."
         return [self.fact(description)]
@@ -364,7 +378,8 @@ class ChatTools:
                 question = previous[-1] + " " + question
         lowered = question.lower()
         situation = question_situation(request.message.lower()) or question_situation(lowered)
-        if not practice and any(token in lowered for token in ("mastery", "improv", "learning", "progress", "better", "fixed")):
+        if not practice and (asks_about_practice_results(request.message)
+                             or any(token in lowered for token in ("mastery", "improv", "learning", "progress", "better", "fixed"))):
             return (await self.call("get_learning_curve", {"session": self.session, "situation": situation}))["facts"][:3]
         round_match = re.search(r"\bround\s+(\d+)\b", lowered)
         frame_match = re.search(r"\bframe\s+(\d+)\b", lowered)

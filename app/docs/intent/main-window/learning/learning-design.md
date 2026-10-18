@@ -25,6 +25,8 @@ The last round with a prediction accuracy: its accuracy in the display face, siz
 - Black belts earned this set: the habits fixed in the last round that were not fixed in the first, as "<k> black belt(s)" / "earned this set: <habit names>", or "No black belt yet" / "earned this set" when none.
 - "When the bot went for your habit": the last round's bandit for the targeted habit's situation, or the first bandit entry if none matches, as one meter per option with its hit rate. The section is hidden when the last round has no bandit data.
 
+Under "When the bot went for your habit", the meters are labelled "Estimated effectiveness": they are the bot's running estimate of each option, and options it has not tried keep their starting values, which a muted line under them says.
+
 ## Habits table
 
 One row per habit in the last round, with columns:

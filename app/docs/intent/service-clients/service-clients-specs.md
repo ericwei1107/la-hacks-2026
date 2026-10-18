@@ -14,6 +14,7 @@ Design: `service-clients-design.md`
 - [ ] **CLIENT-TYPES-002**: The service clients shall define a TypeScript type for each shape `contracts/api.md` defines without a schema file: the `/health` reply, the coach message on `/ws/coach`, the `/coach/chat` request and reply, the `/stats` reply and the `/trends` reply.
 - [ ] **CLIENT-TYPES-003**: In each contract type, a property outside its schema's `required` list shall be optional, a string `enum` shall be a union of its literal values, and a type that allows `null` shall include `null`.
 - [ ] **CLIENT-TYPES-004**: Every service client call and brain stream shall deliver its values typed with the contract types.
+- [ ] **CLIENT-TYPES-005**: The service clients shall define `InsightsV1` and its parts as a provisional type mirroring the insights draft schema, outside the types built from `contracts/`, with `focus.min_opportunities` optional.
 
 ## HTTP calls
 
@@ -29,6 +30,7 @@ Design: `service-clients-design.md`
 - [ ] **CLIENT-HTTP-010**: When `analyze` is called for a session while an earlier `analyze` call for the same session is still in flight, the replay client shall return the earlier call's pending result without sending a second request.
 - [ ] **CLIENT-HTTP-011**: For every call except `getRecording`, when a 2xx response arrives, the service clients shall resolve with its JSON value as the service sent it, without reordering, filtering or computing values.
 - [ ] **CLIENT-HTTP-012**: The service clients shall not validate response fields against the contract schemas at run time.
+- [ ] **CLIENT-HTTP-013**: The analytics client shall provide `getInsights` (`GET /insights/{id}?limit=3`) with the 10-second timeout.
 
 ## Failures
 
@@ -110,6 +112,7 @@ Design: `service-clients-design.md`
 - [ ] **CLIENT-HOOK-013**: The service clients shall provide `useStreamStatus` and `useServiceStatus`, each returning the current status of a brain stream or a service and re-rendering when it changes.
 - [ ] **CLIENT-HOOK-014**: When a component calls `useStreamStatus` for a brain stream, the hook shall count as a subscriber to that stream, opening its socket if it is not yet open.
 - [ ] **CLIENT-HOOK-015**: The query and mutation hooks shall run their calls whatever network connectivity the browser reports.
+- [ ] **CLIENT-HOOK-016**: The service clients shall provide `useInsights(sessionId, enabled)`, a query hook keyed `['analytics', 'insights', sessionId]` that runs `getInsights` only while enabled and the id is non-empty.
 
 ## Implemented in
 
@@ -118,10 +121,10 @@ All paths are under `src/renderer/src/services/`.
 | Spec IDs | Entry point |
 |---|---|
 | CLIENT-ADDR-001 – CLIENT-ADDR-003 | `addresses.ts` |
-| CLIENT-TYPES-001 – CLIENT-TYPES-004 | `contracts.ts` |
+| CLIENT-TYPES-001 – CLIENT-TYPES-005 | `contracts.ts` |
 | CLIENT-HTTP-001 | `brain.ts`, with `getRecording` in `recording.ts`; both gathered as `brain` in `calls.ts` |
 | CLIENT-HTTP-002, CLIENT-HTTP-009, CLIENT-HTTP-010 | `replay.ts` |
-| CLIENT-HTTP-003 | `analytics.ts` |
+| CLIENT-HTTP-003, CLIENT-HTTP-013 | `analytics.ts` |
 | CLIENT-HTTP-004 | `status.ts` (`health`) |
 | CLIENT-HTTP-005 | `http.ts` (`TIMEOUTS`), applied by each call |
 | CLIENT-HTTP-006, CLIENT-HTTP-007, CLIENT-HTTP-011, CLIENT-HTTP-012 | `http.ts` (`exchange`, `requestJson`) |
@@ -131,5 +134,5 @@ All paths are under `src/renderer/src/services/`.
 | CLIENT-LIVE-001 – CLIENT-LIVE-016 | `streams.ts` (`BrainStream` and the slots and channels it feeds) |
 | CLIENT-STATUS-001 – CLIENT-STATUS-005, CLIENT-STATUS-009, CLIENT-STATUS-010 | `status.ts` (`serviceStatus`, `health`, `startHealthPolling`) |
 | CLIENT-STATUS-006 – CLIENT-STATUS-008 | `http.ts` (outcome reporting), applied in `status.ts` |
-| CLIENT-HOOK-001 – CLIENT-HOOK-015 | `hooks.tsx`; the provider wraps the root in `src/renderer/src/main.tsx` |
+| CLIENT-HOOK-001 – CLIENT-HOOK-016 | `hooks.tsx`; the provider wraps the root in `src/renderer/src/main.tsx` |
 | CLIENT-ROUND-001 – CLIENT-ROUND-008 | `hooks.tsx` (`useRoundBreak`) |

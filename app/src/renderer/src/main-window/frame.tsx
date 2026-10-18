@@ -77,6 +77,7 @@ export function FrameProvider({ children }: { children: ReactNode }) {
     void client.invalidateQueries({ queryKey: ['brain', 'recording', id] })
     void client.invalidateQueries({ queryKey: queryKeys.stats(id) })
     void client.invalidateQueries({ queryKey: queryKeys.learning(id) })
+    void client.invalidateQueries({ queryKey: queryKeys.insights(id) })
   }, [client])
 
   useSummaryListener((summary) => {
@@ -108,6 +109,7 @@ export function FrameProvider({ children }: { children: ReactNode }) {
       }
       if (!statsReady) void client.invalidateQueries({ queryKey: queryKeys.stats(awaited.sessionId) })
       if (!learningReady) void client.invalidateQueries({ queryKey: queryKeys.learning(awaited.sessionId) })
+      void client.invalidateQueries({ queryKey: queryKeys.insights(awaited.sessionId) })
     }, CATCH_UP_POLL_MS)
     return () => window.clearInterval(timer)
   }, [awaited, client])
