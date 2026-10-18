@@ -4,10 +4,11 @@ import re
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from game.notation import compile_notation
-from game.sequencer import first_press
+from game.notation import NEUTRAL, compile_notation
+from game.sequencer import Move, apply_execution_error, first_press
 
 ROUTES_PATH = Path(__file__).resolve().parent / "combos_kazuya.json"
+CAPTURED_DIR = Path(__file__).resolve().parent / "combos_captured"
 SHORT_MAX_LEVEL = 2
 SHORT_HITS = 2
 FINISHED = ("done", "dropped", "interrupted", "aborted")
@@ -69,6 +70,51 @@ def last_press(frames):
     return presses[-1] if presses else 0
 
 
+def load_captured(name, directory=CAPTURED_DIR):
+    return json.loads((Path(directory) / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def captured_cut(route, limit):
+    hits = route["hits"]
+    if limit is None or limit >= len(hits):
+        return None
+    return hits[limit - 1][0]
+
+
+def captured_links(route, limit=None):
+    hits = route["hits"]
+    count = len(hits) if limit is None else min(limit, len(hits))
+    first = {"command": route["launcher"], "move_id": route.get("launcher_move_id"), "damage": hits[0][1] if hits else 0}
+    links = [Link(route["launcher"], (first,), body=route["launcher"])]
+    rest = tuple({"command": None, "move_id": h[2], "damage": h[1]} for h in hits[1:count])
+    if rest:
+        links.append(Link(f"captured:{route['name']}", rest))
+    return links
+
+
+def captured_frames(inputs, cut=None):
+    events = sorted((e for e in inputs if cut is None or e[0] <= cut), key=lambda e: e[0])
+    if not events:
+        return [], 0
+    start = events[0][0]
+    end = max(max(o + 1, o + hold) for o, _, _, hold in events)
+    frames = []
+    direction = "n"
+    k = 0
+    for t in range(start, end):
+        while k < len(events) and events[k][0] <= t:
+            direction = events[k][1]
+            k += 1
+        buttons = sorted({b for o, _, bs, hold in events if bs and o <= t < o + max(1, hold) for b in bs})
+        frames.append((direction, tuple(buttons)))
+    frames.append(NEUTRAL)
+    return frames, start
+
+
+def connect_signal(prev_target, target):
+    return target["health"] < prev_target["health"] or bool(target["hit_reaction"] and not prev_target["hit_reaction"])
+
+
 def trace_row(frame, index, bot, target):
     return {"frame": frame, "link": index, "bot_move": bot["move_id"], "bot_free": bot["free_movement"],
             "bot_side": bot.get("side"), "bot_y": bot.get("y"), "dir": bot.get("dir_held"),
@@ -84,7 +130,19 @@ class ComboRunner:
         self.seq = sequencer
         self.bot = bot_slot
         self.difficulty = difficulty if difficulty is not None else sequencer.difficulty
-        self.links = plan(route, hit_limit(self.difficulty))
+        self.captured = route if route.get("captured") else None
+        if self.captured:
+            limit = hit_limit(self.difficulty)
+            self.cut = captured_cut(route, limit)
+            self.links = captured_links(route, limit)
+            self.attacks = [a for a in route["attacks"] if self.cut is None or a[0] <= self.cut]
+            self.planned_hits = sum(len(link.hits) for link in self.links)
+            self.connect_frame = None
+            self.replay = None
+            self.attack_index = 0
+            self.pending_attack = False
+        else:
+            self.links = plan(route, hit_limit(self.difficulty))
         self.listed_damage = listed_damage(self.links)
         self.index = 0
         self.move = None
@@ -139,6 +197,9 @@ class ComboRunner:
             if bot["health"] < prev["players"][self.bot]["health"]:
                 self.stop(frame, "interrupted", "bot was hit")
                 return None
+        if self.captured:
+            return self._captured_step(frame, bot, target, prev)
+        if prev is not None:
             self._track(frame, bot, target, prev)
         if self.move is not None and self._resolve(frame, bot):
             return None
@@ -205,6 +266,81 @@ class ComboRunner:
         if link.hold <= 0:
             return self.seq.timing
         return replace(self.seq.timing, hold_frames=link.hold + self.seq.timing.press_frames)
+
+    def _finish(self, frame, status, reason=None):
+        self.status = status
+        self.reason = reason
+        self.end_frame = frame
+        return None
+
+    def _captured_step(self, frame, bot, target, prev):
+        if self.move is None:
+            if not self._ready(bot):
+                return None
+            return self._submit_opener(frame) if self.captured.get("launcher_inputs_replay") else self._submit(frame)
+        if prev is None:
+            return None
+        prev_bot, prev_target = prev["players"][self.bot], prev["players"][1 - self.bot]
+        drop = prev_target["health"] - target["health"]
+        if drop > 0 and self.move.start_frame is not None:
+            self.hits.append({"frame": frame, "damage": drop, "move_id": bot["move_id"], "link": 0 if not self.hits else 1,
+                              "reaction": target["hit_reaction"], "final": True})
+        if self.connect_frame is None:
+            if self.move.start_frame is not None and connect_signal(prev_target, target):
+                self.connect_frame = frame
+                self.connects[0] = frame
+                self.index = 1
+                self._schedule(frame)
+            elif self.move.done_frame is not None and bot["free_movement"]:
+                return self._finish(frame, "dropped", "launcher missed")
+            else:
+                return None
+        if len(self.hits) >= self.planned_hits:
+            self.index = len(self.links)
+            return self._finish(frame, "done")
+        if frame > self.connect_frame and bot["move_id"] != prev_bot["move_id"]:
+            self.pending_attack = True
+        if self.pending_attack and frame > self.connect_frame and bot["hit_level"] != "none":
+            self.pending_attack = False
+            offset = frame - self.connect_frame
+            if self.attack_index >= len(self.attacks) or bot["move_id"] != int(self.attacks[self.attack_index][1], 16):
+                want = self.attacks[self.attack_index] if self.attack_index < len(self.attacks) else None
+                expected = f"expected {want[1]} at +{want[0]}" if want else "expected no more attacks"
+                self.stop(frame, reason=f"diverged: move 0x{bot['move_id']:04X} at +{offset}, {expected}")
+                return None
+            self.attack_index += 1
+        replay = self.replay
+        if replay is not None and replay.cancelled:
+            return self._finish(frame, "aborted", "sequencer cancelled the input")
+        if (replay is None or replay.done_frame is not None) and bot["free_movement"]:
+            return self._finish(frame, "dropped", f"inputs finished with {len(self.hits)}/{self.planned_hits} hits")
+        return None
+
+    def _schedule(self, connect):
+        frames, start = captured_frames(self.captured["inputs"], self.cut)
+        if not frames:
+            return
+        error = None
+        if self.difficulty is not None:
+            frames, error = apply_execution_error(frames, self.difficulty.execution_error, self.seq.rng)
+        move = Move(f"captured:{self.captured['name']}", frames, earliest=connect + start - self.seq.latency, force=True,
+                    tag={"combo": self.name, "link": 1}, queued_frame=connect)
+        self.seq.queue.append(move)
+        self.replay = move
+        self.submitted.append({"frame": connect, "link": 1, "notation": move.notation, "error": error})
+
+    def _submit_opener(self, frame):
+        frames, _ = captured_frames(self.captured["launcher_inputs"])
+        error = None
+        if self.difficulty is not None:
+            frames, error = apply_execution_error(frames, self.difficulty.execution_error, self.seq.rng)
+        move = Move(f"captured:{self.captured['name']}:opener", frames, force=True, lead=first_press(frames),
+                    tag={"combo": self.name, "link": 0}, queued_frame=frame)
+        self.seq.queue.append(move)
+        self.move = move
+        self.status = "running"
+        self.submitted.append({"frame": frame, "link": 0, "notation": self.captured["launcher"], "error": error})
+        return self.captured["launcher"]
 
     def _submit(self, frame):
         link = self.links[self.index]
