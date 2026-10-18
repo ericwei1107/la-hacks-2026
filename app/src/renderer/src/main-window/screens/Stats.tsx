@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { characterName, dayLabel, EmptyState, habitShort, notation, oneDecimal, percent, Select, share, shortClock, Skeleton, situationName } from '../../design'
 import { useRecording, useStats, useTrends, type SessionMeta, type SessionStats, type TrendPoint } from '../../services'
 import { SavingNote, useFrame } from '../frame'
+import { Focus } from '../focus/Focus'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
 import { isExploited, lastSummary, throwCounts } from '../setData'
 
@@ -132,7 +133,10 @@ function DamageBySituation({ stats, exploited }: { stats: SessionStats; exploite
         const target = isExploited(key, exploited)
         return (
           <div key={key} className="flex items-center gap-4">
-            <span className={`w-[180px] shrink-0 text-base/sm text-text ${target ? 'font-bold' : 'font-medium'}`}>{situationName(key)}</span>
+            <span className={`w-[180px] shrink-0 text-base/sm text-text ${target ? 'font-bold' : 'font-medium'}`}>
+              {situationName(key)}
+              {target && <span className="sr-only">, the habit the bot is attacking right now</span>}
+            </span>
             <div className="flex h-[20px] grow basis-0">
               <div className={`h-full rounded-[3px] ${target ? 'bg-bot' : 'bg-text-muted/45'}`} style={{ width: `${(value / largest) * 100}%` }} />
             </div>
@@ -254,6 +258,7 @@ export function Stats() {
     <Screen title="Stats" picker>
       <ScreenBanner service={offline} line="The numbers you see are the last ones it sent." />
       {sessions && sessions.length === 0 && <EmptyState headline="No stats yet." line="Play a set against Kumite and its numbers show up here." />}
+      {selected && window.kumite?.insights === true && <Focus key={`focus:${selected.session_id}`} session={selected} />}
       {selected && <StatsBody key={selected.session_id} session={selected} />}
     </Screen>
   )

@@ -8,6 +8,7 @@ Design: `design-system-design.md`
 - [ ] **DS-TOKEN-002**: The main window and the between-round card shall paint the mat ground: `--color-bg` overlaid with a repeating horizontal 1 px line of ink at 3.5% opacity every 5 px.
 - [ ] **DS-TYPE-001**: The app shall load Dela Gothic One (400), Zen Kaku Gothic New (400, 500, 700, 900) and IBM Plex Mono (400, 500, 600, 700) from font files bundled with the app, using Latin subsets, and shall make no network request for fonts.
 - [ ] **DS-RULE-001**: The app shall use `--color-bot` (rust) only for elements that show what the bot is targeting.
+- [ ] **DS-RULE-002**: Rust text on the mat or surface grounds shall use `--color-bot-text`, and `--color-bot` shall be used for rust fills and strokes.
 - [ ] **DS-RULE-002**: When a control receives keyboard focus, it shall show a focus ring made of a 3 px `--color-bg` gap followed by a 3 px `--color-primary` ring.
 
 ## Belts
@@ -21,6 +22,8 @@ Design: `design-system-design.md`
 - [ ] **DS-BELT-007**: The `Belt` component shall draw the Paper belt (a 64 × 26 band, knot and tails in the rank color, outlined in 35% black, stripes as 3 × 8 ink bars at x 53, or x 50 and 55).
 - [ ] **DS-BELT-008**: Where the `Belt` component is drawn on the overlay's night ground, it shall outline the black belt in `--color-overlay-text`.
 - [ ] **DS-BELT-009**: The `BeltSquares` component shall draw one 16 px rounded square per round in that round's belt color, outlining white squares in ink at 30%.
+- [ ] **DS-BELT-010**: The `BeltSquares` component shall take each square's round number and name every square's round and belt, as one text alternative for the row and as each square's tooltip.
+- [ ] **DS-COMP-002**: The `Meter` component shall be hidden from assistive technology; every use shows its value as text beside it.
 
 ## Words and formats
 
@@ -54,7 +57,9 @@ All paths are under `src/renderer/src/`.
 | DS-TYPE-001 | `fonts.ts` |
 | DS-RULE-001 | every component that draws `--color-bot`; no single entry point |
 | DS-BELT-001 – DS-BELT-006 | `design/belts.ts` (`beltFor`, `beltName`) |
-| DS-BELT-007 – DS-BELT-009 | `design/Belt.tsx` (`Belt`, `BeltSquares`) |
+| DS-BELT-007 – DS-BELT-010 | `design/Belt.tsx` (`Belt`, `BeltSquares`) |
+| DS-COMP-002 | `design/controls.tsx` (`Meter`) |
+| DS-RULE-002 | `styles.css` (`--color-bot-text`), used by `main-window/screens/Learning.tsx` |
 | DS-WORD-001 – DS-WORD-005 | `design/words.ts` |
 | DS-FMT-001 – DS-FMT-004 | `design/format.ts` |
 | DS-COMP-001, DS-COMP-002 | `design/controls.tsx`, `design/icons.tsx`, `design/states.tsx` |

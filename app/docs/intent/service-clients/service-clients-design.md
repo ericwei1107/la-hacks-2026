@@ -32,6 +32,8 @@ Responses are not validated against the schemas at run time. A client checks onl
 
 ## HTTP calls
 
+`getInsights` reads the analytics service's insights view, which is not yet a shared contract: its type, `InsightsV1`, mirrors Eric's draft (`analytics/insights_v1.schema.json` on the insights branch) rather than a file in `contracts/`, and only the focus card calls it, behind the `KUMITE_INSIGHTS` switch (focus design).
+
 | Call | Service | Request | Resolves with | Timeout |
 |---|---|---|---|---|
 | `listSessions()` | brain | `GET /sessions` | `SessionMeta[]`, newest first as served | 10 s |
@@ -46,6 +48,7 @@ Responses are not validated against the schemas at run time. A client checks onl
 | `getStats(id)` | analytics | `GET /stats/{id}` | `SessionStats` | 10 s |
 | `getTrends(player, character, stat?)` | analytics | `GET /trends/{player}/{character}` with optional `?stat=` | `Trends` | 10 s |
 | `getLearning(id)` | analytics | `GET /learning/{id}` | `LearningMetrics` | 10 s |
+| `getInsights(id)` | analytics | `GET /insights/{id}?limit=3` | `InsightsV1` | 10 s |
 | `health(service)` | each | `GET /health` | `Health` | 2 s |
 
 Path segments and the `stat` query value are percent-encoded. Request bodies are JSON with `Content-Type: application/json`.

@@ -36,7 +36,8 @@ export const queryKeys = {
   stats: (sessionId: string) => ['analytics', 'stats', sessionId] as const,
   trends: (player: string, character: string, stat?: string) =>
     ['analytics', 'trends', player, character, stat ?? null] as const,
-  learning: (sessionId: string) => ['analytics', 'learning', sessionId] as const
+  learning: (sessionId: string) => ['analytics', 'learning', sessionId] as const,
+  insights: (sessionId: string) => ['analytics', 'insights', sessionId] as const
 }
 
 function createQueryClient(): QueryClient {
@@ -98,6 +99,14 @@ export function useTrends(player: string, character: string, stat?: string) {
   return useQuery({
     queryKey: queryKeys.trends(player, character, stat),
     queryFn: () => analytics.getTrends(player, character, stat)
+  })
+}
+
+export function useInsights(sessionId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.insights(sessionId),
+    queryFn: () => analytics.getInsights(sessionId),
+    enabled: enabled && sessionId.length > 0
   })
 }
 

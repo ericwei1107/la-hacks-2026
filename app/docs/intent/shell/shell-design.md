@@ -11,7 +11,7 @@ The shell is the Electron main process plus the preload bridge that every app wi
 
 Two principles:
 
-- **The bridge carries an allow-list.** The main process reads the environment and `app/.env`, which also hold secrets such as the ElevenLabs key. A window receives the three resolved addresses, the overlay mode and the platform name, named one by one, and nothing else from those sources. The voice calls carry text in and audio out; the key never crosses.
+- **The bridge carries an allow-list.** The main process reads the environment and `app/.env`, which also hold secrets such as the ElevenLabs key. A window receives the three resolved addresses, the overlay mode, the insights switch and the platform name, named one by one, and nothing else from those sources. The voice calls carry text in and audio out; the key never crosses.
 - **One app run, one set of addresses.** Addresses are resolved once when the main process starts. The overlay and the main window always point at the same services; pointing somewhere else means restarting the app.
 
 ## Service addresses
@@ -50,6 +50,7 @@ window.kumite = {
     analytics: { url: 'http://localhost:8767',    source: 'default' }
   },
   overlay: 'demo',
+  insights: false,
   speak: (text) => Promise<SpeakResult>,
   transcribe: (recording, mimeType) => Promise<TranscribeResult>
 }
@@ -57,7 +58,7 @@ window.kumite = {
 
 The preload asks the main process for `services` over one synchronous IPC call while it runs, so the object is complete before any page script executes. The service clients can then build every URL at module load without waiting.
 
-`overlay` is the overlay mode resolved from `KUMITE_OVERLAY`: `always` when it is `1` or `on`, `demo` otherwise. The preload fetches it with the services, over one more synchronous IPC call.
+`insights` is `true` when `KUMITE_INSIGHTS` is `1` or `on`, and turns on the focus card, whose source is not yet an agreed contract (focus design). `overlay` is the overlay mode resolved from `KUMITE_OVERLAY`: `always` when it is `1` or `on`, `demo` otherwise. The preload fetches it with the services, over one more synchronous IPC call.
 
 `speak` and `transcribe` carry the voice component's calls: the text or the recording goes to the main process over an asynchronous `ipcRenderer.invoke`, and the clip, the transcript or a failure reason comes back (voice design). Only the data and the result cross; the ElevenLabs settings stay in the main process. The main process also answers the windows' microphone permission requests (voice design).
 

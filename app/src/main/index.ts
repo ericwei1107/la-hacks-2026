@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { OVERLAY_CHANNEL, SERVICES_CHANNEL } from '../shared/bridge'
-import { overlayMode, readAppEnv, resolveServiceAddresses } from './services'
+import { INSIGHTS_CHANNEL, OVERLAY_CHANNEL, SERVICES_CHANNEL } from '../shared/bridge'
+import { insightsEnabled, overlayMode, readAppEnv, resolveServiceAddresses } from './services'
 import { handleMicrophone, handleVoice, readVoiceSettings } from './voice'
 
 const OVERLAY_DESIGN_WIDTH = 1920
@@ -89,6 +89,10 @@ app.whenReady().then(() => {
   })
   ipcMain.on(OVERLAY_CHANNEL, (event) => {
     event.returnValue = overlay === 'always' ? 'always' : 'demo'
+  })
+  const insights = insightsEnabled(fileValues)
+  ipcMain.on(INSIGHTS_CHANNEL, (event) => {
+    event.returnValue = insights
   })
   handleVoice(readVoiceSettings(fileValues))
   handleMicrophone(isAppPage)

@@ -16,6 +16,7 @@ Design: `learning-design.md`
 - [ ] **MAIN-LEARNING-010**: The Learning screen shall show the earliest detection as "<n> rounds" and "to spot your <habit short form> habit", where the habit has the lowest `time_to_detect` and ties go to the habit listed first.
 - [ ] **MAIN-LEARNING-011**: The Learning screen shall show the habits fixed in the last round but not in the first as "<k> black belt" (or "belts") and "earned this set: <habit names>", or "No black belt yet" and "earned this set" when there are none.
 - [ ] **MAIN-LEARNING-012**: When the last round has bandit data, the Learning screen shall show "When the bot went for your habit" with one meter per option of the bandit entry for the targeted habit's situation, or of the first entry if none matches.
+- [ ] **MAIN-LEARNING-013**: The option meters shall carry "Estimated effectiveness" on a muted line under their heading, and under them, in muted text, "The bot's estimate of how often each option works. Options it hasn't tried yet can keep their starting values."
 
 ## Habits table
 
@@ -23,6 +24,7 @@ Design: `learning-design.md`
 - [ ] **MAIN-LEARNING-021**: When a habit's situation appears in the `exploited` list of the selected set's last round summary, its row shall add ". The habit the bot is attacking right now." to the rank name and draw that line in `--color-bot`.
 - [ ] **MAIN-LEARNING-022**: The habits table shall order rows with targeted habits first, then by mastery from lowest.
 - [ ] **MAIN-LEARNING-024**: Each habits table row shall be at least 56 px tall and grow to fit a rank line that wraps.
+- [ ] **MAIN-LEARNING-025**: The accuracy chart's text alternative shall list each round's accuracy, and each habit's belt squares shall be announced as the round and belt name of each square.
 - [ ] **MAIN-LEARNING-023**: When a habit has a `time_to_mastery` but is not `fixed` in the last round, its row shall add "Fixed in round <time to mastery>, slipped since." to the rank line and show its to-master value in `--color-text-muted`.
 
 ## States

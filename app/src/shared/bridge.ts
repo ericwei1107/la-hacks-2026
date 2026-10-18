@@ -28,6 +28,7 @@ export interface KumiteApi {
   platform: string
   services: ServiceAddresses
   overlay: OverlayMode
+  insights: boolean
   speak: (text: string) => Promise<SpeakResult>
   transcribe: (recording: Uint8Array<ArrayBuffer>, mimeType: string) => Promise<TranscribeResult>
 }
@@ -41,6 +42,8 @@ export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
 export const SERVICES_CHANNEL = 'kumite:services'
 
 export const OVERLAY_CHANNEL = 'kumite:overlay'
+
+export const INSIGHTS_CHANNEL = 'kumite:insights'
 
 export const SPEAK_CHANNEL = 'kumite:speak'
 

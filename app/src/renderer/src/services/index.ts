@@ -17,6 +17,7 @@ export {
   useLatestCoach,
   useLatestPlan,
   useLatestSummary,
+  useInsights,
   useLearning,
   useLiveState,
   usePostConfig,
