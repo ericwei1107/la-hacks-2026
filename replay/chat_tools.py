@@ -11,12 +11,14 @@ from jsonschema import Draft202012Validator
 from replay.character_data import CharacterDataError, MOVE_ALIASES, load_character, normalize_character
 from replay.config import ROOT
 from replay.evidence import decision_fingerprint
+from replay.evidence_pack import set_pack
 from replay.inspection import build_inspection
 from replay.learning import finite_numbers, latest_mastery
 from replay.move_coaching import labeled_move
 from replay.options import generate_options
 from replay.reader import read_recording
 from replay.reports import within
+from replay.tips import MIN_N, rank, topic_label
 
 METRICS = Draft202012Validator(json.loads((ROOT / "contracts/metrics.schema.json").read_text()))
 
@@ -47,6 +49,13 @@ TOOL_DEFS = [
          {"session": {"type": "string", "maxLength": 180}, "situation": TEXT}, ["session"]),
 ]
 VALIDATORS = {entry["name"]: Draft202012Validator(entry["parameters"]) for entry in TOOL_DEFS}
+PRACTICE_DRILLS = {
+    "after_block": "In Practice, block that move and hold guard through the follow-up before pressing.",
+    "sidestep_dir": "In Practice, sidestep that move as it starts, then punish.",
+    "neutral": "In Practice, set the dummy to that move and block it until the punish is automatic.",
+    "whiff_punish": "In Practice, hold your ground until the opponent whiffs, then punish.",
+    "missed_punish": "In Practice, block that move on repeat and punish it every time.",
+}
 
 
 def words(value):
@@ -181,9 +190,19 @@ class ChatTools:
                                        "Whether that would change a particular recorded exchange is not established.", cites[:1]))
         return facts or [self.fact("No attributable labeled human decisions are available for that situation; bot choices do not identify human actions.")]
 
+    def set_evidence(self):
+        if not hasattr(self, "_pack"):
+            self._pack = None
+            try:
+                raw = [point["evidence"][0]["record"] for point in self.decisions]
+                self._pack = set_pack(self.recording.records, decisions=raw)
+            except (CharacterDataError, ValueError, OSError, KeyError, TypeError):
+                self._pack = None
+        return self._pack
+
     def get_practice(self, situation=""):
         points = [point for point in self.decisions if not situation or situation in (point["situation"] or "")]
-        candidates = []
+        entries = {}
         for label, action, priority, drill in [
             ("low_defense", "hit", "low blocking",
              "In Practice, work on crouch-blocking predictable lows, then returning to standing guard."),
@@ -192,18 +211,36 @@ class ChatTools:
         ]:
             related = [point for point in points if point["situation"] == label]
             matching = [point for point in related if point["human_action"] == action]
-            if len(matching) < 4 or len(matching) / len(related) < 0.6:
+            if len(matching) < MIN_N or len(matching) / len(related) < 0.6:
                 continue
             observation = (f"You were hit in {len(matching)} of {len(related)} labeled low-defense decisions."
                            if label == "low_defense" else
                            f"No break was recorded in {len(matching)} of {len(related)} labeled throw-break decisions.")
             citations = [{"round": point["round"], "frame": point["frame"]} for point in matching[:2]]
-            candidates.append((len(matching), priority, observation, drill, citations))
-        candidates.sort(key=lambda value: value[0], reverse=True)
+            entries[label] = {"priority": priority, "observation": observation, "answer": "", "drill": drill,
+                              "citations": citations, "damage": 0, "count": len(matching)}
+        pack = self.set_evidence()
+        wanted = situation.split(":", 1)[0] if situation else ""
+        for candidate in (rank(pack) if pack else []):
+            if wanted and candidate.topic != wanted:
+                continue
+            entry = entries.get(candidate.topic)
+            if entry is None:
+                entries[candidate.topic] = {"priority": topic_label(candidate.topic), "observation": "", "answer": candidate.text,
+                                            "drill": PRACTICE_DRILLS.get(candidate.topic, ""), "citations": list(candidate.citations[:2]),
+                                            "damage": candidate.damage, "count": candidate.numbers[0] if candidate.numbers else 0}
+            else:
+                entry["answer"] = candidate.text
+                entry["damage"] = candidate.damage
+        ordered = sorted(entries.values(), key=lambda entry: (entry["damage"], entry["count"]), reverse=True)
         facts = []
-        for index, (_, priority, observation, drill, citations) in enumerate(candidates[:2]):
-            lead = "Start with" if index == 0 else "Next, work on"
-            facts.append(self.fact(f"{lead} {priority}. {observation} {drill}", citations))
+        for index, entry in enumerate(ordered[:3]):
+            lead = ("Start with", "Next, work on", "Then work on")[index]
+            text = " ".join(f"{lead} {entry['priority']}. {entry['observation']} {entry['answer']} {entry['drill']}".split())
+            try:
+                facts.append(self.fact(text, entry["citations"]))
+            except ValueError:
+                facts.append(self.fact(text))
         if facts:
             return facts
         citations = [{"round": point["round"], "frame": point["frame"]} for point in points[:2]]

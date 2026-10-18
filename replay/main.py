@@ -34,7 +34,7 @@ def create_app() -> FastAPI:
     provider = None
     if settings.mode == "auto" and settings.api_key:
         provider = OpenAIProvider(settings.api_key, settings.model)
-    app.state.coach = RoundCoach(provider)
+    app.state.coach = RoundCoach(provider, data_dir=settings.data_dir)
     app.state.reports = ReportService(settings.data_dir)
     chat_provider = OpenAIChatProvider(settings.api_key, os.getenv("OPENAI_CHAT_MODEL", settings.model)) if provider else None
     app.state.chat = ChatService(app.state.reports, chat_provider,
