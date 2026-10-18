@@ -152,6 +152,44 @@ class LoopTest(unittest.TestCase):
         self.assertEqual([hex(p["move_id"]) for p in snap.players], ["0x85a", "0x874"])
 
 
+class GateWaitTest(unittest.TestCase):
+    def gate_reader(self, results):
+        script = iter(results)
+        calls = []
+
+        def gate(log=None):
+            checks = next(script)
+            result = SimpleNamespace(ok=all(ok for _, ok in checks),
+                                     checks=[SimpleNamespace(name=name, ok=ok, detail="") for name, ok in checks])
+            calls.append(result.ok)
+            return result
+
+        return SimpleNamespace(gate=gate, close=lambda: None), calls
+
+    def test_gate_waits_while_only_the_slot_check_fails(self):
+        no_match = [("python", True), ("process", True), ("slot_bytes", False)]
+        in_match = [("python", True), ("process", True), ("slot_bytes", True), ("health_check", True)]
+        reader, calls = self.gate_reader([no_match, no_match, no_match, in_match])
+        logs, sleeps = [], []
+        with mock.patch.object(bot, "run_gate", side_effect=lambda reader, label: reader.gate().ok):
+            ok = bot.gate_until_match(reader, "offsets", log=lambda line, **kw: logs.append(line), sleep=sleeps.append)
+        self.assertTrue(ok)
+        self.assertEqual((len(calls), len(sleeps)), (4, 2))
+        self.assertEqual(sum("no match on screen" in line for line in logs), 1)
+        self.assertTrue(any(line.startswith("GATE PASSED") for line in logs))
+
+    def test_gate_gives_up_on_any_other_failure(self):
+        no_match = [("python", True), ("slot_bytes", False)]
+        broken = [("python", True), ("pe_timestamp", False)]
+        reader, calls = self.gate_reader([no_match, no_match, broken])
+        logs = []
+        with mock.patch.object(bot, "run_gate", side_effect=lambda reader, label: reader.gate().ok):
+            ok = bot.gate_until_match(reader, "offsets", log=lambda line, **kw: logs.append(line), sleep=lambda s: None)
+        self.assertFalse(ok)
+        self.assertEqual(len(calls), 3)
+        self.assertTrue(any(line.startswith("GATE FAILED") for line in logs))
+
+
 class LayaStartupTest(unittest.TestCase):
     def run_main(self, *extra, reasons=(MATCH_OVER, INTERRUPTED)):
         sessions = []

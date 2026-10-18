@@ -1,6 +1,7 @@
 import argparse
 import random
 import sys
+import time
 
 from game import api, laya, trace
 from game.coach import Outlet, replay_url
@@ -14,7 +15,7 @@ from game.options import CLASSES, load_options
 from game.pacer import Pacer
 from game.pad import KillSwitch, connect_pad, load_config
 from game.reader import Reader
-from game.readout import run_gate
+from game.readout import fmt_check, run_gate
 from game.record import add_session_args
 from game.recorder import data_dir
 from game.reflex import Reflex, load_punishers, load_wakeups
@@ -183,6 +184,30 @@ def describe(cfg, difficulty, player, fresh, root=None):
             f"demo {'on' if fresh else 'off'}")
 
 
+GATE_RETRY_S = 1.0
+
+
+def gate_until_match(reader, label, log=print, sleep=time.sleep):
+    if run_gate(reader, label):
+        return True
+    waiting = False
+    while True:
+        reader.close()
+        result = reader.gate()
+        if result.ok:
+            log("GATE PASSED: match on screen", flush=True)
+            return True
+        if not result.checks or result.checks[-1].name != "slot_bytes":
+            for check in result.checks:
+                log(fmt_check(check), flush=True)
+            log("GATE FAILED: refusing to run", flush=True)
+            return False
+        if not waiting:
+            log("no match on screen yet: start Tekken Versus with the bot on the 2P pad; the gate re-checks every second (Ctrl+C to quit)", flush=True)
+            waiting = True
+        sleep(GATE_RETRY_S)
+
+
 def waiting_poll(pad, reloader=None):
     def poll():
         pad.check_kill()
@@ -216,12 +241,12 @@ def main(argv=None):
     reader = Reader(args.offsets)
     pad = None
     try:
-        if not run_gate(reader, args.offsets):
+        if not (gate_until_match(reader, args.offsets) if args.wait_for_match else run_gate(reader, args.offsets)):
             return 1
         pad = connect_pad()
         pacer = Pacer()
         if args.wait_for_match:
-            print("waiting for the match: start Tekken Versus with the bot on the 2P pad; the bot starts by itself at the round 1 intro (Ctrl+C to quit)", flush=True)
+            print("waiting for round 1: the bot starts by itself once both players are free at full health (Ctrl+C to quit)", flush=True)
             wait_for_match(reader, pacer, waiting_poll(pad, reloader), fresh=True)
         while True:
             cfg, difficulty, player, fresh = settings(args)
