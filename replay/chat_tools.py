@@ -8,6 +8,7 @@ from collections import Counter
 import httpx
 from jsonschema import Draft202012Validator
 
+from replay import coachvoice
 from replay.character_data import CharacterDataError, MOVE_ALIASES, load_character, normalize_character
 from replay.config import ROOT
 from replay.evidence import decision_fingerprint
@@ -47,6 +48,7 @@ TOOL_DEFS = [
           "crouching": {"type": "boolean"}}, ["character", "frames"]),
     tool("get_learning_curve", "Read analytics GET /learning/{session} on port 8767; local latest-estimate fallback.",
          {"session": {"type": "string", "maxLength": 180}, "situation": TEXT}, ["session"]),
+    tool("get_combos", "Reliable combo routes from the human's character data, to verify in Practice.", {"character": TEXT}),
 ]
 VALIDATORS = {entry["name"]: Draft202012Validator(entry["parameters"]) for entry in TOOL_DEFS}
 PRACTICE_DRILLS = {
@@ -87,6 +89,8 @@ def asks_for_practice(question):
             or re.search(r"^\s*(?:have i|am i|did (?:i|my|practi[cs]ing)|has (?:my|practi[cs]ing)|is my|show (?:my )?(?:mastery|learning|progress))\b", question)):
         return False
     return bool(re.search(r"\b(?:advice|drills?|tips|practi[cs]e)\b", question)
+                or re.search(r"\b(?:how|what)\b.*\b(?:beat|deal with|handle|counter|stop|fight|win against)\b", question)
+                or re.search(r"\bwhat (?:should|can|do) i do\b", question)
                 or re.search(r"\b(?:how|what)\b.*\b(?:can|could|should|do)\s+i\b.*\b(?:improve|work on|get better|do better)\b", question)
                 or re.search(r"\bhow to (?:improve|get better)\b", question)
                 or re.search(r"\bi (?:want|need|would like) to (?:improve|get better)\b", question)
@@ -179,15 +183,14 @@ class ChatTools:
         counts = Counter((point["situation"], point["human_action"]) for point in points)
         totals = Counter(point["situation"] for point in points)
         facts = []
+        pack = self.set_evidence()
+        candidates = coachvoice.ranked(pack)
         for (label, action), count in counts.most_common(4):
             related = [point for point in points if (point["situation"], point["human_action"]) == (label, action)]
             cites = [{"round": point["round"], "frame": point["frame"]} for point in related[:2]]
-            facts.append(self.fact(
-                f"For {words(label)}, the human's recorded response was '{action}' in {count} of {totals[label]} labeled decisions. "
-                "That observed frequency alone does not establish a mistake.", cites))
-            if label == "low_defense" and action == "hit" and count >= 4 and count / totals[label] >= 0.6:
-                facts.append(self.fact("Practice crouch-blocking predictable lows, then returning to standing guard. "
-                                       "Whether that would change a particular recorded exchange is not established.", cites[:1]))
+            text = (f"{coachvoice.situation_phrase(label).capitalize()} you {coachvoice.action_phrase(label, action)} "
+                    f"{count} of {totals[label]} times. {coachvoice.habit_fix(pack, label, action, candidates)}")
+            facts.append(self.fact(text, cites))
         return facts or [self.fact("No attributable labeled human decisions are available for that situation; bot choices do not identify human actions.")]
 
     def set_evidence(self):
@@ -213,9 +216,9 @@ class ChatTools:
             matching = [point for point in related if point["human_action"] == action]
             if len(matching) < MIN_N or len(matching) / len(related) < 0.6:
                 continue
-            observation = (f"You were hit in {len(matching)} of {len(related)} labeled low-defense decisions."
+            observation = (f"{coachvoice.bot_label(self.set_evidence())}'s lows caught you {len(matching)} of {len(related)} times."
                            if label == "low_defense" else
-                           f"No break was recorded in {len(matching)} of {len(related)} labeled throw-break decisions.")
+                           f"You did not break {len(matching)} of {len(related)} throws.")
             citations = [{"round": point["round"], "frame": point["frame"]} for point in matching[:2]]
             entries[label] = {"priority": priority, "observation": observation, "answer": "", "drill": drill,
                               "citations": citations, "damage": 0, "count": len(matching)}
@@ -247,6 +250,13 @@ class ChatTools:
         review = ("Review the cited exchanges in Practice, or record another short set."
                   if citations else "Record a short set with repeated blocking and throw situations, then ask again.")
         return [self.fact("There are not enough repeated, attributable decisions to pick a specific drill yet. " + review, citations)]
+
+    def get_combos(self, character=""):
+        name = normalize_character(character) if character else self.human
+        if name is None or name != self.human:
+            return [self.fact("Combos come from the recorded human's character only.")]
+        facts = [self.fact(text) for text in coachvoice.combos(name)]
+        return facts or [self.fact("No combo routes are listed for that character.")]
 
     def get_mastery(self, situation=""):
         path = within(self.reports.data_dir, self.reports.data_dir / "learning" / f"{self.session}.jsonl")
@@ -307,7 +317,11 @@ class ChatTools:
                 raw = moment["evidence"][0]["record"]
                 human = confident and moment["kind"] == "human_decision"
                 role = "the human's" if human else f"slot {raw.get('actor', 'unknown')}'s"
-                description = f"The recorder labeled {role} response as '{raw.get('action') or 'unknown'}' for {words(moment['situation'] or 'unknown situation')}."
+                if human and moment["situation"] and raw.get("action"):
+                    description = (f"{coachvoice.situation_phrase(moment['situation']).capitalize()} you "
+                                   f"{coachvoice.action_phrase(moment['situation'], raw['action'])} (labeled '{raw['action']}').")
+                else:
+                    description = f"The recorder labeled {role} response as '{raw.get('action') or 'unknown'}' for {words(moment['situation'] or 'unknown situation')}."
                 if not human:
                     description += " Human attribution is uncertain because exact state context is unavailable or conflicting."
             elif not confident:
@@ -417,7 +431,11 @@ class ChatTools:
         situation = question_situation(request.message.lower()) or question_situation(lowered)
         if not practice and (asks_about_practice_results(request.message)
                              or any(token in lowered for token in ("mastery", "improv", "learning", "progress", "better", "fixed"))):
-            return (await self.call("get_learning_curve", {"session": self.session, "situation": situation}))["facts"][:3]
+            facts = (await self.call("get_learning_curve", {"session": self.session, "situation": situation}))["facts"]
+            story = coachvoice.progression(self.set_evidence(), situation)
+            if story:
+                facts = [self.fact(story)] + facts
+            return facts[:3]
         round_match = re.search(r"\bround\s+(\d+)\b", lowered)
         frame_match = re.search(r"\bframe\s+(\d+)\b", lowered)
         if frame_match:
@@ -432,6 +450,11 @@ class ChatTools:
         if explicit_move:
             character = self.human if explicit_move[1] == "my" else self.bot
             return answer((await self.call("get_frame_data", {"character": character or "unknown", "move": explicit_move[2].strip()}))["facts"])
+        if re.search(r"\bcombos?\b|\bjuggles?\b", lowered):
+            facts = (await self.call("get_combos", {"character": self.human or "unknown"}))["facts"][:1]
+            if practice:
+                facts += (await self.call("get_practice", {"situation": situation}))["facts"][:2]
+            return answer(facts)
         for character in characters:
             if not character or normalize_character(character) is None:
                 continue

@@ -236,3 +236,73 @@ def test_real_sdk_parses_structured_composition_without_external_network(client,
     assert seen[0]["text"]["format"]["strict"] is True
     assert set(seen[0]["text"]["format"]["schema"]["required"]) == {"text", "moves"}
     assert "Double High Sweep" in seen[0]["input"]
+
+
+def chat(client, message):
+    return client.post("/coach/chat", json={"session_id": SESSION, "player": "sahil", "message": message, "history": []}).json()
+
+
+def test_report_habit_fix_cost_and_drills_come_from_the_evidence(client, tmp_path):
+    from replay.scoring import JevScorer
+
+    round_one(tmp_path / "recordings")
+    client.app.state.reports.scorer = JevScorer("")
+    report = client.post(f"/analyze/{SESSION}").json()
+    habits = {habit["situation"]: habit for habit in report["habits"]}
+    assert "Sliding Low Kick (db+3)" in habits["low_defense"]["min_change"] and "d+2" in habits["low_defense"]["min_change"]
+    assert "Double High Sweep (1+3)" in habits["throw_break"]["min_change"] and "press 2" in habits["throw_break"]["min_change"]
+    costs = {(point["situation"], point["frame"]): point.get("cost") for point in report["decision_points"]}
+    assert costs[("low_defense", 100)] == 14 and costs[("throw_break", 530)] == 35
+    assert all(point["good"] is False for point in report["decision_points"])
+    assert any("Demon God Fist" in drill and "b+1+3" in drill for drill in report["drills"])
+    assert all("In Practice" in drill for drill in report["drills"])
+    assert client.get(f"/reports/{SESSION}").json() == report
+
+
+def test_chat_default_answer_speaks_like_a_coach(client, tmp_path):
+    round_one(tmp_path / "recordings")
+    reply = chat(client, "How am I doing against the lows?")
+    assert "you got hit by the low 4 of 4 times" in reply["text"]
+    assert "Sliding Low Kick (db+3)" in reply["text"] and "d+2" in reply["text"]
+    assert "recorded response" not in reply["text"] and "does not establish" not in reply["text"]
+
+
+def test_beat_question_and_combos_use_character_data(client, tmp_path):
+    round_one(tmp_path / "recordings")
+    reply = chat(client, "What combos should I use and how do I beat Kazuya?")
+    assert reply["text"].startswith("Devil Jin's reliable combos")
+    assert "After Wind God Fist (f,n,d,df+2)" in reply["text"] and "for 55" in reply["text"]
+    assert "Start with throw breaks" in reply["text"] and "Double High Sweep" in reply["text"]
+    reply = chat(client, "How do I beat Kazuya?")
+    assert reply["text"].startswith("Start with throw breaks.")
+
+
+def test_progress_question_tells_the_round_by_round_story(client, tmp_path):
+    pieces = {1: [low_hit(100, 1), low_hit(200, 1), low_hit(300, 1), throw(500, 1)],
+              2: [low_hit(100, 2), throw(500, 2), throw(700, 2)]}
+    write_recording(tmp_path / "recordings", pieces)
+    reply = chat(client, "Have I been improving per round?")
+    assert "Kazuya's lows hit you 3, 1 times round by round, trending the right way" in reply["text"]
+    assert "Throws landed on you 1, 2 times round by round, trending up, so fix that first" in reply["text"]
+    assert "unavailable" in reply["text"].lower() or "missing" in reply["text"].lower()
+
+
+def test_composed_chat_reply_is_spoken_only_when_grounded(client, tmp_path):
+    from replay.chat import AnswerPlan
+
+    round_one(tmp_path / "recordings")
+    grounded = ("Two things cost you this set. Kazuya's Sliding Low Kick, db+3, caught you 4 of 4 times, so hold down-back "
+                "and answer with d+2. And Double High Sweep grabbed you 3 of 3 times: press 2 as the grab starts.")
+    hallucinated = ("Kazuya's Sliding Low Kick caught you 4 of 4 times. Duck the Hellsweep and launch with "
+                    "Electric Wind God Fist for 70 damage.")
+    outcomes = {}
+    for label, text in (("grounded", grounded), ("hallucinated", hallucinated)):
+        async def provider(request, tools, initial, text=text):
+            return AnswerPlan(fact_ids=[fact["id"] for fact in initial[:3]], text=text, moves=[])
+
+        client.app.state.chat.provider = provider
+        outcomes[label] = chat(client, "What should I practice?")
+    assert outcomes["grounded"]["text"] == grounded
+    assert outcomes["grounded"]["citations"]
+    assert outcomes["hallucinated"]["text"].startswith("Start with throw breaks.")
+    assert "Hellsweep" not in outcomes["hallucinated"]["text"]

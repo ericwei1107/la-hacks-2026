@@ -489,6 +489,19 @@ matching actions and a frequency of at least 60% among the relevant labeled
 decisions with unambiguous exact state context. This is a practice suggestion, not proof of avoidable damage or a
 guaranteed different outcome. Sparse or uncertain evidence stays explicit.
 
+When the model is enabled, the selector also writes the reply itself: a
+coach's answer of at most 140 words composed from the selected facts
+(structured output: fact ids, text, moves). Every move name, command and
+number in that text must appear in the selected facts, otherwise the verified
+facts are spoken verbatim. Without a key the local facts are already written
+in a coach's voice: what you did in each spot, the opponent move that cost you,
+the Devil Jin answer and a drill. `combo` questions add the reliable routes
+from `characters/<human>/combos.json`; "how do I beat" questions get the
+practice priorities; progress questions get a round-by-round story of lows,
+throws, presses and sidesteps from the evidence pack when the set has more
+than one round. The analysis report's `min_change`, `cost`, `went_well` and
+`drills` come from the same evidence pack (`replay/coachvoice.py`).
+
 `Have I improved?` remains a learning-data question. Explicit move/frame
 questions retain their verified lookups. The optional model cannot replace an
 advice request with unrelated mastery facts; provider failures use the same

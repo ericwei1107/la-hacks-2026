@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from replay.character_data import CharacterDataError, load_character, load_matchup, normalize_character, normalize_command
-from replay.reports import checked_id, within
 
 PUNISH_WINDOW = 45
 FOLLOWUP_WINDOW = 30
@@ -327,6 +326,7 @@ def build_pack(tail, ctx, round_number=None, decisions=None, summary=None):
                         "citations": [{"round": point["round"], "frame": point["frame"]}]})
 
     missed = []
+    punished = []
     for event in events:
         if event["kind"] != "block" or event.get("actor") != bot or event.get("target") != human:
             continue
@@ -336,6 +336,11 @@ def build_pack(tail, ctx, round_number=None, decisions=None, summary=None):
         landed = _window(indexed, event["round"], event["frame"], event["frame"] + PUNISH_WINDOW,
                          lambda item: item["kind"] in STRIKES and item.get("actor") == human and item.get("target") == bot)
         if landed:
+            punished.append({"blocked": describe(ctx.bot, event.get("move_id")), "human_advantage": -advantage,
+                             "punish": {**describe(ctx.human, landed[0].get("move_id")),
+                                        "damage": landed[0].get("damage") if type(landed[0].get("damage")) is int else 0},
+                             "frame": event["frame"], "round": event["round"],
+                             "citations": [{"round": event["round"], "frame": event["frame"]}]})
             continue
         attempted = _window(indexed, event["round"], event["frame"], event["frame"] + PUNISH_WINDOW,
                             lambda item: item["kind"] in HUMAN_ATTACKS and item.get("actor") == human)
@@ -360,6 +365,19 @@ def build_pack(tail, ctx, round_number=None, decisions=None, summary=None):
                       "damage": struck[0].get("damage", 0) if struck and type(struck[0].get("damage")) is int else 0,
                       "hit": bool(struck), "citations": [{"round": point["round"], "frame": point["frame"]}]})
 
+    whiff_punishes = []
+    for event in events:
+        if event["kind"] != "whiff" or event.get("actor") != bot:
+            continue
+        start = (event.get("detail") or {}).get("start_frame", event["frame"])
+        landed = _window(indexed, event["round"], start, event["frame"] + WHIFF_WINDOW,
+                         lambda item: item["kind"] in STRIKES and item.get("actor") == human and item.get("target") == bot)
+        if landed:
+            whiff_punishes.append({**describe(ctx.bot, event.get("move_id")), "frame": event["frame"], "round": event["round"],
+                                   "punish": {**describe(ctx.human, landed[0].get("move_id")),
+                                              "damage": landed[0].get("damage") if type(landed[0].get("damage")) is int else 0},
+                                   "citations": [{"round": event["round"], "frame": event["frame"]}]})
+
     lows = {}
     for point in decisions:
         if point.get("situation") != "low_defense":
@@ -376,9 +394,11 @@ def build_pack(tail, ctx, round_number=None, decisions=None, summary=None):
         "human_character": ctx.human_name, "bot_character": ctx.bot_name,
         "damage_taken_by_situation": dict(damage_by_situation),
         "hits_taken": hits_taken, "throws": throws, "whiffs": whiffs, "presses": presses,
-        "missed_punishes": missed, "sidesteps": steps, "low_decisions": lows,
+        "missed_punishes": missed, "punishes_landed": punished, "whiff_punishes_landed": whiff_punishes,
+        "sidesteps": steps, "low_decisions": lows, "decisions": decisions,
         "rates": habit_rates(decisions),
         "habits": list((summary or {}).get("top_habits", [])),
+        "damage_taken": (summary or {}).get("human_damage_taken"),
         "newly_fixed": list((summary or {}).get("newly_fixed", [])),
         "regressed": list((summary or {}).get("regressed", [])),
         "warnings": list(ctx.warnings) + list(tail.warnings),
@@ -413,6 +433,8 @@ class EvidenceStore:
         self.tails = {}
 
     def tail(self, session_id):
+        from replay.reports import checked_id, within
+
         try:
             checked_id(session_id)
             path = within(self.data_dir, self.data_dir / "recordings" / f"{session_id}.jsonl")
@@ -451,4 +473,7 @@ def set_pack(records, decisions=None):
         return None
     ctx = MatchupContext.load(human_slot, tail.characters.get(human_slot), tail.characters.get(1 - human_slot))
     latest = tail.summaries[max(tail.summaries)] if tail.summaries else None
-    return build_pack(tail, ctx, round_number=None, decisions=decisions, summary=latest)
+    pack = build_pack(tail, ctx, round_number=None, decisions=decisions, summary=latest)
+    pack["per_round"] = {number: build_pack(tail, ctx, round_number=number, decisions=decisions, summary=tail.summaries.get(number))
+                         for number in pack["rounds"]}
+    return pack

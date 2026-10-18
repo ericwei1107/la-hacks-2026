@@ -104,7 +104,7 @@ def low_defense(pack):
             moves = _names(top, top["punisher"])
         text = f"{label} is a low; it hit you {times(top['count'])} for {top['damage']}. {answer}"
     else:
-        text = f"Lows hit you {times(hit_count)} for {damage} this round. Crouch-block the low, then return to standing guard."
+        text = f"Lows hit you {times(hit_count)} for {damage}. Crouch-block the low, then return to standing guard."
         moves = []
     return Candidate("low_defense", text, "warn", damage, max(p, 0.1), moves, numbers,
                      {"opponent_move": {key: top.get(key) for key in ("name", "command", "hit_level", "on_block", "distance")},
@@ -373,16 +373,16 @@ def vocabulary(*characters):
 def _allowed_numbers(candidate):
     allowed = set()
     for value in candidate.numbers:
-        if type(value) is int:
-            allowed.add(abs(value))
+        if type(value) in (int, float):
+            allowed.add(abs(float(value)))
     return allowed
 
 
-def validate_text(text, moves, candidate, vocab=()):
+def validate_text(text, moves, candidate, vocab=(), max_words=MAX_WORDS):
     if not isinstance(text, str) or not text.strip():
         return "empty"
     text = " ".join(text.split())
-    if _words(text) > MAX_WORDS:
+    if _words(text) > max_words:
         return "too long"
     allowed = [value for value in candidate.moves if isinstance(value, str) and value]
     lowered_allowed = {value.lower() for value in allowed} | {normalize_command(value).lower() for value in allowed}
@@ -406,9 +406,30 @@ def validate_text(text, moves, candidate, vocab=()):
             value = abs(float(match))
         except ValueError:
             return f"bad number {match!r}"
-        if value != int(value) or int(value) not in numbers:
+        if value not in numbers:
             return f"ungrounded number {match}"
     return None
+
+
+def grounded_in(texts, vocab=()):
+    joined = " ".join(" ".join(str(text).split()) for text in texts)
+    lowered = joined.lower()
+    commands = set(COMMAND.findall(lowered))
+    names = {name for name in vocab if re.search(r"(?<![\w])" + re.escape(name) + r"(?![\w])", lowered)}
+    residue = lowered
+    for value in sorted(commands | names, key=len, reverse=True):
+        residue = re.sub(r"(?<![a-z0-9+,~/])" + re.escape(value) + r"(?![a-z0-9]|[+,~/][1-4])", " ", residue)
+    numbers = []
+    for match in NUMBER.findall(residue):
+        try:
+            numbers.append(abs(float(match)))
+        except ValueError:
+            continue
+    return Candidate("reply", joined, "info", moves=sorted(commands | names), numbers=numbers)
+
+
+def validate_reply(text, texts, vocab=(), max_words=140):
+    return validate_text(text, [], grounded_in(texts, vocab), vocab, max_words=max_words)
 
 
 def topic_label(topic):
