@@ -98,10 +98,10 @@ def describe(raw, pending=False):
             'consumed_bytes': len(raw) if raw is not None else 0, 'pending_tail': pending}
 
 
-def recording_records(raw, sid):
+def recording_records(raw, sid, start=0):
     entries, tactical, invalid = [], [], []
     unsupported = 0
-    for line, content in enumerate(raw.splitlines(), 1):
+    for line, content in enumerate(raw.splitlines(), start + 1):
         if not content.strip():
             continue
         try:
@@ -216,6 +216,21 @@ class InsightRepository:
         self.files = FileRepository(self.root)
         self.lock = threading.RLock()
         self.cache = {}
+        self.parsed = {}
+
+    def parse(self, sid, raw):
+        known = self.parsed.get(sid)
+        if known and raw.startswith(known['prefix']):
+            entries, tactical, invalid, unsupported = recording_records(raw[known['length']:], sid, known['lines'])
+            entries, tactical, invalid = known['entries'] + entries, known['tactical'] + tactical, known['invalid'] + invalid
+            unsupported += known['unsupported']
+            lines = known['lines'] + len(raw[known['length']:].splitlines())
+        else:
+            entries, tactical, invalid, unsupported = recording_records(raw, sid)
+            lines = len(raw.splitlines())
+        self.parsed[sid] = {'length': len(raw), 'prefix': raw, 'lines': lines, 'entries': entries,
+                            'tactical': tactical, 'invalid': invalid, 'unsupported': unsupported}
+        return list(entries), list(tactical), list(invalid), unsupported
 
     def capture(self, sid):
         check_id(sid)
@@ -270,7 +285,7 @@ class InsightRepository:
             key = sid, revision, limit, focus
             if key in self.cache:
                 return copy.deepcopy(self.cache[key])
-            entries, tactical, invalid, unsupported = recording_records(raw['recording'], sid)
+            entries, tactical, invalid, unsupported = self.parse(sid, raw['recording'])
             records = [record for line, record in entries]
             completed = sorted({r['round'] for r in records if r['t'] == 'round_summary' or (r['t'] == 'event' and r['kind'] == 'round_end')})
             completed_entries = [(line, record) for line, record in entries if record.get('round') in completed]
@@ -344,7 +359,7 @@ class InsightRepository:
             captured = self.capture(sid)
             if captured is None or captured[2] != current['sources']:
                 raise DataError('Stale evidence reference; refresh the snapshot')
-            entries, _, _, _ = recording_records(captured[1]['recording'], sid)
+            entries, _, _, _ = self.parse(sid, captured[1]['recording'])
             found = next((r for n, r in entries if n == line), None)
             if found is None or type(found.get('round')) is not int:
                 return None

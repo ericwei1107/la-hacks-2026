@@ -297,6 +297,70 @@ class SnapshotTest(unittest.TestCase):
         self.assertEqual(list(output.glob('.insights-*')), [])
 
 
+class IncrementalParseTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        for directory in ('recordings', 'sessions', 'learning'):
+            (self.root / directory).mkdir()
+        meta = {'session_id': 's', 'started_at': '2026-10-18T00:00:00Z', 'player': 'test', 'human_slot': 0,
+                'human_character': 'devil_jin', 'bot_character': 'kazuya', 'difficulty': 3, 'rounds': [], 'mode': 'versus'}
+        (self.root / 'sessions/s.json').write_text(json.dumps(meta))
+        self.path = self.root / 'recordings/s.jsonl'
+        self.write([event(n, actor=1, target=0, hit_level='low', damage=10) for n in range(1, 4)] + [summary()])
+        self.live = InsightRepository(self.root)
+
+    def line(self, record):
+        return json.dumps(record) + '\n'
+
+    def write(self, records):
+        self.path.write_text(''.join(self.line(record) for record in records))
+
+    def append(self, text):
+        with self.path.open('a') as stream:
+            stream.write(text)
+
+    def assertMatchesFresh(self):
+        self.assertEqual(self.live.snapshot('s'), InsightRepository(self.root).snapshot('s'))
+
+    def test_long_lived_repository_matches_a_fresh_parse_through_growth_and_rewrites(self):
+        self.assertMatchesFresh()
+        self.append(self.line(event(5, actor=1, target=0, hit_level='low', round_=2, damage=10)))
+        self.assertMatchesFresh()
+        partial = self.line(event(6, actor=1, target=0, hit_level='low', round_=2, damage=10))
+        self.append(partial[:15])
+        self.assertMatchesFresh()
+        self.append(partial[15:] + self.line(summary(2)))
+        self.assertMatchesFresh()
+        self.assertEqual(self.live.snapshot('s')['freshness']['completed_rounds'], [1, 2])
+        self.append(self.line({'t': 'tactical', 'session_id': 's', 'round': 2, 'frame': 7, 'chosen': 'block_low', 'source': 'habit'}))
+        self.append(self.line({'t': 'extension', 'session_id': 's'}))
+        self.assertMatchesFresh()
+        self.append('{"t": broken}\n')
+        self.assertMatchesFresh()
+        self.assertEqual(self.live.snapshot('s')['quality']['state'], 'invalid')
+        content = self.path.read_bytes()
+        edited = content.replace(b'"damage": 10', b'"damage": 12', 1)
+        self.assertEqual(len(edited), len(content))
+        self.path.write_bytes(edited)
+        self.assertMatchesFresh()
+        self.path.write_bytes(b''.join(content.splitlines(keepends=True)[:2]))
+        self.assertMatchesFresh()
+        replacement = self.root / 'recordings/new.jsonl'
+        replacement.write_text(''.join(self.line(record) for record in [event(9, actor=1, target=0, hit_level='low', block=True), summary()]))
+        os.replace(replacement, self.path)
+        self.assertMatchesFresh()
+
+    def test_an_append_validates_only_the_new_lines(self):
+        self.live.snapshot('s')
+        from analytics import insights
+        with patch.object(insights, 'checked_record', wraps=insights.checked_record) as checked:
+            self.append(self.line(event(5, round_=2)) + self.line(event(6, round_=2)))
+            self.live.snapshot('s')
+        self.assertEqual(checked.call_count, 2)
+
+
 class RealInsightTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
