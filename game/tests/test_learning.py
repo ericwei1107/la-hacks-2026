@@ -1,11 +1,13 @@
 import copy
 import importlib.util
 import json
+import pickle
 import random
 import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
+from unittest import mock
 
 from jsonschema import Draft202012Validator, FormatChecker
 
@@ -1049,6 +1051,62 @@ class SaveFailureTest(unittest.TestCase):
             rig.close()
 
 
+class PredictorFileTest(unittest.TestCase):
+    @unittest.skipIf(forest is None, "river not installed")
+    def test_save_is_atomic_and_a_bad_pickle_starts_fresh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "p.predictor.pkl"
+            p = Predictor(seed=0)
+            for _ in range(10):
+                p.observe({"situation": "low_defense"}, "hit")
+            self.assertTrue(p.save(path))
+            good = path.read_bytes()
+            with mock.patch("game.learning.pickle.dump", side_effect=OSError(28, "No space left on device")):
+                with self.assertRaises(OSError):
+                    p.save(path)
+            self.assertEqual(path.read_bytes(), good)
+            for junk in (b"", b"\x80\x05garbage", pickle.dumps({"not": "a model"})[:-3]):
+                path.write_bytes(junk)
+                warnings = []
+                loaded = Predictor.load(path, 0, warnings.append)
+                self.assertTrue(loaded.enabled)
+                self.assertEqual(loaded.seen, 0)
+                self.assertEqual(len(warnings), 1)
+            with mock.patch("game.learning.pickle.load", side_effect=ValueError("changed class layout")):
+                path.write_bytes(good)
+                warnings = []
+                self.assertTrue(Predictor.load(path, 0, warnings.append).enabled)
+                self.assertIn("unreadable", warnings[0])
+            warnings = []
+            Predictor.load(Path(tmp) / "missing.pkl", 0, warnings.append)
+            self.assertEqual(warnings, [])
+
+    @unittest.skipIf(forest is None, "river not installed")
+    def test_learning_survives_a_corrupt_predictor_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first = Learning("tester", "devil_jin", OPTIONS, L3, random.Random(0), tmp)
+            first.predictor_path.parent.mkdir(parents=True, exist_ok=True)
+            first.predictor_path.write_bytes(b"\x80\x05not a pickle")
+            again = Learning("tester", "devil_jin", OPTIONS, L3, random.Random(0), tmp)
+            self.assertTrue(again.predictor.enabled)
+            self.assertTrue(any("unreadable" in w for w in again.warnings))
+
+    def test_fresh_ignores_a_saved_profile(self):
+        rig = LearningRig()
+        try:
+            for _ in range(6):
+                rig.feed("low_defense", "hit", False)
+            rig.end_round(winner=1)
+            kept = Learning("tester", "devil_jin", OPTIONS, L3, random.Random(0), rig.root, predictor=False)
+            fresh = Learning("tester", "devil_jin", OPTIONS, L3, random.Random(0), rig.root, predictor=False, fresh=True)
+            self.assertEqual(kept.sessions, 2)
+            self.assertEqual(fresh.sessions, 1)
+            self.assertGreater(kept.habits.seen["low_defense"], 0)
+            self.assertEqual(fresh.habits.seen["low_defense"], 0)
+        finally:
+            rig.close()
+
+
 class TacticalIntegrationTest(unittest.TestCase):
     def test_habit_source_and_plan_update(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1076,6 +1134,49 @@ class TacticalIntegrationTest(unittest.TestCase):
             self.assertTrue(all("low_defense" in r["tactical"]["boosts"]["low"]["situation"] for r in habit))
             lows = [r for r in decisions if r["frame"] >= 20 and r["chosen"] == "low"]
             self.assertTrue(all(r["source"] == "habit" for r in lows))
+
+    def test_plan_note_falls_back_to_the_plan_it_started_with(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            learning = Learning("tester", "devil_jin", OPTIONS, L3, random.Random(0), tmp, predictor=False)
+            rig = TRig(difficulty=L3)
+            rig.tactical.set_plan({**rig.tactical.plan, "note": "King defaults"})
+            rig.tactical.learning = learning
+            for i in range(6):
+                learning.step(state_at(i, situation="neutral"), [decision(i, "low_defense", "hit", False)])
+            rig.run(frames("close", start=10, n=20))
+            for i in range(30):
+                learning.step(state_at(40 + i, situation="neutral"), [decision(40 + i, "low_defense", "blocked", True)])
+            rig.run(frames("close", start=80, n=20))
+            notes = [r["note"] for r in rig.records if r.get("t") == "plan"]
+            self.assertIn("low", notes[0])
+            self.assertEqual(notes[-1], "King defaults")
+            self.assertNotIn("Kazuya defaults", notes)
+
+
+class ReplayHarnessTest(unittest.TestCase):
+    def test_replays_are_reproducible_and_follow_data_dir(self):
+        records = load_jsonl(NEUTRAL)
+        states = [r for r in records if r["t"] == "state"][:3000]
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict("os.environ", {"DATA_DIR": tmp}):
+            first = run_learning(states, "tester", 3, "versus", seed=0, predictor=False)
+            second = run_learning(states, "tester", 3, "versus", seed=0, predictor=False)
+            self.assertEqual(first.learning.root, Path(tmp) / "replay")
+            self.assertEqual(second.learning.sessions, 1)
+            strip = lambda rs: [{k: v for k, v in r.items() if k != "frame"} for r in rs]
+            self.assertEqual(strip(first.summaries), strip(second.summaries))
+            self.assertEqual(first.learning.rounds, second.learning.rounds)
+            lines = first.learning.learning_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), len(second.learning.rounds))
+            kept = run_learning(states, "tester", 3, "versus", seed=0, predictor=False, fresh=False)
+            self.assertEqual(kept.learning.sessions, 2)
+
+    def test_recording_without_states(self):
+        from game.replay_learn import main
+        with tempfile.TemporaryDirectory() as tmp:
+            empty = Path(tmp) / "empty.jsonl"
+            empty.write_text("", encoding="utf-8")
+            self.assertEqual(main([str(empty), "--data-dir", tmp]), 0)
+            self.assertEqual(main([str(empty), "--subject", "bot"]), 0)
 
 
 class NeutralSampleTest(unittest.TestCase):

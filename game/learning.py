@@ -353,18 +353,29 @@ class Predictor:
     def save(self, path):
         if self.model is None:
             return False
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "wb") as fh:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".pkl.tmp")
+        with open(tmp, "wb") as fh:
             pickle.dump(self.model, fh)
+        tmp.replace(path)
         return True
 
     @classmethod
-    def load(cls, path, seed=0):
+    def fresh(cls, seed=0):
+        return cls(None if forest is None else forest.ARFClassifier(n_models=PREDICTOR_TREES, seed=seed), seed)
+
+    @classmethod
+    def load(cls, path, seed=0, warn=None):
+        if not Path(path).exists():
+            return cls.fresh(seed)
         try:
             with open(path, "rb") as fh:
                 return cls(pickle.load(fh), seed)
-        except (OSError, pickle.PickleError, AttributeError, EOFError, ImportError):
-            return cls(None if forest is None else forest.ARFClassifier(n_models=PREDICTOR_TREES, seed=seed), seed)
+        except Exception as e:
+            if warn is not None:
+                warn(f"predictor {path} unreadable, starting a fresh one: {e!r}")
+            return cls.fresh(seed)
 
 
 def features(key, state, recent, last_option):
@@ -387,16 +398,17 @@ def features(key, state, recent, last_option):
 
 
 class Learning:
-    def __init__(self, player, character, options, difficulty, rng=None, root=None, predictor=True, profile=None):
+    def __init__(self, player, character, options, difficulty, rng=None, root=None, predictor=True, profile=None, fresh=False):
         self.player = player
         self.character = character
         self.options = options
         self.difficulty = difficulty
         self.rng = rng or random.Random()
+        self.warnings = []
         self.root = Path(root) if root else data_dir()
         self.profile_path = self.root / "profiles" / f"{player}_{character}.json"
         self.predictor_path = self.profile_path.with_name(f"{player}_{character}.predictor.pkl")
-        data = profile if profile is not None else self.read_profile()
+        data = {} if fresh else profile if profile is not None else self.read_profile()
         self.sessions = int(data.get("sessions", 0)) + 1
         self.history = list(data.get("history", []))
         self.habits = Habits(data.get("habits"), (data.get("rates") or {}))
@@ -405,7 +417,12 @@ class Learning:
         self.mastery.forget()
         self.bandit = Bandit(data.get("bandits"))
         seed = self.rng.randrange(1 << 30)
-        self.predictor = Predictor.load(self.predictor_path, seed) if predictor else Predictor(None)
+        if not predictor:
+            self.predictor = Predictor(None)
+        elif fresh:
+            self.predictor = Predictor.fresh(seed)
+        else:
+            self.predictor = Predictor.load(self.predictor_path, seed, self.warn)
         self.recent = deque(maxlen=RECENT_ACTIONS)
         self.states = deque(maxlen=STATE_HISTORY)
         self.last_option = None
@@ -430,7 +447,6 @@ class Learning:
         self.fixed_round = {}
         self.rounds = []
         self.events = []
-        self.warnings = []
         self.observations = 0
 
     def read_profile(self):
@@ -894,9 +910,9 @@ class Learning:
                 out.append({"situation": key, "action": action, "weight": round(min(1.0, p), 2)})
         return out
 
-    def note(self, targets):
+    def note(self, targets, default=None):
         if not targets:
-            return "Kazuya defaults"
+            return default
         top = max(targets, key=lambda t: t["weight"])
         words = ACTION_WORDS.get(top["action"], top["action"].replace("_", " "))
         return f"You {words} {top['weight']:.0%} of the time"[:NOTE_LIMIT]
