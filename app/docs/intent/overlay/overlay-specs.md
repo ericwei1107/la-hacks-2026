@@ -35,9 +35,12 @@ Design: `overlay-design.md`
 - [ ] **OVERLAY-024**: While the card's `round_end` event does not carry `detail.match_over: true`, the between-round card for round n shall show, in the display face in `--color-primary`, the whole seconds left of a 10-second countdown that starts when the `round_end` event reaches the overlay and holds at 0, over "Round <n + 1>", and a bottom bar whose `--color-primary` fill is proportional to the time left.
 - [ ] **OVERLAY-030**: While the card's `round_end` event carries `detail.match_over: true`, the between-round card shall show "Set over" at 28 px (`--text-xl`) in the display face in `--color-primary` in place of the seconds and the round label.
 - [ ] **OVERLAY-031**: While the card's `round_end` event carries `detail.match_over: true`, the between-round card shall not draw the bottom bar.
+- [ ] **OVERLAY-032**: When the between-round card first shows the `text` of a `coach` record for its round, the overlay shall ask its voice player to speak that text, once per card.
+- [ ] **OVERLAY-033**: When the between-round card closes, the overlay shall stop its voice player.
+- [ ] **OVERLAY-034**: While the overlay's voice player is speaking and the between-round card is showing, the card shall show under the coach text a 40 × 20 waveform in `--color-primary` and "Coach speaking" at 16 px medium in `--color-primary`.
 
 ## Implemented in
 
 | Spec IDs | Entry point |
 |---|---|
-| OVERLAY-001 – OVERLAY-031 | `src/renderer/src/overlay.tsx` (`OverlayContent`, `Habits`, `BetweenRounds`) |
+| OVERLAY-001 – OVERLAY-034 | `src/renderer/src/overlay.tsx` (`OverlayContent`, `Habits`, `BetweenRounds`) |

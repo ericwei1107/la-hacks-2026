@@ -124,7 +124,7 @@ Falsification signals: the overlay takes a click from the game; coach text arriv
 ## Open Questions
 
 - **The brain does not stream plan records yet.** The HUD shows its plan note only once `plan` records arrive on `/ws/state`, and hides the row until then. Adding them to `/ws/state` is a contract change that needs all four owners.
-- **Hold-to-talk while the game has focus.** Electron's global shortcuts report key presses but not releases, so holding a key to talk needs either a native key hook or press-to-start/press-to-stop. Reading a fight-stick button from an unfocused window is unverified. The voice design settles this.
+- **Hold-to-talk while the game has focus.** Electron's global shortcuts report key presses but not releases, so holding a key to talk needs either a native key hook or press-to-start/press-to-stop. Reading a fight-stick button from an unfocused window is unverified. Until this is settled, holding to talk works only while the main window has focus (voice design).
 
 ## References
 

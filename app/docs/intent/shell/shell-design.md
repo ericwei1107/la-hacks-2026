@@ -11,7 +11,7 @@ The shell is the Electron main process plus the preload bridge that every app wi
 
 Two principles:
 
-- **The bridge carries an allow-list.** The main process reads the environment and `app/.env`, which also hold secrets such as the ElevenLabs key. A window receives the three resolved addresses and the platform name, named one by one, and nothing else from those sources.
+- **The bridge carries an allow-list.** The main process reads the environment and `app/.env`, which also hold secrets such as the ElevenLabs key. A window receives the three resolved addresses and the platform name, named one by one, and nothing else from those sources. The voice calls carry text in and audio out; the key never crosses.
 - **One app run, one set of addresses.** Addresses are resolved once when the main process starts. The overlay and the main window always point at the same services; pointing somewhere else means restarting the app.
 
 ## Service addresses
@@ -48,17 +48,20 @@ window.kumite = {
     replay:    { url: 'http://localhost:8766',    source: 'default',
                  warning: 'KUMITE_REPLAY_URL in the environment is not an http(s) URL: "192.168.50.2:8766"' },
     analytics: { url: 'http://localhost:8767',    source: 'default' }
-  }
+  },
+  speak: (text) => Promise<SpeakResult>
 }
 ```
 
 The preload asks the main process for `services` over one synchronous IPC call while it runs, so the object is complete before any page script executes. The service clients can then build every URL at module load without waiting.
 
+`speak` carries the voice component's text-to-speech call: the text goes to the main process over an asynchronous `ipcRenderer.invoke`, and the clip or a failure reason comes back (voice design). Only the text and the result cross; the ElevenLabs settings stay in the main process.
+
 A page opened outside Electron, such as the renderer dev server in a plain browser, has no `window.kumite`. The service clients design covers that case.
 
 ## Windows
 
-The main process opens two windows from the same renderer build, both with the shared preload, context isolation, no Node integration, and the sandbox on.
+The main process opens two windows from the same renderer build, both with the shared preload, context isolation, no Node integration, and the sandbox on. Both let audio play without a user gesture: the overlay never takes a click or a key press, and it speaks the coach's line between rounds (voice design).
 
 **Main window.** 1440 × 900 by default, 1024 × 640 at least, titled "Kumite", shown once its first frame is ready. It loads the renderer's `index.html`. Closing it quits the app on Windows and Linux, overlay included; on macOS the app stays in the dock and reopens the main window when activated.
 
@@ -89,7 +92,7 @@ The main process opens two windows from the same renderer build, both with the s
 
 ### Deferred
 1. The global push-to-talk key, including hold-to-talk while the game has focus (HLD open question).
-2. Bridge calls for the voice component: text-to-speech and speech-to-text through the main process, which holds the ElevenLabs key.
+2. The voice component's speech-to-text bridge call, `transcribe` (voice design, deferred).
 3. Choosing the display the overlay covers, for a game on a secondary display.
 
 ## References

@@ -44,7 +44,7 @@ On the mat ground:
 - Along the bottom, a 12 px mat-deep bar whose indigo fill shrinks with the seconds left.
 - When the `round_end` event's `detail` carries `match_over: true`, the panel reads "Set over" in the display face at 28 px (`--text-xl`), indigo, in place of the seconds and the round label, and the bottom bar is not drawn.
 
-The "Coach speaking" line from Paper belongs to the voice update.
+**Voice.** When the card shows the coach's line for its round, the overlay asks its voice player to speak the line, once per card (voice design). When the card closes, the overlay stops the voice, so the coach never talks into the next round. While the line plays, a voice indicator sits under it: a 40 × 20 indigo waveform and "Coach speaking" at 16 px medium in indigo.
 
 ## Decisions & Alternatives
 
@@ -55,13 +55,13 @@ The "Coach speaking" line from Paper belongs to the voice update.
 | Countdown | 10 seconds from the `round_end` event, holding at 0 | No number; only "Round <n + 1> next" | Paper draws a number. The round-end screen runs 8 to 10 seconds, so the next round's start usually ends the card before 0, and a hold at 0 covers the rest. |
 | Card before the coach line | "Coach is reviewing the round…" in mat muted | Leave the line empty until it lands | The replay service may take up to 8 seconds. An empty card reads as broken on video. |
 | Closing the last card of a set | 2 seconds after the state stream stops, or at a state for a different set | Keep it until the next set starts | The brain stops the state stream once the post-match scene begins. A card held over the results screen and menus would be stale. |
-| Final round label | "Set over" when the `round_end` event's `detail` carries `match_over: true`; "Round <n + 1>" otherwise | Infer the last round from wins and match length | The contracts carry no match length; only the brain knows a set is over. The event's `detail` is a free-form object, so the flag fits the existing schema. |
+| Final round label | "Set over" when the `round_end` event's `detail` carries `match_over: true`; "Round <n + 1>" otherwise | Infer the last round from wins and match length | The contracts carry no match length; only the brain knows a set is over, and it marks every `round_end` with `match_over`. The event's `detail` is a free-form object, so the flag fits the existing schema. |
 | HUD mastery source | Learning metrics, refetched per round summary | Round summary `top_habits` only | The metrics hold every habit's mastery and fixed flag. Top habits may list only some habits and may omit mastery. |
 | Plan row | Shown only when `plan` records arrive | Always shown with a placeholder | The brain does not stream plans yet (HLD open question). An empty row would look broken on video. |
 
 ## Open Questions
 
-- **The brain does not yet send `match_over`.** Until it does, the final card counts down toward a round that never starts.
+- **`match_over` reaches main with the brain's M3 merge.** The brain sets it on every `round_end`: true on the round that ends the set (rounds to win reached in versus) and on a stopped session, false otherwise. Brains and recordings from before that merge omit it, and their final card counts down toward a round that never starts.
 - **The mock starts the next round one frame after each `round_end`.** Against `tools/mock`, the card opens and closes almost at once. Seeing it hold needs a round-end pause in the mock's playback.
 - **A `round_end` sent while the state socket is down is lost** (the clients do not recover missed events), so that round gets no card.
 

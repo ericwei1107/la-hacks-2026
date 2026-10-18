@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'node:path'
 import { SERVICES_CHANNEL } from '../shared/bridge'
 import { overlayEnabled, readAppEnv, resolveServiceAddresses } from './services'
+import { handleVoice, readVoiceSettings } from './voice'
 
 const OVERLAY_DESIGN_WIDTH = 1920
 
@@ -9,7 +10,8 @@ const webPreferences = {
   preload: join(__dirname, '../preload/index.js'),
   contextIsolation: true,
   nodeIntegration: false,
-  sandbox: true
+  sandbox: true,
+  autoplayPolicy: 'no-user-gesture-required' as const
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -76,6 +78,7 @@ app.whenReady().then(() => {
   ipcMain.on(SERVICES_CHANNEL, (event) => {
     event.returnValue = services
   })
+  handleVoice(readVoiceSettings(fileValues))
   mainWindow = createMainWindow()
   if (overlayEnabled(fileValues)) createOverlayWindow()
   app.on('activate', () => {

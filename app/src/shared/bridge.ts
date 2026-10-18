@@ -12,9 +12,16 @@ export interface ServiceAddress {
 
 export type ServiceAddresses = Record<ServiceName, ServiceAddress>
 
+export type VoiceFailure = 'not_configured' | 'rejected' | 'network' | 'timeout'
+
+export type SpeakResult =
+  | { ok: true; audio: Uint8Array<ArrayBuffer> }
+  | { ok: false; reason: VoiceFailure; status?: number }
+
 export interface KumiteApi {
   platform: string
   services: ServiceAddresses
+  speak: (text: string) => Promise<SpeakResult>
 }
 
 export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
@@ -24,3 +31,5 @@ export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
 }
 
 export const SERVICES_CHANNEL = 'kumite:services'
+
+export const SPEAK_CHANNEL = 'kumite:speak'
