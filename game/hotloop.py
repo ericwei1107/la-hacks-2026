@@ -119,10 +119,9 @@ def round_live(players):
     return all(p["health"] >= p["max_health"] and p["free_movement"] for p in players)
 
 
-def wait_for_match(reader, pacer, on_poll=None, log=print):
+def wait_for_match(reader, pacer, on_poll=None, log=print, fresh=False):
     prev = None
     gap = False
-    fresh = False
     while True:
         snap = reader.snapshot()
         if snap is None:

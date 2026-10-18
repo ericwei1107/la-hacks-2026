@@ -161,14 +161,14 @@ if ($NoApp) {
 }
 
 $title = "Kumite bot"
-$botCmd = "python -m game.bot --player $Player --bot kazuya --difficulty $Difficulty --mode versus --loop --laya"
+$botCmd = "python -m game.bot --player $Player --bot kazuya --difficulty $Difficulty --mode versus --loop --laya --wait-for-match"
 if (-not $NoDemo) { $botCmd += " --demo" }
 if (Test-Window $title) {
     Add-Row $title "already running" "window open; close it or run demo-stop.ps1 for a new bot"
 } else {
     if (Test-Tcp 8765) { Write-Warning "tcp 8765 is already in use; the bot's brain API will not bind until it is freed" }
-    $p = Open-Window $title $Root "Write-Host 'Start Tekken Versus, Devil Jin vs Kazuya on the 2P pad. Press Enter when the round 1 intro is on screen.'; [void](Read-Host); $botCmd"
-    Add-Row $title "started" "waiting for Enter; brain :8765 comes up with the bot"
+    $p = Open-Window $title $Root $botCmd
+    Add-Row $title "started" "waits for round 1 by itself; brain :8765 comes up with the bot"
 }
 
 $failed = @($Rows | Where-Object { $_.Status -in @("FAILED", "MISSING") -or $_.Health -like "*FAILED*" -or $_.Health -like "*NOT*" })
@@ -179,7 +179,8 @@ $Rows | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
 Write-Host "Bot: $botCmd"
 Write-Host ""
 Write-Host "1. Padserver window: type start, start (only if Tekken has not seen the 2P pad yet)."
-Write-Host "2. Tekken: Versus, Devil Jin (you, 1P) vs Kazuya (2P pad). At the round 1 intro press Enter in 'Kumite bot'."
+Write-Host "2. Tekken: Versus, Devil Jin (you, 1P) vs Kazuya (2P pad). The bot starts by itself at the round 1 intro."
+Write-Host "3. After a match, press F8 from the game to ask the coach; press F8 again to send (KUMITE_TALK_KEY in app/.env changes the key)."
 Write-Host ""
 Write-Host "Change difficulty between matches:"
 Write-Host "  Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/config -ContentType 'application/json' -Body '{`"difficulty`": 5}'"

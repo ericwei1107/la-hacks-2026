@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { EmptyState, KeyCap, Microphone, PlayMark, SendArrow, Toggle } from '../../design'
 import { useChat, useConfig, usePostConfig, type ChatCitation, type SessionMeta } from '../../services'
 import { answerBlocks, type AnswerBlock } from '../coachAnswer'
 import { useFrame } from '../frame'
+import { consumeTalkRequest, talkKey, useTalkRequest } from '../talkRequests'
 import { keyLabel, usePushToTalkKey } from '../pushToTalk'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
 import { useHoldToTalk, useVoice } from '../../voice'
@@ -136,6 +137,18 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
   const available = !disabled && !chat.isPending && Boolean(window.kumite?.transcribe)
   const talk = useHoldToTalk((text) => void ask(text), available)
   const { start, stop } = talk
+  const talkRequest = useTalkRequest()
+  const phase = useRef(talk.phase)
+
+  useLayoutEffect(() => {
+    phase.current = talk.phase
+  })
+
+  useEffect(() => {
+    if (!consumeTalkRequest()) return
+    if (phase.current === 'listening') stop()
+    else void start()
+  }, [talkRequest, start, stop])
 
   const send = () => {
     const message = draft.trim()
@@ -250,6 +263,7 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
             />
           </label>
         </div>
+        {talkKey() && <p className="text-sm leading-5 text-text-muted">After a match, press {talkKey()} from the game to talk; press it again to send.</p>}
         {talk.note && <p role="status" className="text-sm leading-5 text-text-muted">{talk.note}</p>}
       </div>
     </>

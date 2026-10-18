@@ -134,6 +134,7 @@ def parse_args(argv=None, root=None):
     parser.set_defaults(difficulty=None)
     parser.add_argument("--demo", action="store_true", help="start from a fresh profile (player guest unless --player is given)")
     parser.add_argument("--loop", action="store_true", help="after a match ends, wait for the next match's round 1 and start a new session with the current config")
+    parser.add_argument("--wait-for-match", action="store_true", help="wait for round 1 (both players free at full health) before the first session instead of starting at once")
     parser.add_argument("--no-api", action="store_true", help="do not serve the brain API on :8765")
     parser.add_argument("--host", default=api.HOST, help="address the brain API listens on, e.g. this laptop's Tailscale IP for remote clients")
     parser.add_argument("--seed", type=int)
@@ -219,6 +220,9 @@ def main(argv=None):
             return 1
         pad = connect_pad()
         pacer = Pacer()
+        if args.wait_for_match:
+            print("waiting for the match: start Tekken Versus with the bot on the 2P pad; the bot starts by itself at the round 1 intro (Ctrl+C to quit)", flush=True)
+            wait_for_match(reader, pacer, waiting_poll(pad, reloader), fresh=True)
         while True:
             cfg, difficulty, player, fresh = settings(args)
             args.difficulty = difficulty.level

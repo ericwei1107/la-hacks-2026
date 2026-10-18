@@ -94,6 +94,13 @@ export function overlayMode(fileValues: EnvValues): 'always' | 'demo' | 'off' {
   return 'demo'
 }
 
+export function talkKey(fileValues: EnvValues): string | null {
+  const raw = process.env.KUMITE_TALK_KEY?.trim() || fileValues.KUMITE_TALK_KEY?.trim() || 'F8'
+  const lowered = raw.toLowerCase()
+  if (lowered === '0' || lowered === 'off') return null
+  return raw
+}
+
 export function insightsEnabled(fileValues: EnvValues): boolean {
   const raw = (process.env.KUMITE_INSIGHTS?.trim() || fileValues.KUMITE_INSIGHTS?.trim() || '').toLowerCase()
   return raw === '1' || raw === 'on'

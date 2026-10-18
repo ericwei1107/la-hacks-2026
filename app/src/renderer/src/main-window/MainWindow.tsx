@@ -1,5 +1,6 @@
 import { Sidebar } from './Sidebar'
 import { FrameProvider, useFrame } from './frame'
+import { GlobalTalk } from './GlobalTalk'
 import { Coach } from './screens/Coach'
 import { Controls } from './screens/Controls'
 import { Learning } from './screens/Learning'
@@ -27,6 +28,7 @@ export function MainWindow() {
   return (
     <FrameProvider>
       <CoachRecordVoice />
+      <GlobalTalk />
       <div className="mat-ground flex h-full overflow-hidden">
         <Sidebar />
         <div className="flex grow basis-0 flex-col overflow-auto">

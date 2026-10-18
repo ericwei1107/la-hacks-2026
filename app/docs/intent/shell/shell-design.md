@@ -52,7 +52,9 @@ window.kumite = {
   overlay: 'demo',
   insights: false,
   speak: (text) => Promise<SpeakResult>,
-  transcribe: (recording, mimeType) => Promise<TranscribeResult>
+  transcribe: (recording, mimeType) => Promise<TranscribeResult>,
+  talkKey: 'F8',
+  onTalk: (listener) => unsubscribe
 }
 ```
 
@@ -61,6 +63,8 @@ The preload asks the main process for `services` over one synchronous IPC call w
 `insights` is `true` when `KUMITE_INSIGHTS` is `1` or `on`, and turns on the focus card, whose source is not yet an agreed contract (focus design). `overlay` is the overlay mode resolved from `KUMITE_OVERLAY`: `always` when it is `1` or `on`, `demo` otherwise. The preload fetches it with the services, over one more synchronous IPC call.
 
 `speak` and `transcribe` carry the voice component's calls: the text or the recording goes to the main process over an asynchronous `ipcRenderer.invoke`, and the clip, the transcript or a failure reason comes back (voice design). Only the data and the result cross; the ElevenLabs settings stay in the main process. The main process also answers the windows' microphone permission requests (voice design).
+
+`talkKey` is the global shortcut the main process registered for talking to the coach from the game (`KUMITE_TALK_KEY`, default `F8`, `null` when it is off or could not be registered), fetched with one more synchronous IPC call; `onTalk` subscribes a page to each press of that key and returns the unsubscribe (voice design).
 
 A page opened outside Electron, such as the renderer dev server in a plain browser, has no `window.kumite`. The service clients design covers that case.
 

@@ -130,6 +130,11 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(snap.round_frame, 8)
         self.assertEqual(len(polls), 6)
 
+    def test_wait_for_match_fresh_starts_at_the_first_live_frame(self):
+        snaps = [pair(161, free=0), pair(162), pair(163)]
+        snap = wait_for_match(ScriptedReader(snaps), NoPacer(), log=lambda line: None, fresh=True)
+        self.assertEqual(snap.round_frame, 162)
+
     def test_wait_for_match_never_starts_without_a_new_scene(self):
         snaps = [pair(f, 0, 64) for f in range(300, 310)] + [pair(f) for f in range(310, 320)]
         with self.assertRaises(KeyboardInterrupt):
@@ -167,6 +172,10 @@ class LayaStartupTest(unittest.TestCase):
                 mock.patch.object(bot, "wait_for_match") as wait:
             code = bot.main(["--bot", "kazuya", "--no-api", *extra])
         return code, start.call_count, wait.call_count, sessions
+
+    def test_wait_for_match_flag_waits_before_the_first_session(self):
+        code, _, waits, sessions = self.run_main("--wait-for-match", reasons=(INTERRUPTED,))
+        self.assertEqual((code, waits, len(sessions)), (0, 1, 1))
 
     def test_flag_defaults_off(self):
         with tempfile.TemporaryDirectory() as tmp:

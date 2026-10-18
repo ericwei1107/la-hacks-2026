@@ -84,6 +84,8 @@ When the transcript is empty, a muted line under the input bar reads "Didn't cat
 
 Hold to talk is unavailable, and the button drawn disabled, under the same conditions as the text field (replay service offline, answer pending), and in a plain browser. While a recording is being transcribed, new presses are ignored.
 
+**Talk key from the game.** After a set the player's hands are often still on the game, so one key works while Tekken has focus: the main process registers `KUMITE_TALK_KEY` (environment, then `app/.env`; default `F8`; `0` or `off` leaves it out) as an Electron global shortcut and tells the main window each time it is pressed. The window ignores the press while a match is in progress, that is while live state is arriving and the last `round_end` it saw did not carry `match_over`; between sets, before the first one, or on the post-match screen it opens the Coach screen for the selected set and toggles a recording: one press starts listening, the next press (or the 30-second limit) stops it and sends the transcript as a question, exactly as the hold-to-talk key does. The answer shows on the Coach screen and is spoken when the coach voice is on, so the player hears it over the game. The Coach screen names the key under its input bar. If the key cannot be registered (another program holds it, or the value is not an accelerator) the main process prints why and the bridge reports no key.
+
 **Microphone permission.** The main process grants microphone requests from the app's own pages and refuses every other media request. On macOS it asks the system for microphone access the first time a recording starts.
 
 ## Decisions & Alternatives
@@ -96,6 +98,7 @@ Hold to talk is unavailable, and the button drawn disabled, under the same condi
 | Lines that overlap | A queue: every line plays to the end, in order | The newest line replaces the one playing | A tip cut in half is worse than one heard a few seconds late, and tips close together are rare and short. |
 | Transcription | One `scribe_v2` request on release | `scribe_v2_realtime` streaming while the key is held | Questions are a sentence or two; one request after release is one call with no socket to manage. |
 | Where hold to talk works | The main window, while it has focus | A global key while the game has focus | Electron's global shortcuts report presses but not releases, so holding a key over the game needs a native keyboard hook, a compiled dependency on the booth machine. After a set the player is in the main window anyway. |
+| Talking from the game | A toggle key registered as a global shortcut (`KUMITE_TALK_KEY`, default F8): one press starts, the next sends; ignored during a match | Hold to talk over the game through a native keyboard hook; no key over the game | A toggle needs only the press, which global shortcuts report, so no compiled dependency. F8 is free in Tekken and on a pad. Gating on live state keeps a stray press from recording mid-round and from stealing the booth's attention. |
 | Voice choice | `ELEVENLABS_VOICE_ID` in `app/.env`, no default | A default premade voice; a picker in Controls | One coach voice is chosen once for the video, the booth and the app, in the ElevenLabs account. It is a per-machine setting beside the key, and a picker would need the account's voice list in a page. |
 | What `voice` in the brain config controls | Speaking only | Speaking and listening | The Controls toggle reads "Speaks between rounds and in the Coach tab". Holding to talk is a deliberate act and needs no second switch. |
 | Who speaks between rounds | The main window, audio only | The overlay, with its card and a speaking indicator | The game screen belongs to the game, and the overlay is off by default. One speaker means one voice even when the overlay is on. |
@@ -105,7 +108,7 @@ Hold to talk is unavailable, and the button drawn disabled, under the same condi
 ## Open Questions & Future Decisions
 
 ### Deferred
-1. Holding to talk while the game has focus (HLD open question), for a quick follow-up question between rounds.
+1. A spoken or on-screen cue when the talk key starts and stops recording over the game; today the only feedback over the game is the coach's answer.
 2. OpenAI speech as the fallback when ElevenLabs is down (HLD, Voice). Until then a failure is text-only.
 
 ## References

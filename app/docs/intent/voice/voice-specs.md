@@ -65,6 +65,14 @@ Design: `voice-design.md`
 - [ ] **VOICE-TALK-012**: When the player starts another recording or sends a typed question, the Coach screen shall clear the muted line under the input bar.
 - [ ] **VOICE-TALK-013**: When a recording starts, the main window shall leave its voice player playing.
 
+## Talk key from the game
+
+- [ ] **VOICE-TALK-014**: The main process shall register `KUMITE_TALK_KEY` (the process environment first, then `app/.env`; `F8` when unset) as a global shortcut unless its value is `0` or `off`, and send the main window a talk message each time it is pressed.
+- [ ] **VOICE-TALK-015**: If the talk key cannot be registered or is not a valid accelerator, then the main process shall print a console warning naming the key and the bridge shall report no talk key.
+- [ ] **VOICE-TALK-016**: While live state is arriving and the last `round_end` seen for that set did not carry `match_over` true, the main window shall ignore talk messages.
+- [ ] **VOICE-TALK-017**: When a talk message arrives outside a match, the main window shall open the Coach screen for the selected set and start a recording, or stop and transcribe the recording already in progress.
+- [ ] **VOICE-TALK-018**: While the bridge reports a talk key, the Coach screen shall show "After a match, press <key> from the game to talk; press it again to send." in muted text under the input bar.
+
 ## Implemented in
 
 | Spec IDs | Entry point |
@@ -75,3 +83,6 @@ Design: `voice-design.md`
 | VOICE-ROUND-001, VOICE-ROUND-003 | `src/renderer/src/voice.ts` (`useCoachRecordVoice`), called by `src/renderer/src/main-window/MainWindow.tsx` (`CoachRecordVoice`) |
 | VOICE-HEAR-001 – VOICE-HEAR-004, VOICE-TALK-009 | `src/main/voice.ts` (`handleVoice`, `handleMicrophone`) |
 | VOICE-TALK-001 – VOICE-TALK-008, VOICE-TALK-010 – VOICE-TALK-013 | `src/renderer/src/voice.ts` (`useHoldToTalk`), used by `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`) |
+| VOICE-TALK-014, VOICE-TALK-015 | `src/main/index.ts` (the `app.whenReady` handler) with `src/main/services.ts` (`talkKey`) |
+| VOICE-TALK-016, VOICE-TALK-017 | `src/renderer/src/main-window/GlobalTalk.tsx` (`GlobalTalk`), consumed by `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`) through `src/renderer/src/main-window/talkRequests.ts` |
+| VOICE-TALK-018 | `src/renderer/src/main-window/screens/Coach.tsx` (`Conversation`) |
