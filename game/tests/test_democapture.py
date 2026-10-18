@@ -308,6 +308,27 @@ class DemoReplayTest(unittest.TestCase):
         heated = dict(bot, heat_active=True)
         self.assertEqual(lead_in(runner, seq, 110, target, heated), (110 + LEAD_IN, "ws1,2"))
 
+    def test_heat_followup_runs_right_after_the_burst_then_custom_walk_and_stand(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = replay_route(build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"}), heat=True)
+        route.update(heat_followup="b,B", heat_followup_hold=10, min_walk_frames=14, idle_frames=20)
+        pad, device = fake_pad()
+        seq = Sequencer(pad, 2)
+        runner = ComboRunner(route, seq, 1, name="ws12")
+        bot, target = player(side=0), player(x=500.0)
+        buttons = {pad.config["buttons"]["2"], pad.config["buttons"]["3"]}
+        pressed = []
+        for f in range(43, 60):
+            heat = dict(bot, heat_active=f > 44, free_movement=f < 45 or f > 59)
+            self.assertIsNone(runner.on_state({"frame": f, "players": [target, heat]}))
+            seq.on_frame(f, heat)
+            pressed.append(set(device.pressed))
+        self.assertEqual(pressed[:2], [buttons, buttons])
+        self.assertEqual(pressed[2:4], [{"DPAD_LEFT"}, set()])
+        self.assertEqual(pressed[4:14], [{"DPAD_LEFT"}] * 10)
+        heated = dict(bot, heat_active=True)
+        self.assertEqual(lead_in(runner, seq, 60, target, heated), (60 + 14 + 19, "ws1,2"))
+
     def test_heat_route_stops_when_heat_never_activates(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
         route = replay_route(build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"}), heat=True)

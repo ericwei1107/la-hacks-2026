@@ -231,8 +231,11 @@ def replay_demo(reader, args):
         print(f"the opener waits for the same round frame as the demo, then Kazuya walks in until it will connect at "
               f"the demo's distance ({route.get('connect_distance')})", flush=True)
     if route.get("heat"):
-        print("HEAT ROUTE: after each reset Kazuya heat bursts (2+3) first, waits for the burst to finish, then walks in; "
-              "leave practice heat settings so the gauge refills on reset", flush=True)
+        followup = route.get("heat_followup")
+        then = f", then {followup} (hold {route.get('heat_followup_hold', 10)} frames)" if followup else ""
+        print(f"HEAT ROUTE: after each reset Kazuya heat bursts (2+3){then}, waits until he is free, walks forward "
+              f"{route.get('min_walk_frames', 14)} frames, stands {route.get('idle_frames', 30)} frames, then starts the "
+              "combo; leave practice heat settings so the gauge refills on reset", flush=True)
     pad = connect_pad()
     try:
         if args.trace:

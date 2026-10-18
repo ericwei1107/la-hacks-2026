@@ -163,6 +163,7 @@ class ComboRunner:
             self.pending_attack = False
             self.charged = False
             self.burst = None
+            self.followup = None
             self.approach_start = None
             self.release_frame = None
             self.walked = False
@@ -394,11 +395,18 @@ class ComboRunner:
 
     def _heat(self, frame, bot):
         if bot.get("heat_active"):
-            return self.burst is not None and not bot["free_movement"]
+            last = self.followup or self.burst
+            return last is not None and (last.done_frame is None or not bot["free_movement"])
         if self.burst is None:
             if bot["free_movement"] and frame >= self.captured.get("start_round_frame", 0):
                 self.burst = self.seq.submit(HEAT_BURST, frame=frame, force=True, error=False, combo=self.name, link=0,
                                              part="heat")
+                followup = self.captured.get("heat_followup")
+                if followup:
+                    hold = int(self.captured.get("heat_followup_hold") or self.seq.timing.hold_frames)
+                    self.followup = self.seq.submit(followup, frame=frame, force=True, error=False,
+                                                    timing=replace(self.seq.timing, hold_frames=hold), combo=self.name,
+                                                    link=0, part="heat_followup")
             return True
         if self.burst.done_frame is not None and frame - self.burst.done_frame > HEAT_WAIT_FRAMES:
             self.stop(frame, reason="heat burst did not put the bot in heat (heat already used this round?)")
@@ -406,7 +414,9 @@ class ComboRunner:
 
     def _approach(self, frame, bot, target):
         fire = self.fire_distance()
-        min_walk = 0 if self.captured.get("trigger") == "ki_charge" else MIN_WALK_FRAMES
+        min_walk = self.captured.get("min_walk_frames", MIN_WALK_FRAMES)
+        if self.captured.get("trigger") == "ki_charge":
+            min_walk = 0
         if fire is None and not min_walk:
             return False
         if self.approach_start is None:
@@ -425,7 +435,7 @@ class ComboRunner:
         frames = self.captured.get("frames") or []
         idle = frames[0]["move_id"] if frames else bot["move_id"]
         self.idle_run = self.idle_run + 1 if bot["move_id"] == idle and bot["free_movement"] else 0
-        settled = self.idle_run >= IDLE_FRAMES or frame - self.release_frame >= MAX_SETTLE_FRAMES
+        settled = self.idle_run >= self.captured.get("idle_frames", IDLE_FRAMES) or frame - self.release_frame >= MAX_SETTLE_FRAMES
         return frame - self.release_frame < RELEASE_FRAMES or not settled
 
     def _submit_opener(self, frame):
