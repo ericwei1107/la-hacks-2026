@@ -30,6 +30,7 @@ def initialize(*args, **kwargs):
     return original_init(*args, **kwargs)
 
 
+os.environ['DATABASE_URL'] = ''
 os.environ['SENTRY_ENVIRONMENT'] = 'instrumentation-test'
 os.environ['SENTRY_RELEASE'] = 'kumite-analytics@instrumentation-test'
 with patch('sentry_sdk.init', side_effect=initialize):

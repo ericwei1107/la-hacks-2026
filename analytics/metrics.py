@@ -1,11 +1,7 @@
-from analytics.stats import Situations, block, compute, winners
+from analytics.stats import Situations, block, compute, rate, winners
 from analytics.observability import traced
 
 CONTRACT_KEYS = ("damage_taken_by_situation", "punish_rate", "throw_break_rate", "low_block_rate", "counter_hits_taken", "counter_hits_given", "avg_adv_after_block")
-
-
-def rate(num, den):
-    return round(num / den, 3) if den else None
 
 
 def stat_totals(human_slot, evs):

@@ -9,6 +9,7 @@ from analytics.tigerdata.database import Database, connection
 from analytics.tigerdata.trends import assemble, signature
 
 logger = logging.getLogger('analytics.tigerdata')
+RETRY_SECONDS = 30
 
 
 class TigerRepository(FileRepository):
@@ -33,8 +34,8 @@ class TigerRepository(FileRepository):
                         stored = Database(conn).trends([entry[2]['session_id'] for entry in sessions])
                     self.retry_at = 0
                 except Exception:
-                    self.retry_at = time.monotonic() + 2
-                    logger.warning('Tiger Data trends unavailable; serving files; retrying after two seconds')
+                    self.retry_at = time.monotonic() + RETRY_SECONDS
+                    logger.warning('Tiger Data trends unavailable; serving files; retrying after thirty seconds')
         finally:
             if acquired:
                 self.database_lock.release()

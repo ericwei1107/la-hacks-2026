@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ['SENTRY_DSN'] = ''
 
@@ -90,6 +91,9 @@ class StatsRouteTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         subprocess.run([sys.executable, str(ROOT / 'tools/mock/synth.py'), '--out', str(self.root)], check=True, capture_output=True)
+        patcher = patch.dict(os.environ, {'DATABASE_URL': ''})
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.client = TestClient(create_app(self.root))
         self.recording = self.root / 'recordings' / f'{SYNTH}.jsonl'
 

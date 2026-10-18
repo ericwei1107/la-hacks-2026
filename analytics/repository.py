@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
+from analytics.fastcheck import compile_schema
 from analytics.observability import traced
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,10 +18,15 @@ VALIDATORS = {name: Draft202012Validator(schema, format_checker=FormatChecker())
 ROUND_VALIDATOR = Draft202012Validator({**SCHEMAS['metrics']['$defs']['round'], '$defs': SCHEMAS['metrics']['$defs']}, format_checker=FormatChecker())
 EVAL_VALIDATOR = Draft202012Validator({'type': 'object', 'required': ['before', 'after'], 'properties': {key: {'type': ['number', 'null'], 'minimum': 0, 'maximum': 1} for key in ('before', 'after')}})
 RECORD_SCHEMAS = {'state': 'gamestate', 'event': 'event', 'round_summary': 'round_summary', 'plan': 'gameplan', 'learning_round': 'metrics'}
+FAST_RECORDS = {kind: compile_schema(SCHEMAS[RECORD_SCHEMAS[kind]]) for kind in ('state', 'event', 'round_summary')}
 logger = logging.getLogger(__name__)
 
 
 class DataError(Exception):
+    pass
+
+
+class Changed(Exception):
     pass
 
 
@@ -58,7 +64,9 @@ def checked_record(record, sid, label):
     if not isinstance(kind, str) or kind not in RECORD_SCHEMAS:
         return False
     body = {key: value for key, value in record.items() if key not in ('t', 'session_id', 'round', 'frame')} if kind == 'plan' else record
-    validate(body, ROUND_VALIDATOR if kind == 'learning_round' else VALIDATORS[RECORD_SCHEMAS[kind]], label)
+    fast = FAST_RECORDS.get(kind)
+    if fast is None or not fast(body):
+        validate(body, ROUND_VALIDATOR if kind == 'learning_round' else VALIDATORS[RECORD_SCHEMAS[kind]], label)
     if record.get('session_id', sid) != sid:
         raise DataError(f'{label}: mismatched session id')
     if kind == 'event' and record['kind'] == 'round_end':
@@ -106,11 +114,21 @@ class TailReader:
         self.mtime = None
         self.generation = 0
         self.skipped = 0
+        self.lines = 0
+        self.first_error = None
         self.identity = None
         self.digest = hashlib.sha256().digest()
 
     @traced('file.load')
     def refresh(self):
+        for _ in range(3):
+            try:
+                return self._load()
+            except Changed:
+                continue
+        raise DataError(f'{self.path.name}: changed while being read; retry the request')
+
+    def _load(self):
         with self.path.open('rb') as f:
             st = os.fstat(f.fileno())
             identity = (st.st_dev, st.st_ino)
@@ -118,14 +136,14 @@ class TailReader:
                 return self
             prefix = f.read(min(self.offset, st.st_size))
             if identity != self.identity or st.st_size < self.offset or hashlib.sha256(prefix).digest() != self.digest:
-                self.records, self.offset, self.skipped = [], 0, 0
+                self.records, self.offset, self.skipped, self.lines, self.first_error = [], 0, 0, 0, None
                 self.generation += 1
                 f.seek(0)
                 prefix = b''
             chunk = f.read(st.st_size - self.offset)
             after = os.fstat(f.fileno())
             if (st.st_size, st.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
-                raise DataError(f'{self.path.name}: changed while being read; retry the request')
+                raise Changed()
             end = chunk.rfind(b'\n')
             if end >= 0:
                 for raw in chunk[:end + 1].splitlines():
@@ -138,6 +156,7 @@ class TailReader:
         return self
 
     def _parse(self, raw):
+        self.lines += 1
         if not raw.strip():
             return
         try:
@@ -146,8 +165,11 @@ class TailReader:
                 raise ValueError('expected object')
             if checked_record(record, self.sid, self.path.name):
                 self.records.append(record)
-        except (ValueError, UnicodeDecodeError, DataError):
+        except (ValueError, UnicodeDecodeError, DataError) as exc:
             self.skipped += 1
+            if self.first_error is None:
+                detail = str(exc).removeprefix(f'{self.path.name}: ') if isinstance(exc, DataError) else 'invalid JSON'
+                self.first_error = f'{self.path.name}:{self.lines}: {detail}'
 
 
 class FileRepository:
@@ -311,16 +333,30 @@ class FileRepository:
                 return None
             return copy.deepcopy(self._metrics(sid)[1])
 
+    def _tail(self, recording, sid):
+        tail = self.tails.get(recording)
+        if tail is None or tail.sid != sid:
+            tail = TailReader(recording, sid)
+        try:
+            tail.refresh()
+        except FileNotFoundError as exc:
+            self.tails.pop(recording, None)
+            raise DataError(f'{recording.name}: required file is missing') from exc
+        except OSError as exc:
+            raise DataError(f'{recording.name}: cannot read file') from exc
+        self.tails[recording] = tail
+        return tail
+
     def _records(self, path, sid):
-        stamp, text = self._read(path)
-        key = (path, 'records')
+        tail = self._tail(Path(path), sid)
+        if tail.skipped:
+            raise DataError(tail.first_error)
+        stamp = (tail.generation, tail.offset)
+        key = (Path(path), 'records')
         cached = self.parsed.get(key)
         if cached and cached[0] == stamp and cached[1] == sid:
             return stamp, cached[2]
-        records = []
-        for record in read_lines(text, path.name):
-            if checked_record(record, sid, path.name) and record['t'] in ('state', 'event', 'round_summary'):
-                records.append(record)
+        records = [record for record in tail.records if record['t'] in ('state', 'event', 'round_summary')]
         self.parsed[key] = (stamp, sid, records)
         return stamp, records
 
@@ -332,15 +368,7 @@ class FileRepository:
             if sid not in sessions:
                 return None
             _, meta_stamp, meta, recording = sessions[sid]
-            tail = self.tails.get(recording) or TailReader(recording, sid)
-            try:
-                tail.refresh()
-            except FileNotFoundError as exc:
-                self.tails.pop(recording, None)
-                raise DataError(f'{recording.name}: required file is missing') from exc
-            except OSError as exc:
-                raise DataError(f'{recording.name}: cannot read file') from exc
-            self.tails[recording] = tail
+            tail = self._tail(recording, sid)
             signature = (meta_stamp, tail.generation, tail.offset)
             cached = self.results.get((sid, 'stats'))
             if cached and cached[0] == signature:

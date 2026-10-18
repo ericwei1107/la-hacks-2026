@@ -13,7 +13,7 @@ TIMELINE_STEP = 30
 
 
 def rate(num, den):
-    return round(min(num / den, 1.0), 3) if den else None
+    return round(num / den, 3) if den and num <= den else None
 
 
 def rounds_of(records):
