@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 import random
 import re
 import sys
@@ -42,6 +43,9 @@ SAMPLES_DIR = Path(__file__).resolve().parent.parent / "data" / "samples"
 TEST_SESSION = "2026-10-18T07-30-06"
 VAL_FRACTION = 0.1
 VARIANTS = 4
+MAX_VARIANTS = 8
+MAX_SHARE = 0.65
+POOL = 12
 SEED = 0
 SPLITS = ("train", "val", "test")
 OPTIONS = {
@@ -50,6 +54,7 @@ OPTIONS = {
     "sidestep_dir": ("left", "right", "none"),
     "throw_break": ("break_1", "break_2", "break_12", "none"),
 }
+OPTION_FAMILIES = {", ".join(v): k for k, v in OPTIONS.items()}
 INSTRUCTION = "Which option did the opponent take? Answer with exactly one option name from the list."
 DISTANCES = ("touching the bot", "at close range", "at mid range", "far away")
 ALLOWED_DISTANCES = {
@@ -503,19 +508,94 @@ def pair(text, row):
     return {"prompt": prompt(text, row["situation"]), "label": row["action"]}
 
 
-def export_lines(rows, count=VARIANTS, seed=SEED):
-    out = {name: [] for name in SPLITS}
-    for row in rows:
-        out[row["split"]].append(pair(row["text"], row))
-        if row["split"] == "train":
-            out["train"] += [pair(text, row) for text in variants(row, count, seed)]
+def take(row, want, seen, seed=SEED):
+    got = []
+    for text in variants(row, POOL, seed):
+        if len(got) >= want:
+            break
+        line = pair(text, row)
+        key = (line["prompt"], line["label"])
+        if key not in seen:
+            seen.add(key)
+            got.append(line)
+    return got
+
+
+def max_majority(minority_lines, cap=MAX_SHARE):
+    return math.floor(cap * minority_lines / (1 - cap) + 1e-9)
+
+
+def minority_count(n_top, n_minority, base=VARIANTS, most=MAX_VARIANTS, cap=MAX_SHARE):
+    for k in range(base, most + 1):
+        if n_top * (base + 1) <= max_majority(n_minority * (k + 1), cap):
+            return k
+    return most
+
+
+def spread(total, n, seed, key):
+    order = list(range(n))
+    random.Random(f"{seed}:{key}").shuffle(order)
+    out = [total // n] * n
+    for i in order[: total % n]:
+        out[i] += 1
     return out
 
 
-def export(sources, out_dir, test_session=TEST_SESSION, fraction=VAL_FRACTION, count=VARIANTS, seed=SEED, log=print):
+def balanced_train(train, base=VARIANTS, most=MAX_VARIANTS, cap=MAX_SHARE, seed=SEED):
+    seen = {(pair(r["text"], r)["prompt"], r["action"]) for r in train}
+    extra = [[] for _ in train]
+    for fam in sorted({family(r["situation"]) for r in train}):
+        idx = [i for i, r in enumerate(train) if family(r["situation"]) == fam]
+        counts = Counter(train[i]["action"] for i in idx)
+        top = min(counts, key=lambda a: (-counts[a], a))
+        majority = [i for i in idx if train[i]["action"] == top]
+        minority = [i for i in idx if train[i]["action"] != top]
+        if not minority:
+            for i in majority:
+                extra[i] = take(train[i], base, seen, seed)
+            continue
+        k = minority_count(len(majority), len(minority), base, most, cap)
+        for i in minority:
+            extra[i] = take(train[i], k, seen, seed)
+        minority_lines = len(minority) + sum(len(extra[i]) for i in minority)
+        room = max(0, min(base * len(majority), max_majority(minority_lines, cap) - len(majority)))
+        for i, want in zip(majority, spread(room, len(majority), seed, fam)):
+            extra[i] = take(train[i], want, seen, seed)
+    lines = []
+    for row, more in zip(train, extra):
+        lines.append(pair(row["text"], row))
+        lines += more
+    return lines
+
+
+def export_lines(rows, count=VARIANTS, seed=SEED, most=MAX_VARIANTS, cap=MAX_SHARE):
+    out = {name: [pair(r["text"], r) for r in rows if r["split"] == name] for name in SPLITS}
+    out["train"] = balanced_train([r for r in rows if r["split"] == "train"], count, most, cap, seed)
+    return out
+
+
+def line_family(line):
+    options = line["prompt"].rsplit("\nOptions: ", 1)[1].split(".\n", 1)[0]
+    return OPTION_FAMILIES[options]
+
+
+def label_counts(lines):
+    out = {}
+    for line in lines:
+        out.setdefault(line_family(line), Counter())[line["label"]] += 1
+    return out
+
+
+def top_share(counts):
+    label = min(counts, key=lambda a: (-counts[a], a))
+    return label, counts[label] / sum(counts.values())
+
+
+def export(sources, out_dir, test_session=TEST_SESSION, fraction=VAL_FRACTION, count=VARIANTS, seed=SEED, log=print,
+           most=MAX_VARIANTS, cap=MAX_SHARE):
     rows, skipped = gather(sources, log)
     val = assign_splits(rows, test_session, fraction, seed)
-    lines = export_lines(rows, count, seed)
+    lines = export_lines(rows, count, seed, most, cap)
     paths = {name: write(lines[name], Path(out_dir) / f"{name}.jsonl") for name in SPLITS}
     return rows, skipped, val, lines, paths
 
@@ -528,10 +608,13 @@ def export_report(rows, skipped, val, lines, paths, log=print):
         extra = f" ({len(part)} originals + {len(lines[name]) - len(part)} augmented)" if name == "train" else ""
         log(f"{name}: {len(lines[name])} lines{extra} from {len(sessions)} session(s) -> {paths[name]}")
         by_family = Counter(family(r["situation"]) for r in part)
+        shares = label_counts(lines[name])
         for fam in OPTIONS:
             if by_family[fam]:
                 actions = Counter(r["action"] for r in part if family(r["situation"]) == fam)
-                log(f"  {fam:<13} {by_family[fam]:>4}  " + ", ".join(f"{a} {n}" for a, n in actions.most_common()))
+                label, share = top_share(shares[fam])
+                log(f"  {fam:<13} {by_family[fam]:>4} originals, {sum(shares[fam].values()):>5} lines, top {label} {share:.0%}  "
+                    + ", ".join(f"{a} {n}" for a, n in actions.most_common()))
     val_n = sum(1 for r in rows if r["split"] == "val")
     log(f"val: {len(val)} (session, round) groups, {val_n}/{train_rows} pre-augmentation train examples "
         f"({val_n / max(train_rows, 1):.1%})")
@@ -552,7 +635,51 @@ def cmd_export(args):
     return 0 if result[0] else 1
 
 
-COMMANDS = ("build", "export", "eval", "bench", "train")
+def majority_labels(train_lines):
+    return {fam: top_share(counts)[0] for fam, counts in label_counts(train_lines).items()}
+
+
+def score(lines, majority):
+    by_class = {}
+    for line in lines:
+        fam = line_family(line)
+        hits = by_class.setdefault((fam, line["label"]), [0, 0])
+        hits[0] += line["label"] == majority.get(fam)
+        hits[1] += 1
+    out = {}
+    for fam in OPTIONS:
+        classes = [v for (f, _), v in by_class.items() if f == fam]
+        if classes:
+            out[fam] = {"n": sum(v[1] for v in classes), "accuracy": sum(v[0] for v in classes) / sum(v[1] for v in classes),
+                        "balanced": sum(v[0] / v[1] for v in classes) / len(classes)}
+    classes = list(by_class.values())
+    if classes:
+        out["overall"] = {"n": sum(v[1] for v in classes), "accuracy": sum(v[0] for v in classes) / sum(v[1] for v in classes),
+                          "balanced": sum(v[0] / v[1] for v in classes) / len(classes)}
+    return out
+
+
+def cmd_baseline(args):
+    folder = Path(args.dir) if args.dir else data_dir() / "finetune"
+    lines = {name: read_rows(folder / f"{name}.jsonl") for name in SPLITS}
+    if not lines["train"]:
+        raise SystemExit(f"no training lines in {folder}; run python -m game.finetune export first")
+    majority = majority_labels(lines["train"])
+    print(f"majority-class predictor from {folder / 'train.jsonl'}: " + ", ".join(f"{f} -> {majority[f]}" for f in OPTIONS if f in majority))
+    print("balanced accuracy is the mean recall over the labels present; overall balanced is over every (situation, label) present")
+    for name in ("val", "test"):
+        print(f"{name}:")
+        for key, row in score(lines[name], majority).items():
+            print(f"  {key:<13} n={row['n']:<4} accuracy {row['accuracy']:.1%}  balanced {row['balanced']:.1%}")
+    print("test label counts:")
+    counts = label_counts(lines["test"])
+    for fam in OPTIONS:
+        if fam in counts:
+            print(f"  {fam:<13} " + ", ".join(f"{a} {n}" for a, n in counts[fam].most_common()))
+    return 0
+
+
+COMMANDS = ("build", "export", "baseline", "eval", "bench", "train")
 
 
 def main(argv=None):
@@ -572,6 +699,8 @@ def main(argv=None):
     e.add_argument("--variants", type=int, default=VARIANTS, help="augmented variants per training example")
     e.add_argument("--seed", type=int, default=SEED)
     e.add_argument("--out-dir", help="default DATA_DIR/finetune")
+    bl = sub.add_parser("baseline", help="majority-class accuracy and balanced accuracy on the exported val and test splits")
+    bl.add_argument("--dir", help="folder with train/val/test.jsonl; default DATA_DIR/finetune")
     for name, help_ in (("eval", "accuracy of a Laya checkpoint on the held-out session"), ("bench", "p50/p95 latency of a 4-question batch")):
         p = sub.add_parser(name, help=help_)
         p.add_argument("--model", default="convaiinnovations/laya", help="HF repo id or local checkpoint directory")
@@ -593,7 +722,7 @@ def main(argv=None):
     t.add_argument("--grad-accum", type=int, default=8)
     t.add_argument("--seed", type=int, default=0)
     args = parser.parse_args(argv)
-    return {"build": cmd_build, "export": cmd_export, "eval": cmd_eval, "bench": cmd_bench, "train": cmd_train}[args.command](args)
+    return {"build": cmd_build, "export": cmd_export, "baseline": cmd_baseline, "eval": cmd_eval, "bench": cmd_bench, "train": cmd_train}[args.command](args)
 
 
 if __name__ == "__main__":

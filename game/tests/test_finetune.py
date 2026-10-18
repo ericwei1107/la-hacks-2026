@@ -4,8 +4,9 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from game.finetune import (OPTIONS, QUESTIONS, assign_splits, build, drop_recent, export, labels, main, majority_baseline,
-                           sentences, session_points, shift_distance, shift_health, split, variants)
+from game.finetune import (OPTIONS, QUESTIONS, assign_splits, balanced_train, build, drop_recent, export, label_counts, labels,
+                           main, majority_baseline, majority_labels, minority_count, pair, score, sentences, session_points,
+                           shift_distance, shift_health, split, variants)
 
 SAMPLES = Path(__file__).resolve().parents[2] / "data" / "samples"
 NEUTRAL = SAMPLES / "versus_djin_vs_kaz_l3_neutral.zip"
@@ -123,6 +124,87 @@ class AugmentTest(unittest.TestCase):
     def test_drop_recent_only_drops_the_recent_clause(self):
         self.assertEqual(" ".join(drop_recent(sentences(TEXT))), TEXT.split(". ", 1)[1])
         self.assertIsNone(drop_recent(sentences(TEXT.split(". ", 1)[1])))
+
+
+def texts(n, distance="at close range"):
+    out = []
+    for i in range(n):
+        lead = ("Recently the opponent had a move blocked. ", "Recently the opponent whiffed a move. ", "")[i % 3]
+        when = ("early in the round", "midway through the round", "late in the round", "the final seconds of the round")[i // 3 % 4]
+        frames = ("a small disadvantage", "a big disadvantage", "even frames", "a small advantage", "a big advantage")[i // 12 % 5]
+        out.append(f"{lead}The opponent is at {frames}, standing {distance}. The opponent is healthy with heat available. "
+                   f"The bot is healthy with heat available. The bot is even on health. It is {when}. The stage is open.")
+    return out
+
+
+def train_rows(situation, labels_and_counts):
+    rows = []
+    for label, n in labels_and_counts:
+        for k, text in enumerate(texts(n)):
+            rows.append({"session_id": "s", "round": 1, "frame": len(rows), "situation": situation, "action": label, "text": text})
+    return rows
+
+
+class RebalanceTest(unittest.TestCase):
+    def test_minority_gets_up_to_8_and_majority_is_trimmed_to_65_percent(self):
+        rows = train_rows("low_defense", [("hit", 40), ("blocked", 4)])
+        lines = balanced_train(rows)
+        counts = label_counts(lines)["low_defense"]
+        self.assertEqual(counts["blocked"], 4 * 9)
+        self.assertLessEqual(counts["hit"] / sum(counts.values()), 0.65)
+        self.assertEqual(counts["hit"], 66)
+        self.assertEqual(len({(x["prompt"], x["label"]) for x in lines}), len(lines))
+        originals = {(pair(r["text"], r)["prompt"], r["action"]) for r in rows}
+        self.assertTrue(originals <= {(x["prompt"], x["label"]) for x in lines})
+
+    def test_balanced_situations_keep_four_variants(self):
+        rows = train_rows("after_block:df1", [("press", 6), ("ss_right", 4), ("duck", 2)])
+        counts = label_counts(balanced_train(rows))["after_block"]
+        self.assertEqual(dict(counts), {"press": 30, "ss_right": 20, "duck": 10})
+        self.assertEqual(minority_count(6, 6), 4)
+        self.assertEqual(minority_count(10, 2), 8)
+
+    def test_val_and_test_are_never_augmented(self):
+        rows = train_rows("low_defense", [("hit", 20), ("blocked", 2)])
+        for r in rows[:3]:
+            r["split"] = "val"
+        rows[3]["split"] = "test"
+        for r in rows[4:]:
+            r["split"] = "train"
+        from game.finetune import export_lines
+        lines = export_lines(rows)
+        self.assertEqual(len(lines["val"]), 3)
+        self.assertEqual(len(lines["test"]), 1)
+        self.assertEqual(lines["val"], [pair(r["text"], r) for r in rows[:3]])
+        self.assertEqual(lines["test"], [pair(rows[3]["text"], rows[3])])
+        self.assertEqual(sum(label_counts(lines["train"])["low_defense"].values()), len(balanced_train(rows[4:])))
+
+
+class BaselineTest(unittest.TestCase):
+    def line(self, situation, label):
+        return pair(TEXT, {"situation": situation, "action": label})
+
+    def test_majority_accuracy_and_balanced_accuracy(self):
+        train = [self.line("sidestep_dir", "none")] * 3 + [self.line("sidestep_dir", "left"),
+                                                           self.line("low_defense", "hit"), self.line("low_defense", "hit")]
+        majority = majority_labels(train)
+        self.assertEqual(majority, {"sidestep_dir": "none", "low_defense": "hit"})
+        test = ([self.line("sidestep_dir", "none")] * 3 + [self.line("sidestep_dir", "right")]
+                + [self.line("low_defense", "hit"), self.line("low_defense", "blocked")])
+        got = score(test, majority)
+        self.assertAlmostEqual(got["sidestep_dir"]["accuracy"], 0.75)
+        self.assertAlmostEqual(got["sidestep_dir"]["balanced"], 0.5)
+        self.assertAlmostEqual(got["low_defense"]["accuracy"], 0.5)
+        self.assertAlmostEqual(got["overall"]["accuracy"], 4 / 6)
+        self.assertAlmostEqual(got["overall"]["balanced"], 0.5)
+        self.assertEqual(got["overall"]["n"], 6)
+
+    def test_cli_baseline_reads_the_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, part in (("train", [self.line("sidestep_dir", "none")] * 2),
+                               ("val", [self.line("sidestep_dir", "left")]), ("test", [self.line("sidestep_dir", "none")])):
+                (Path(tmp) / f"{name}.jsonl").write_text("".join(json.dumps(x) + "\n" for x in part), encoding="utf-8")
+            self.assertEqual(main(["baseline", "--dir", tmp]), 0)
 
 
 class ExportTest(unittest.TestCase):
