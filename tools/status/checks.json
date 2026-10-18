@@ -2,12 +2,14 @@
   "A": [
     {"id": "sentry-init", "from": "Eric", "due": "10-14", "todo": "Add sentry_sdk.init to the brain (project kumite-brain)", "doc": "tools/status/requests/sentry-brain.md", "grep": "sentry_sdk\\.init", "paths": ["game"]},
     {"id": "sentry-decision-span", "from": "Eric", "due": "10-14", "todo": "Wrap each decision in a Sentry transaction with read, decode, reflex, tactical and input spans, sampled so the hot loop never waits", "doc": "tools/status/requests/sentry-brain.md", "grep": "op=[\"']decision[\"']", "paths": ["game"]},
-    {"id": "sentry-environment", "from": "Eric", "due": "14-16", "todo": "Read SENTRY_ENVIRONMENT in sentry_sdk.init; set it to demo on the demo laptop from integration onward", "doc": "tools/status/requests/sentry-brain.md", "grep": "SENTRY_ENVIRONMENT", "paths": ["game"]}
+    {"id": "sentry-environment", "from": "Eric", "due": "14-16", "todo": "Read SENTRY_ENVIRONMENT in sentry_sdk.init; set it to demo on the demo laptop from integration onward", "doc": "tools/status/requests/sentry-brain.md", "grep": "SENTRY_ENVIRONMENT", "paths": ["game"]},
+    {"id": "finetune-results", "from": "Eric", "due": "14-19", "todo": "Write the fine-tune's held-out before/after accuracy to DATA_DIR/eval/<session_id>.json so /learning serves finetune on the learning panel", "doc": "tools/status/requests/finetune-results.md", "grep": "[\"'/]eval[\"'/]", "paths": ["game"]}
   ],
   "B": [
     {"id": "sentry-init", "from": "Eric", "due": "10-14", "todo": "Add @sentry/electron with Sentry.init in the main and renderer processes (project kumite-app)", "doc": "tools/status/requests/sentry-app.md", "grep": "@sentry/electron", "paths": ["app"]},
     {"id": "sentry-sourcemaps", "from": "Eric", "due": "14-16", "todo": "Upload source maps to Sentry from the app build so stack traces stay readable (run the sentry-fix-stack-traces skill)", "doc": "tools/status/requests/sentry-app.md", "grep": "@sentry/vite-plugin|sentryVitePlugin|sentry-cli|sourcemaps upload", "paths": ["app"]},
-    {"id": "sentry-environment", "from": "Eric", "due": "14-16", "todo": "Set the Sentry environment from SENTRY_ENVIRONMENT; demo on the demo laptop from integration onward", "doc": "tools/status/requests/sentry-app.md", "grep": "SENTRY_ENVIRONMENT", "paths": ["app"]}
+    {"id": "sentry-environment", "from": "Eric", "due": "14-16", "todo": "Set the Sentry environment from SENTRY_ENVIRONMENT; demo on the demo laptop from integration onward", "doc": "tools/status/requests/sentry-app.md", "grep": "SENTRY_ENVIRONMENT", "paths": ["app"]},
+    {"id": "finetune-panel", "from": "Eric", "due": "14-19", "todo": "Show finetune.before → finetune.after from /learning on the learning panel when both are numbers; hide or show pending when null", "doc": "tools/status/requests/finetune-panel.md", "grep": "finetune\\??\\.(before|after)|\\.finetune", "paths": ["app/src"]}
   ],
   "C": [
     {"id": "sentry-init", "from": "Eric", "due": "10-14", "todo": "Add sentry_sdk.init to the replay service (project kumite-replay)", "doc": "tools/status/requests/sentry-replay.md", "grep": "sentry_sdk\\.init", "paths": ["replay"]},
