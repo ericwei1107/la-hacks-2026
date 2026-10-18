@@ -359,7 +359,7 @@ class TimeoutTest(Base):
         tracker = Tracker(SID, timeouts=True, rounds_to_win=3)
         _, _, events = self.run_frames(round_frames(30, (10, 106)) + round_frames(10), tracker=tracker)
         end = self.only(events, "round_end")
-        self.assertEqual(end["detail"], {"reason": "time", "winner": 1})
+        self.assertEqual(end["detail"], {"reason": "time", "winner": 1, "match_over": False})
         self.assertEqual(end["frame"], 29)
         self.assertEqual(tracker.rounds[0]["winner"], 1)
         self.assertEqual(tracker.wins[1], 1)
@@ -367,11 +367,11 @@ class TimeoutTest(Base):
     def test_equal_health_timeout_is_a_draw(self):
         tracker = Tracker(SID, timeouts=True)
         _, _, events = self.run_frames(round_frames(30, (90, 90)) + round_frames(10), tracker=tracker)
-        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "time", "winner": None})
+        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "time", "winner": None, "match_over": False})
 
     def test_practice_reset_is_not_a_timeout(self):
         _, _, events = self.run_frames(round_frames(30, (10, 106)) + round_frames(10))
-        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "counter_reset", "winner": None})
+        self.assertEqual(self.only(events, "round_end")["detail"], {"reason": "counter_reset", "winner": None, "match_over": False})
 
     def test_match_over_after_rounds_to_win(self):
         tracker = Tracker(SID, timeouts=True, rounds_to_win=3)
@@ -381,6 +381,14 @@ class TimeoutTest(Base):
         self.assertEqual([r["winner"] for r in tracker.rounds], [0, 0, 1, 0])
         self.assertTrue(tracker.match_over)
         self.assertEqual(dict(tracker.wins), {0: 3, 1: 1})
+        ends = [e for e in events if e["kind"] == "round_end"]
+        self.assertEqual([e["detail"]["match_over"] for e in ends], [False, False, False, True])
+
+    def test_stop_marks_the_match_over(self):
+        tracker = Tracker(SID, timeouts=True, rounds_to_win=3)
+        self.run_frames(ko_frames(0) + idle_frames(range(0, 4)), tracker=tracker)
+        fin = tracker.finish()
+        self.assertEqual(fin[0]["detail"], {"reason": "stop", "winner": None, "match_over": True})
 
     def test_practice_never_ends_the_match(self):
         tracker = Tracker(SID)
@@ -572,7 +580,7 @@ class EventTest(Base):
         fin = tracker.finish()
         self.assertEqual(self.kinds(fin), ["round_end"])
         self.assertEqual(fin[0]["frame"], 103)
-        self.assertEqual(fin[0]["detail"], {"reason": "stop", "winner": None})
+        self.assertEqual(fin[0]["detail"], {"reason": "stop", "winner": None, "match_over": True})
         self.assert_valid([], fin)
 
     def test_finish_before_any_frame(self):

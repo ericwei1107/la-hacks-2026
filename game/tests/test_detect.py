@@ -17,7 +17,7 @@ MID = 0x8000020A
 HIGH = 0xA000050F
 THROW_LEVEL = 0x60000A1D
 PRESS_2 = 0xE000001F
-DIR = {"n": 32, "b": 16, "d": 4, "db": 2, "u": 256, "f": 64}
+DIR = {"n": 32, "b": 16, "d": 4, "db": 2, "df": 8, "u": 256, "f": 64}
 BUTTON_2 = 0x2
 D4, DF1, JAB, THROW_ATTEMPT = 0x6DB, 0x6A6, 0x643, 0x70E
 
@@ -195,11 +195,148 @@ class AfterBlockTest(unittest.TestCase):
     def test_sidestep_by_displacement(self):
         seq, c, free = self.setup()
         respond(seq, free, lambda f, h: h.update(position=(-6000.0 + 20.0 * (f - free), 1040.0, -1000.0)))
-        ev = only(self, run(seq)[1], "after_block:df1", "ss_right", True)
+        ev = only(self, run(seq)[1], "after_block:df1", "ss_left", True)
         self.assertEqual(ev["detail"]["evidence"], "displacement")
         seq, c, free = self.setup()
         respond(seq, free, lambda f, h: h.update(position=(-6000.0 - 20.0 * (f - free), 1040.0, -1000.0)))
-        only(self, run(seq)[1], "after_block:df1", "ss_left", True)
+        only(self, run(seq)[1], "after_block:df1", "ss_right", True)
+
+    def test_input_and_displacement_agree(self):
+        seq, c, free = self.setup()
+        respond(seq, free, lambda f, h: h.update(dir_held=DIR["u"]) if f in (free + 2, free + 3) else None)
+        by_input = only(self, run(seq)[1], "after_block:df1", "ss_left", True)
+        seq, c, free = self.setup()
+        respond(seq, free, lambda f, h: h.update(position=(-6000.0 + 20.0 * (f - free), 1040.0, -1000.0)))
+        by_move = only(self, run(seq)[1], "after_block:df1", "ss_left", True)
+        self.assertEqual(by_input["action"], by_move["action"])
+
+    def test_crouch_dash_is_not_a_sidestep(self):
+        seq, c, free = self.setup()
+        pattern = {free + 2: DIR["d"], free + 3: DIR["df"], free + 4: DIR["df"], free + 5: DIR["df"]}
+        respond(seq, free, lambda f, h: h.update(dir_held=pattern.get(f, DIR["n"])))
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertEqual(len(decisions), 1)
+        self.assertNotIn(decisions[0]["action"], ("ss_left", "ss_right"))
+        seq, c, free = self.setup()
+        pattern = {free + 2: DIR["d"], free + 3: DIR["db"]}
+        respond(seq, free, lambda f, h: h.update(dir_held=pattern.get(f, DIR["n"])))
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertNotIn(decisions[0]["action"], ("ss_left", "ss_right"))
+
+    def test_knockback_is_not_movement(self):
+        seq, c, free = self.setup()
+
+        def knocked(f, h):
+            if f >= free + 3:
+                h.update(position=(-6000.0 + 60.0 * (f - free - 2), 1040.0, -1000.0 - 40.0 * (f - free - 2)), hit_reaction=3,
+                         move_id=0x600, frame_in_move=f - free - 2, move_total=25, free_movement=0)
+
+        respond(seq, free, knocked)
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertEqual(len(decisions), 1)
+        self.assertNotIn(decisions[0]["action"], ("ss_left", "ss_right", "backdash"))
+
+    def test_buffered_punish_counts_as_press(self):
+        seq, c, free = self.setup(def_total=5)
+
+        def buffered(f, h):
+            if f >= free:
+                h.update(move_id=JAB, frame_in_move=f - free + 1, move_total=27, free_movement=0, hit_level=HIGH, hit_level_name="high")
+
+        respond(seq, free, buffered)
+        ev = only(self, run(seq)[1], "after_block:df1", "press", True)
+        self.assertTrue(ev["detail"]["buffered"])
+        self.assertEqual(ev["detail"]["response_move_id"], JAB)
+        self.assertEqual(ev["frame"], free + 12)
+
+    def test_rage_art_out_of_stun_is_a_press(self):
+        seq, c, free = self.setup(def_total=5)
+
+        def rage(f, h):
+            if f == free - 2:
+                h.update(game_buttons=0x03FC0000 | (1 << 6))
+            if f >= free:
+                h.update(move_id=0x84C, frame_in_move=f - free + 1, move_total=192, free_movement=0, hit_reaction=0)
+
+        respond(seq, free - 2, rage)
+        ev = only(self, run(seq)[1], "after_block:df1", "press", True)
+        self.assertEqual(ev["detail"]["response_move_id"], 0x84C)
+        self.assertTrue(ev["detail"]["buffered"])
+
+    def test_stun_tail_slide_is_not_a_backdash(self):
+        seq, c, free = self.setup()
+
+        def tail(f, h):
+            if free <= f < free + 8:
+                h.update(move_id=0x720, frame_in_move=f - c + 1, move_total=19, free_movement=1, hit_reaction=1,
+                         position=(-6000.0, 1040.0, -1000.0 - 30.0 * (f - free + 1)))
+            elif f >= free + 8:
+                h.update(position=(-6000.0, 1040.0, -1240.0))
+
+        respond(seq, free, tail)
+        ev = only(self, run(seq)[1], "after_block:df1", "none", False)
+        self.assertEqual(ev["frame"], free + 20)
+        seq, c, free = self.setup(def_total=5)
+
+        def tail_then_jab(f, h):
+            if free <= f < free + 4:
+                h.update(move_id=0x720, frame_in_move=f - c + 1, move_total=5, free_movement=1, hit_reaction=1,
+                         position=(-6000.0, 1040.0, -1000.0 - 40.0 * (f - free + 1)))
+            elif f >= free + 4:
+                h.update(move_id=JAB, frame_in_move=f - free - 3, move_total=27, free_movement=0, hit_level=HIGH, hit_level_name="high",
+                         position=(-6000.0, 1040.0, -1160.0))
+
+        respond(seq, free, tail_then_jab)
+        ev = only(self, run(seq)[1], "after_block:df1", "press", True)
+        self.assertEqual(ev["detail"]["response_move_id"], JAB)
+
+    def test_non_attack_move_out_of_stun_opens_the_window(self):
+        seq, c, free = self.setup()
+
+        def stance(f, h):
+            if free <= f < free + 100:
+                h.update(move_id=0x84C, frame_in_move=f - free + 1, move_total=130, free_movement=0, hit_reaction=0)
+            elif f >= free + 100:
+                h.update(move_id=0x850, frame_in_move=f - free - 99, move_total=60, free_movement=0, hit_level=MID, hit_level_name="mid")
+
+        respond(seq, free, stance)
+        seq = seq + [(f, [idle(0, f), idle(1, f)]) for f in range(seq[-1][0] + 1, free + 130)]
+        for f, pair in seq:
+            stance(f, pair[0]) if f >= free else None
+        decisions = [d for d in run(seq)[1] if d["situation"] == "after_block:df1"]
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0]["action"], "none")
+        self.assertEqual(decisions[0]["frame"], free + 20)
+
+    def test_pushback_after_a_second_block_is_not_a_backdash(self):
+        seq, c, free = self.setup()
+
+        def blocked_again(f, h):
+            if free + 3 <= f < free + 14:
+                h.update(move_id=0x720, frame_in_move=f - free - 2, move_total=11, free_movement=0, hit_reaction=1,
+                         position=(-6000.0, 1040.0, -1000.0 - 40.0 * (f - free - 2)))
+            elif f >= free + 14:
+                h.update(position=(-6000.0, 1040.0, -1440.0))
+
+        respond(seq, free, blocked_again)
+        decisions = [d for d in run(seq)[1] if d["situation"].startswith("after_block")]
+        self.assertTrue(decisions)
+        self.assertTrue(all(d["action"] != "backdash" for d in decisions), decisions)
+
+    def test_string_opens_one_window_and_a_hit_cancels(self):
+        first, c1, end1 = blocked_df1(def_total=19, tail=0)
+        second, c2, end2 = exchange(attacker=1, move=0x6A7, total=41, connect_at=15, level_code=MID, level="mid", reaction=1,
+                                    def_move=0x720, def_total=19, tail=45, start=end1 + 1)
+        seq = first + second
+        decisions = [d for d in run(seq)[1] if d["situation"].startswith("after_block")]
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0]["situation"], "after_block:0x6a7")
+        first, c1, end1 = blocked_df1(def_total=19, tail=0)
+        hit_after, c2, end2 = exchange(attacker=1, move=0x6A7, total=41, connect_at=15, level_code=MID, level="mid", reaction=3,
+                                       def_move=0x600, def_total=25, damage=12, tail=45, start=end1 + 1)
+        seq = first + hit_after
+        decisions = [d for d in run(seq)[1] if d["situation"].startswith("after_block")]
+        self.assertEqual(decisions, [])
 
     def test_backdash_taps(self):
         seq, c, free = self.setup()
@@ -252,6 +389,37 @@ class ThrowBreakTest(unittest.TestCase):
 
 
 class SidestepDirTest(unittest.TestCase):
+    def test_stale_hit_reaction_does_not_close_the_window(self):
+        def human(f, h):
+            if 96 <= f <= 103:
+                h.update(hit_reaction=12)
+            if f in (102, 103):
+                h.update(dir_held=DIR["u"])
+
+        ev = only(self, run(bot_attack(human=human))[1], "sidestep_dir", "left", True)
+        self.assertEqual(ev["detail"]["evidence"], "input")
+        stale = lambda f, h: h.update(hit_reaction=1, frame_in_move=f - 80) if 90 <= f <= 103 else None
+        ev = only(self, run(bot_attack(lead=12, human=stale))[1], "sidestep_dir", "none", False)
+        self.assertEqual(ev["frame"], 115)
+        self.assertNotEqual(ev["detail"].get("evidence"), "struck")
+
+    def test_block_during_the_window_closes_it(self):
+        tracker = Tracker(SID)
+        det = Detector(0, TABLE)
+        decisions = []
+        for f, pair in bot_attack(lead=3, length=41, first=15, last=16):
+            state = build_state(pair, 0, f, SID)
+            evs = tracker.step(state)
+            if f == 106:
+                evs = evs + [{"t": "event", "session_id": SID, "frame": 106, "round": 1, "kind": "block", "actor": 1, "target": 0,
+                              "move_id": DF1, "hit_level": "mid", "frame_advantage": None}]
+            decisions += det.step(state, evs)
+            if f == 106:
+                break
+        ev = only(self, decisions, "sidestep_dir", "none", False)
+        self.assertEqual(ev["detail"].get("evidence"), "struck")
+        self.assertEqual(ev["frame"], 106)
+
     def test_step_left(self):
         frames = bot_attack(human=lambda f, h: h.update(dir_held=DIR["u"]) if f in (102, 103) else None)
         ev = only(self, run(frames)[1], "sidestep_dir", "left", True)

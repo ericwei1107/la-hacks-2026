@@ -1,0 +1,328 @@
+{
+  "player": "sahil",
+  "character": "devil_jin",
+  "sessions": 1,
+  "habits": {
+    "sidestep_dir": {
+      "none": [
+        16.4192,
+        1.0
+      ],
+      "right": [
+        0.5946,
+        1.0
+      ]
+    },
+    "after_block:bot_plus": {
+      "block_high": [
+        1.933,
+        1.0
+      ],
+      "press": [
+        0.9659,
+        1.0
+      ]
+    },
+    "after_block:any": {
+      "block_high": [
+        1.6598,
+        1.0
+      ],
+      "press": [
+        8.2307,
+        1.0
+      ],
+      "ss_right": [
+        0.7579,
+        1.0
+      ]
+    },
+    "after_block:f4": {
+      "block_high": [
+        0.9659,
+        1.0
+      ],
+      "press": [
+        1.0,
+        1.0
+      ]
+    },
+    "throw_break": {
+      "none": [
+        2.8002,
+        1.0
+      ],
+      "break_1": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:bot_minus": {
+      "press": [
+        7.7862,
+        1.0
+      ],
+      "ss_right": [
+        0.8123,
+        1.0
+      ]
+    },
+    "after_block:f_n_d_df2": {
+      "press": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:df2": {
+      "press": [
+        2.899,
+        1.0
+      ]
+    },
+    "low_defense": {
+      "hit": [
+        11.9011,
+        1.0
+      ]
+    },
+    "after_block:12": {
+      "ss_right": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:db2": {
+      "press": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:0x6a1": {
+      "press": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:0x69b": {
+      "press": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:df1": {
+      "press": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:0x6b8": {
+      "press": [
+        1.0,
+        1.0
+      ]
+    },
+    "after_block:0x6fa": {
+      "block_high": [
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "mastery": {
+    "sidestep_dir": {
+      "p_learned": 0.168,
+      "observations": 25,
+      "fixed": false,
+      "last_retest": null
+    },
+    "after_block:bot_plus": {
+      "p_learned": 0.657,
+      "observations": 3,
+      "fixed": false,
+      "last_retest": null
+    },
+    "after_block:any": {
+      "p_learned": 0.5381,
+      "observations": 13,
+      "fixed": false,
+      "last_retest": "2026-10-18T05:15:16Z"
+    },
+    "throw_break": {
+      "p_learned": 0.5321,
+      "observations": 4,
+      "fixed": false,
+      "last_retest": null
+    },
+    "after_block:bot_minus": {
+      "p_learned": 0.1658,
+      "observations": 10,
+      "fixed": false,
+      "last_retest": null
+    },
+    "low_defense": {
+      "p_learned": 0.168,
+      "observations": 15,
+      "fixed": false,
+      "last_retest": null
+    }
+  },
+  "bandits": {
+    "after_block:any|press": {
+      "1": [
+        0.0,
+        1.3783
+      ],
+      "2": [
+        0.0,
+        0.729
+      ],
+      "f+4": [
+        0.0,
+        1.4305
+      ],
+      "db+2": [
+        0.0,
+        0.0
+      ],
+      "df+1": [
+        0.0,
+        0.5314
+      ],
+      "df+3": [
+        0.0,
+        0.0
+      ],
+      "b+2": [
+        0.0,
+        0.81
+      ],
+      "df+3+4": [
+        0.124,
+        0.9195
+      ],
+      "df+2": [
+        0.0,
+        0.0
+      ],
+      "b+4": [
+        0.5669,
+        0.0236
+      ]
+    },
+    "low_defense|hit": {
+      "db+3": [
+        1.2667,
+        4.9411
+      ],
+      "db+4": [
+        0.0788,
+        1.3325
+      ],
+      "d+4": [
+        0.3176,
+        1.4467
+      ],
+      "d+3": [
+        0.0,
+        0.0
+      ],
+      "f,n,d,DF+4": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "predictor": null,
+  "history": [
+    {
+      "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
+      "round": 1,
+      "winner": 1,
+      "observations": 11
+    },
+    {
+      "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
+      "round": 2,
+      "winner": 1,
+      "observations": 26
+    },
+    {
+      "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
+      "round": 3,
+      "winner": 0,
+      "observations": 47
+    },
+    {
+      "session_id": "2026-10-18T05-14-03_sahil_djin_vs_kaz",
+      "round": 4,
+      "winner": 1,
+      "observations": 57
+    }
+  ],
+  "rates": {
+    "sidestep_dir": [
+      0.5946,
+      17.0138
+    ],
+    "after_block:bot_plus": [
+      1.933,
+      2.899
+    ],
+    "after_block:any": [
+      4.5942,
+      10.6483
+    ],
+    "after_block:f4": [
+      0.9659,
+      1.9659
+    ],
+    "throw_break": [
+      1.0,
+      3.8002
+    ],
+    "after_block:bot_minus": [
+      3.1154,
+      8.5984
+    ],
+    "after_block:f_n_d_df2": [
+      1.0,
+      1.0
+    ],
+    "after_block:df2": [
+      2.899,
+      2.899
+    ],
+    "low_defense": [
+      0.0,
+      11.9011
+    ],
+    "after_block:12": [
+      0.0,
+      1.0
+    ],
+    "after_block:db2": [
+      0.0,
+      1.0
+    ],
+    "after_block:0x6a1": [
+      0.0,
+      1.0
+    ],
+    "after_block:0x69b": [
+      0.0,
+      1.0
+    ],
+    "after_block:df1": [
+      0.0,
+      1.0
+    ],
+    "after_block:0x6b8": [
+      0.0,
+      1.0
+    ],
+    "after_block:0x6fa": [
+      1.0,
+      1.0
+    ]
+  }
+}

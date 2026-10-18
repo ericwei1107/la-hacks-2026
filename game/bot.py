@@ -5,6 +5,7 @@ import sys
 from game.detect import Detector
 from game.difficulty import Difficulty
 from game.hotloop import Hooks, run_session
+from game.learning import Learning
 from game.notation import Timing
 from game.options import CLASSES, load_options
 from game.pad import KillSwitch, connect_pad, load_config
@@ -17,19 +18,22 @@ from game.tactical import Tactical
 
 
 class BotHooks(Hooks):
-    def __init__(self, pad, difficulty, seed=None, config=None):
+    def __init__(self, pad, difficulty, seed=None, config=None, player="player"):
         self.pad = pad
         self.difficulty = difficulty
         self.rng = random.Random(seed)
         self.config = config or load_config()
+        self.player = player
         self.seq = None
         self.reflex = None
         self.tactical = None
         self.detector = None
+        self.learning = None
 
     def start(self, snap, sid):
         bot = 1 - snap.human_slot
         character = snap.players[bot]["character"]
+        human_character = snap.players[snap.human_slot]["character"]
         latency = self.config["input_latency_frames"]
         timing = Timing.from_config(self.config.get("timing"))
         self.seq = Sequencer(self.pad, latency, self.difficulty, self.rng, timing)
@@ -37,8 +41,11 @@ class BotHooks(Hooks):
         wakeups, wake_source = load_wakeups(character)
         self.reflex = Reflex(self.seq, self.difficulty, latency, punishers, self.rng, wakeups)
         options, option_source = load_options(character)
-        self.tactical = Tactical(self.seq, self.difficulty, latency, options, self.rng)
+        self.learning = Learning(self.player, human_character, options, self.difficulty, self.rng)
+        self.tactical = Tactical(self.seq, self.difficulty, latency, options, self.rng, learning=self.learning)
         self.detector = Detector(snap.human_slot, options)
+        print(f"profile {self.learning.profile_path} session {self.learning.sessions}, "
+              f"predictor {'on' if self.learning.predictor.enabled else 'off (river missing)'}; {self.learning.status()}", flush=True)
         tiers = ", ".join(f"{s}: " + " ".join(f"{t['notation']}(i{t['startup']})" for t in punishers[s]) for s in ("standing", "crouching"))
         menu = ", ".join(f"{c} {len(options['classes'][c])}" for c in CLASSES)
         print(f"bot P{bot + 1} {character} at difficulty {self.difficulty.level} "
@@ -53,12 +60,28 @@ class BotHooks(Hooks):
 
     def frame(self, state, events):
         records = self.reflex.step(state, events)
-        records += self.detector.step(state, events)
+        decisions = self.detector.step(state, events)
+        records += decisions
+        learned = self.learning.step(state, events + decisions)
+        records += learned
         records += self.tactical.step(state, events, self.reflex)
+        self.report(learned)
         bot = state["players"][1 - state["human_slot"]]
         self.seq.on_frame(state["frame"], bot, self.reflex.live(state))
         self.seq.pop_finished()
         return records
+
+    def report(self, learned):
+        for rec in learned:
+            if rec.get("t") == "round_summary":
+                print(f"learning r{rec['round']}: {self.learning.status()}", flush=True)
+
+    def finish(self, state, events):
+        if self.learning is None:
+            return []
+        learned = self.learning.step(state, events)
+        self.report(learned)
+        return learned
 
     def close(self):
         if self.seq is not None:
@@ -78,7 +101,7 @@ def main(argv=None):
         if not run_gate(reader, args.offsets):
             return 1
         pad = connect_pad()
-        run_session(reader, args, BotHooks(pad, Difficulty.preset(args.difficulty), args.seed))
+        run_session(reader, args, BotHooks(pad, Difficulty.preset(args.difficulty), args.seed, player=args.player))
         return 0
     except KillSwitch as e:
         print(f"stopped: {e}", flush=True)

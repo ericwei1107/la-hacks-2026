@@ -11,14 +11,14 @@
   "kazuya": {
     "classes": {
       "mid": [
-        {"notation": "df+1", "move_id": "0x6A6", "hit_level": "mid", "startup": 15, "on_block": -7, "weight": 1.0, "ranges": ["point_blank", "close", "mid"], "tags": []},
+        {"notation": "df+1", "move_id": "0x6A6", "move_ids": ["0x5DC", "0x6A6"], "hit_level": "mid", "startup": 15, "on_block": -7, "weight": 1.0, "ranges": ["point_blank", "close", "mid"], "tags": []},
         {"notation": "df+4", "move_id": "0x6C3", "hit_level": "mid", "startup": 13, "on_block": -9, "weight": 0.9, "ranges": ["point_blank", "close"], "tags": []},
         {"notation": "f+4", "move_id": "0x680", "hit_level": "mid", "startup": 19, "on_block": 4, "weight": 0.9, "ranges": ["close", "mid"], "tags": ["plus_on_block"]},
         {"notation": "db+2", "move_id": "0x6C5", "hit_level": "mid", "startup": 18, "on_block": -4, "weight": 0.8, "ranges": ["close", "mid"], "tags": []},
         {"notation": "b+2", "move_id": "0x685", "hit_level": "mid", "startup": 14, "on_block": -8, "weight": 0.7, "ranges": ["point_blank", "close"], "tags": []},
         {"notation": "df+3", "move_id": "0x6B0", "hit_level": "mid", "startup": 18, "on_block": -7, "weight": 0.6, "ranges": ["point_blank", "close", "mid"], "tags": []},
         {"notation": "df+2", "move_id": "0x6AF", "hit_level": "mid", "startup": 14, "on_block": -12, "weight": 0.6, "ranges": ["point_blank", "close", "mid"], "tags": ["homing"]},
-        {"notation": "1", "move_id": "0x659", "hit_level": "high", "startup": 10, "on_block": 1, "weight": 0.8, "ranges": ["point_blank", "close"], "tags": ["poke"]}
+        {"notation": "1", "move_id": "0x659", "move_ids": ["0x659", "0x65A"], "hit_level": "high", "startup": 10, "on_block": 1, "weight": 0.8, "ranges": ["point_blank", "close"], "tags": ["poke"]}
       ],
       "low": [
         {"notation": "d+4", "move_id": "0x6DB", "hit_level": "low", "startup": 12, "on_block": -15, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": []},
@@ -30,15 +30,15 @@
         {"notation": "d+1", "move_id": "0x6D5", "hit_level": "special_low", "startup": 10, "on_block": -5, "weight": 0.4, "ranges": ["point_blank", "close"], "tags": []}
       ],
       "throw": [
-        {"notation": "1+3", "move_id": "0x71B", "hit_level": "throw", "startup": 12, "on_block": 0, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": [], "break": "1/2"},
+        {"notation": "1+3", "move_id": "0x71B", "move_ids": ["0x71B", "0x814"], "hit_level": "throw", "startup": 12, "on_block": 0, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": [], "break": "1/2"},
         {"notation": "2+4", "move_id": null, "hit_level": "throw", "startup": 12, "on_block": 0, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": [], "break": "1/2"},
         {"notation": "uf+1+2", "move_id": null, "hit_level": "throw", "startup": 12, "on_block": 0, "weight": 0.7, "ranges": ["point_blank", "close"], "tags": [], "break": "1+2"}
       ],
       "launcher": [
-        {"notation": "1+2", "move_id": "0x64B", "hit_level": "mid", "startup": 12, "on_block": -13, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": ["launcher"]},
+        {"notation": "1+2", "move_id": "0x64B", "move_ids": ["0x64A", "0x64B"], "hit_level": "mid", "startup": 12, "on_block": -13, "weight": 1.0, "ranges": ["point_blank", "close"], "tags": ["launcher"]},
         {"notation": "ws+2", "move_id": "0x698", "hit_level": "mid", "startup": 16, "on_block": -18, "weight": 0.6, "ranges": ["point_blank", "close"], "tags": ["launcher", "homing"]},
         {"notation": "f+2", "move_id": "0x65B", "hit_level": "mid", "startup": 20, "on_block": -12, "weight": 0.6, "ranges": ["close", "mid"], "tags": ["launcher", "power_crush"]},
-        {"notation": "f,n,d,df+2", "move_id": "0x702", "hit_level": "high", "startup": 11, "on_block": -10, "weight": 0.7, "ranges": ["close", "mid"], "tags": ["launcher", "wind_god_fist"], "movement_set": "character"}
+        {"notation": "f,n,d,df+2", "move_id": "0x702", "move_ids": ["0x701", "0x702"], "hit_level": "high", "startup": 11, "on_block": -10, "weight": 0.7, "ranges": ["close", "mid"], "tags": ["launcher", "wind_god_fist"], "movement_set": "character"}
       ],
       "backdash": [
         {"notation": "b,b", "weight": 1.0, "movement_set": "basic"}

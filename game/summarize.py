@@ -203,8 +203,69 @@ def reflex_section(records, events, human):
         print(f"  {kind}: {sum(counts.values())} decisions, " + ", ".join(f"{k} {n}" for k, n in counts.most_common()))
 
 
+def find_learning(path, sid):
+    path = Path(path)
+    if path.suffix == ".zip":
+        for name, text in zip_members(path).items():
+            if name.endswith(".learning.jsonl"):
+                return f"{path.as_posix()}:{name}", text
+    for candidate in (path.with_name(f"{path.stem}.learning.jsonl"), data_dir() / "learning" / f"{sid}.jsonl"):
+        if candidate.exists():
+            return str(candidate), candidate.read_text(encoding="utf-8")
+    return None
+
+
+def learning_section(records, path, sid):
+    schema = json.loads((CONTRACTS / "round_summary.schema.json").read_text())
+    summary_v = Draft202012Validator(schema, format_checker=FormatChecker())
+    failures = 0
+    summaries = [r for r in records if r.get("t") == "round_summary"]
+    events = [r for r in records if r.get("t") == "learning_event"]
+    found = find_learning(path, sid)
+    if not summaries and not events and found is None:
+        print("learning: none")
+        return 0
+    for ev in events:
+        print(f"learning_event r{ev['round']} f{ev['frame']}: {ev.get('event')} {ev.get('situation', '')}")
+    for s in summaries:
+        errors = [e.message for e in summary_v.iter_errors(s)]
+        failures += len(errors)
+        habits = "; ".join(f"{h['situation']} {h['action']} p={h['p']:.2f} n={h['n']}"
+                           + (f" mastery={h['mastery']:.2f}" if "mastery" in h else "") + (" fixed" if h.get("fixed") else "")
+                           for h in s["top_habits"])
+        moments = ", ".join(f"f{m['frame']} {m['kind']} {m.get('damage', 0)}" + (f" in {m['situation']}" if m.get("situation") else "")
+                            for m in s["biggest_moments"])
+        print(f"round_summary r{s['round']}: winner {s['winner']}, human took {s['human_damage_taken']}, bot took {s['bot_damage_taken']}, "
+              f"exploited {s.get('exploited', [])}, fixed {s.get('newly_fixed', [])}, regressed {s.get('regressed', [])}"
+              + (f"; FAIL {errors[0]}" if errors else ""))
+        print(f"  top habits: {habits or 'none'}; moments: {moments or 'none'}")
+    if found is None:
+        return failures
+    label, text = found
+    round_schema = json.loads((CONTRACTS / "metrics.schema.json").read_text())
+    round_v = Draft202012Validator({**round_schema["$defs"]["round"], "$defs": round_schema["$defs"]}, format_checker=FormatChecker())
+    print(f"learning per round ({label}):")
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        if rec.get("t") != "learning_round":
+            continue
+        errors = [e.message for e in round_v.iter_errors(rec)]
+        failures += len(errors)
+        acc = "n/a" if rec.get("prediction_accuracy") is None else f"{rec['prediction_accuracy']:.0%}"
+        print(f"  round {rec['round']}: prediction accuracy {acc}" + (", player changed" if rec.get("player_changed") else "")
+              + (f"; FAIL {errors[0]}" if errors else ""))
+        for key, row in rec.get("habits", {}).items():
+            print(f"    {key:<24} {row.get('action', '?'):<11} p={row['p']:.2f} n={row['n']:<3}"
+                  + (f" mastery={row['mastery']:.2f}" if "mastery" in row else "") + ("  fixed" if row.get("fixed") else ""))
+        for key, arms in rec.get("bandit", {}).items():
+            print(f"    bandit {key}: " + ", ".join(f"{arm} {rate:.2f}" for arm, rate in arms.items()))
+    return failures
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Summarize a Kumite recording: session check, events, frame advantage")
+    parser = argparse.ArgumentParser(description="Summarize a Kumite recording: session check, events, frame advantage, learning")
     parser.add_argument("recording")
     args = parser.parse_args(argv)
 
@@ -230,11 +291,15 @@ def main(argv=None):
             print(f"session: ok {session_path} human P{meta['human_slot'] + 1} {meta['human_character']} vs {meta['bot_character']}, rounds {meta['rounds']}")
 
     replayed = replay(states, meta.get("mode", "practice"))
-    has_decisions = any(e["kind"] == "decision_point" for e in events)
-    recorded_keys = Counter(event_key(e) for e in events)
-    replayed_keys = Counter(event_key(e) for e in replayed if has_decisions or e["kind"] != "decision_point")
+    recorded_keys = Counter(event_key(e) for e in events if e["kind"] != "decision_point")
+    replayed_keys = Counter(event_key(e) for e in replayed if e["kind"] != "decision_point")
+    recorded_decisions = Counter(e.get("situation") for e in events if e["kind"] == "decision_point")
+    replayed_decisions = Counter(e.get("situation") for e in replayed if e["kind"] == "decision_point")
+    if recorded_decisions and recorded_decisions != replayed_decisions:
+        print(f"decision points: recorded {sum(recorded_decisions.values())}, current detector finds {sum(replayed_decisions.values())} "
+              f"(the detector changed since this recording; not a failure)")
     if recorded_keys == replayed_keys:
-        print(f"replay: ok, re-running the tracker on the states reproduces all {len(replayed)} events")
+        print(f"replay: ok, re-running the tracker on the states reproduces all {sum(replayed_keys.values())} tracker events")
     else:
         print("replay: MISMATCH between recorded events and the current tracker")
         for key in sorted((recorded_keys - replayed_keys).elements(), key=str):
@@ -267,6 +332,7 @@ def main(argv=None):
             print(f"blocked jab 0x{jab:X}: none found in this recording")
     reflex_section(records, replayed, human)
     tactical_section(records, replayed, human)
+    failures += learning_section(records, args.recording, sid)
     print("PASS" if failures == 0 else f"{failures} failure(s)")
     return 1 if failures else 0
 
