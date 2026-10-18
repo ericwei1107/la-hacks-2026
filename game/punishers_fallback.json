@@ -6,10 +6,11 @@
       {"notation": "2", "startup": 12, "move_id": "0x645"},
       {"notation": "df+4", "startup": 13, "move_id": "0x6C3"},
       {"notation": "df+2", "startup": 14, "move_id": "0x6AF"},
-      {"notation": "df+1", "startup": 15, "move_id": "0x6A6"}
+      {"notation": "df+1", "startup": 15, "move_id": "0x6A6"},
+      {"notation": "f,n,d,df+2", "startup": 15, "move_id": "0x701"}
     ],
     "crouching": [
-      {"notation": "ws+1", "startup": 13, "move_id": "0x696"},
+      {"notation": "ws+1,2", "startup": 13, "move_id": "0x696"},
       {"notation": "ws+2", "startup": 16, "move_id": "0x698"}
     ]
   },

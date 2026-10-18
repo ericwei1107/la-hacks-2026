@@ -9,6 +9,7 @@
     "ewgf_reliable": {
       "guide": "EWGF ⏵ (short dash) b+2,2 ⏵ df+1,df+2 T!",
       "launcher": "f,n,d,df+2",
+      "launcher_move_ids": ["0x701", "0x702"],
       "requires": null,
       "segments": [
         {

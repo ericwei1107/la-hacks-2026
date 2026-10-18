@@ -62,6 +62,7 @@ class StubBotHooks(BotHooks):
         self.detector = Stub(step=[])
         self.learning = Stub(step=[])
         self.tactical = Stub(step=[])
+        self.combos = Stub(step=[])
         self.seq = Stub()
 
 

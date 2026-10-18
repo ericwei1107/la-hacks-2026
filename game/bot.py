@@ -4,6 +4,7 @@ import sys
 
 from game import api, trace
 from game.coach import Outlet, replay_url
+from game.comboplay import ComboPlay, describe as describe_combos, load_play_routes
 from game.detect import Detector
 from game.difficulty import Difficulty
 from game.hotloop import MATCH_OVER, Hooks, run_session, wait_for_match
@@ -36,6 +37,7 @@ class BotHooks(Hooks):
         self.tactical = None
         self.detector = None
         self.learning = None
+        self.combos = None
 
     def start(self, snap, sid):
         bot = 1 - snap.human_slot
@@ -51,6 +53,8 @@ class BotHooks(Hooks):
         self.learning = Learning(self.player, human_character, options, self.difficulty, self.rng, fresh=self.fresh)
         self.tactical = Tactical(self.seq, self.difficulty, latency, options, self.rng, learning=self.learning)
         self.detector = Detector(snap.human_slot, options)
+        short, full = load_play_routes(character)
+        self.combos = ComboPlay(self.seq, self.difficulty, self.rng, (short, full))
         print(f"{'demo: fresh ' if self.fresh else ''}profile {self.learning.profile_path} session {self.learning.sessions}, "
               f"predictor {'on' if self.learning.predictor.enabled else 'off (river missing)'}; {self.learning.status()}", flush=True)
         tiers = ", ".join(f"{s}: " + " ".join(f"{t['notation']}(i{t['startup']})" for t in punishers[s]) for s in ("standing", "crouching"))
@@ -61,23 +65,27 @@ class BotHooks(Hooks):
               f"movement {self.difficulty.movement_set}, temperature {self.difficulty.mixup_temperature}), "
               f"latency {latency}f; punishers from {source}: {tiers}; wakeups from {wake_source}; "
               f"options from {option_source}: {menu}. Kill key {self.config['kill_key']}.", flush=True)
+        print(describe_combos(short, full, self.difficulty), flush=True)
 
     def poll(self):
         self.pad.check_kill()
 
     def frame(self, state, events):
+        live = self.reflex.live(state)
         with trace.span("reflex"):
             records = self.reflex.step(state, events)
+            records += self.combos.step(state, live)
         with trace.span("tactical"):
             decisions = self.detector.step(state, events)
             records += decisions
             learned = self.learning.step(state, events + decisions)
             records += learned
-            records += self.tactical.step(state, events, self.reflex)
+            if not self.combos.busy():
+                records += self.tactical.step(state, events, self.reflex)
         self.report(learned)
         with trace.span("input"):
             bot = state["players"][1 - state["human_slot"]]
-            self.seq.on_frame(state["frame"], bot, self.reflex.live(state))
+            self.seq.on_frame(state["frame"], bot, live)
             self.seq.pop_finished()
         return records
 

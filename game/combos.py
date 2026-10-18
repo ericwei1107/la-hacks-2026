@@ -147,14 +147,14 @@ def trace_row(frame, index, bot, target):
 
 
 class ComboRunner:
-    def __init__(self, route, sequencer, bot_slot, difficulty=None, name=None, trace=False):
+    def __init__(self, route, sequencer, bot_slot, difficulty=None, name=None, trace=False, cut=True):
         self.name = name
         self.seq = sequencer
         self.bot = bot_slot
         self.difficulty = difficulty if difficulty is not None else sequencer.difficulty
         self.captured = route if route.get("captured") else None
+        limit = hit_limit(self.difficulty) if cut else None
         if self.captured:
-            limit = hit_limit(self.difficulty)
             self.cut = captured_cut(route, limit)
             self.links = captured_links(route, limit)
             self.attacks = [a for a in route["attacks"] if self.cut is None or a[0] <= self.cut]
@@ -173,7 +173,7 @@ class ComboRunner:
             self.opener_distance = None
             self.reach = None
         else:
-            self.links = plan(route, hit_limit(self.difficulty))
+            self.links = plan(route, limit)
         self.listed_damage = listed_damage(self.links)
         self.index = 0
         self.move = None
@@ -203,6 +203,13 @@ class ComboRunner:
     @property
     def first_reaction(self):
         return self.hits[0]["reaction"] if self.hits else None
+
+    def follow(self, prev, notation, start_frame):
+        self.prev = prev
+        self.move = Move(notation, [], start_frame=start_frame)
+        self.final_entry = start_frame
+        self.status = "running"
+        self.submitted.append({"frame": start_frame, "link": 0, "notation": notation, "error": None})
 
     def stop(self, frame=None, status="aborted", reason=None):
         if not self.finished:

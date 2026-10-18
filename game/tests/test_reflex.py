@@ -20,7 +20,7 @@ BREAK_BUTTONS = {"press_1": {"X"}, "press_2": {"Y"}, "press_12": {"X", "Y"}}
 BACK = {0: "DPAD_LEFT", 1: "DPAD_RIGHT"}
 FIRST_PRESS = {"1,1,2": {"X"}, "2": {"Y"}, "df+4": {"DPAD_DOWN", "DPAD_LEFT", "B"},
                "df+2": {"DPAD_DOWN", "DPAD_LEFT", "Y"}, "df+1": {"DPAD_DOWN", "DPAD_LEFT", "X"},
-               "ws+1": {"X"}, "ws+2": {"Y"}}
+               "ws+1,2": {"X"}, "ws+2": {"Y"}}
 ATTACK = 0x6A6
 STATUS = 0x1942
 DOWNED = 0x80
@@ -290,8 +290,7 @@ class PunishStandingTest(unittest.TestCase):
         return rig, c
 
     def test_tiers(self):
-        for advantage, notation in ((10, "1,1,2"), (11, "1,1,2"), (12, "2"), (13, "df+4"), (14, "df+2"), (15, "df+1"),
-                                    (20, "df+1")):
+        for advantage, notation in ((10, "1,1,2"), (11, "1,1,2"), (12, "2"), (13, "df+4"), (14, "df+2")):
             with self.subTest(advantage=advantage):
                 rig, c = self.run_punish(advantage)
                 recs = rig.kind("punish")
@@ -326,6 +325,23 @@ class PunishStandingTest(unittest.TestCase):
                 self.assertEqual(presses[0], actionable - LATENCY)
                 self.assertEqual(rig.pressed[actionable - LATENCY], FIRST_PRESS[notation])
                 self.assertEqual(rig.pressed[actionable - LATENCY - 1], {"DPAD_RIGHT"})
+
+    def test_ewgf_is_the_launch_punish_from_minus_15(self):
+        for advantage in (15, 20):
+            with self.subTest(advantage=advantage):
+                rig, c = self.run_punish(advantage)
+                rec = rig.kind("punish")[0]
+                self.assertEqual(rec["chosen"], "f,n,d,df+2")
+                self.assertEqual(rec["reflex"]["best"], "f,n,d,df+2")
+                self.assertEqual(rec["reflex"]["lateness"], 0)
+                actionable = c + 30 - advantage
+                move = rig.moves("punish")[0]
+                self.assertEqual(move.lead, 3)
+                self.assertEqual(rec["reflex"]["planned_frame"], actionable - LATENCY - 3)
+                self.assertEqual(move.start_frame, actionable - LATENCY - 3)
+                start = move.start_frame
+                self.assertEqual([rig.pressed[start + i] for i in range(4)],
+                                 [{"DPAD_LEFT"}, set(), {"DPAD_DOWN"}, {"DPAD_DOWN", "DPAD_LEFT", "Y"}])
 
     def test_below_threshold_no_record(self):
         for advantage in (9, 5, 1):
@@ -362,7 +378,7 @@ class PunishCancelTest(unittest.TestCase):
 
 class PunishCrouchingTest(unittest.TestCase):
     def test_ws_tiers(self):
-        for advantage, notation in ((16, "ws+2"), (13, "ws+1"), (15, "ws+1"), (20, "ws+2")):
+        for advantage, notation in ((16, "ws+2"), (13, "ws+1,2"), (15, "ws+1,2"), (20, "ws+2")):
             with self.subTest(advantage=advantage):
                 frames, c, _ = punish_frames(advantage, reaction=2, level="low")
                 rig = Rig(exact(0, frame_perfect_chance=1.0)).run(frames)
@@ -370,7 +386,7 @@ class PunishCrouchingTest(unittest.TestCase):
                 self.assertEqual(len(recs), 1)
                 rec = recs[0]
                 self.assertEqual(rec["chosen"], notation)
-                self.assertEqual(rec["options"], ["ws+1", "ws+2", "none"])
+                self.assertEqual(rec["options"], ["ws+1,2", "ws+2", "none"])
                 self.assertEqual(rec["reflex"]["stance"], "crouching")
                 self.assertEqual(rec["reflex"]["lateness"], 0)
                 actionable = c + 30 - advantage
