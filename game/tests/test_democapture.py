@@ -176,11 +176,28 @@ class DemoReplayTest(unittest.TestCase):
         for f in range(105, 120):
             runner.on_state({"frame": f, "players": [player(x=1000.0), dict(bot, free_movement=False)]})
             seq.on_frame(f, bot)
-        runner.on_state({"frame": 120, "players": [player(x=1000.0, health=180, hit_reaction=10),
+        runner.on_state({"frame": 120, "players": [player(x=800.0, health=180, hit_reaction=10),
                                                    dict(bot, free_movement=False, move_id=0x696)]})
         self.assertEqual(runner.connect_frame, 120)
-        self.assertEqual(route["learned_reach"], 550)
-        self.assertEqual(runner.fire_distance(), 962 + 550)
+        self.assertEqual(route["learned_reach"], 750)
+        self.assertEqual(runner.fire_distance(), 962 + 750)
+
+    def test_close_enough_connect_keeps_the_reach(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"})
+        route.update(connect_distance=962, opener_reach=590)
+        seq = Sequencer(fake_pad()[0], 2)
+        runner = ComboRunner(route, seq, 1, name="ws12")
+        bot = player(side=0, x=0.0)
+        self.assertEqual(runner.on_state({"frame": 50, "players": [player(x=1500.0), bot]}), "ws1,2")
+        seq.on_frame(50, bot)
+        busy = dict(bot, free_movement=False, move_id=0x696)
+        runner.on_state({"frame": 60, "players": [player(x=1000.0), busy]})
+        seq.on_frame(60, busy)
+        runner.on_state({"frame": 61, "players": [player(x=1000.0, health=180, hit_reaction=12), busy]})
+        self.assertEqual(runner.reach, 500)
+        self.assertNotIn("learned_reach", route)
+        self.assertEqual(runner.fire_distance(), 962 + 590)
 
     def test_whiffed_opener_does_not_teach_reach(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))

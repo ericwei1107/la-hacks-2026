@@ -18,6 +18,7 @@ COUNTER_HIT_REACTIONS = (10, 11)
 MAX_APPROACH_FRAMES = 40
 RELEASE_FRAMES = 2
 OPENER_HIT_WINDOW = 1
+CONNECT_TOLERANCE = 60
 FIRST_DIRECTION = re.compile(r"^([udfb]{1,2})(?=\+)")
 
 
@@ -322,9 +323,11 @@ class ComboRunner:
                 self.connects[0] = frame
                 if self.opener_distance is not None and self._opener_landed(bot):
                     self.reach = round(self.opener_distance - distance(bot, target))
-                    reaches = self.captured.setdefault("reaches", [])
-                    reaches.append(self.reach)
-                    self.captured["learned_reach"] = round(statistics.median(reaches))
+                    want = self.captured.get("connect_distance")
+                    if want is None or abs(distance(bot, target) - want) > CONNECT_TOLERANCE:
+                        reaches = self.captured.setdefault("reaches", [])
+                        reaches.append(self.reach)
+                        self.captured["learned_reach"] = round(statistics.median(reaches))
                 self.index = 1
                 self._schedule(frame)
             elif self.move.done_frame is not None and bot["free_movement"]:
