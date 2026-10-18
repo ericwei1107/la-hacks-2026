@@ -17,6 +17,8 @@ GUARD_FRAMES = 3
 RECENT_EVENTS = 40
 LOW_PARRY_SLACK = 3
 BREAK_INPUTS = {("1",): "break_1", ("2",): "break_2", ("1", "2"): "break_12"}
+ATTACK_BUTTONS = ("1", "2", "3", "4", "heat", "rage")
+BUTTON_SLACK = 3
 BREAK_CODES = {"press_1": "break_1", "press_2": "break_2", "press_12": "break_12"}
 CORRECT_LOW = ("blocked", "low_parry")
 CORRECT_PUNISH = ("press", "throw")
@@ -24,7 +26,15 @@ CORRECT_SAFE = ("block_high", "backdash", "ss_left", "ss_right")
 
 
 def in_stun(player):
-    return not player["free_movement"] and player["hit_reaction"] != 0
+    return player["hit_reaction"] != 0
+
+
+def pressed_button(player):
+    return any(b in ATTACK_BUTTONS for b in player["buttons_pressed"])
+
+
+def new_move(subj, prev_subj):
+    return not subj["free_movement"] and not in_stun(subj) and (subj["move_id"] != prev_subj["move_id"] or prev_subj["free_movement"])
 
 
 def self_moved(player):
@@ -134,7 +144,8 @@ class Detector:
         if kind == "block" and ev.get("actor") == self.opp and ev.get("target") == self.subject and ev.get("frame_advantage") is not None:
             human_adv = -ev["frame_advantage"]
             self._open(state, f"after_block:{self._name(ev['move_id'])}", ev["move_id"], ev["frame"], kind="after_block", adv=human_adv,
-                       free_frame=None, dirs=Counter(), tap=None, taps=[], press_at=None, press_move=None, origin=None)
+                       free_frame=None, dirs=Counter(), tap=None, taps=[], press_at=None, press_move=None, origin=None,
+                       last_button=state["frame"] if pressed_button(subj) else None)
         if kind in ("hit", "counter_hit", "block") and ev.get("actor") == self.opp and ev.get("target") == self.subject \
                 and ev.get("hit_level") == "low":
             obs = self._open(state, "low_defense", ev["move_id"], ev["frame"], kind="low_defense")
@@ -226,11 +237,19 @@ class Detector:
             return ("right" if lateral > 0 else "left"), "displacement"
         return None, None
 
+    def _is_press(self, obs, subj, prev_subj, frame):
+        if not new_move(subj, prev_subj):
+            return False
+        recent = obs.get("last_button") is not None and frame - obs["last_button"] <= BUTTON_SLACK
+        return subj["hit_level"] != "none" or recent
+
     def _after_block(self, obs, state, subj, opp, prev_subj):
         frame = state["frame"]
+        if pressed_button(subj):
+            obs["last_button"] = frame
         if obs["free_frame"] is None:
             left_stun = in_stun(prev_subj) and not in_stun(subj) and frame > obs["frame"]
-            started = left_stun and subj["hit_level"] != "none" and not subj["free_movement"]
+            started = left_stun and self._is_press(obs, subj, prev_subj, frame)
             if subj["free_movement"] or left_stun:
                 obs["free_frame"] = frame
                 obs["origin"] = (copy.copy(subj), copy.copy(opp))
@@ -245,8 +264,7 @@ class Detector:
         self._rebase(obs, subj, opp, prev_subj)
         taps = self._tap(obs, subj, frame)
         obs["dirs"][subj["dir_held"]] += 1
-        attacking = subj["hit_level"] not in ("none",) and not subj["free_movement"]
-        if obs["press_at"] is None and attacking and (prev_subj["hit_level"] == "none" or prev_subj["move_id"] != subj["move_id"]):
+        if obs["press_at"] is None and self._is_press(obs, subj, prev_subj, frame):
             obs["press_at"] = frame
             obs["press_move"] = subj["move_id"]
         if obs["press_at"] is not None and frame - obs["press_at"] >= PRESS_CONFIRM:

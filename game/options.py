@@ -67,8 +67,12 @@ def normalize_entry(entry, cls):
     return out
 
 
+def executable(notation):
+    return parses(notation) and not notation.lower().startswith("ws")
+
+
 def normalize_table(table):
-    classes = {cls: [normalize_entry(e, cls) for e in table.get("classes", {}).get(cls, []) if parses(e["notation"])] for cls in CLASSES}
+    classes = {cls: [normalize_entry(e, cls) for e in table.get("classes", {}).get(cls, []) if executable(e["notation"])] for cls in CLASSES}
     names = {k.lower(): v for k, v in table.get("move_names", {}).items()}
     return {"classes": classes, "move_names": names}
 

@@ -610,7 +610,8 @@ class LearningTest(unittest.TestCase):
             self.assertEqual(throw["damage"], 35)
             L.step(state_at(400, human={"health": 140}), [{"t": "event", "session_id": SID, "frame": 400, "round": 1, "kind": "throw", "actor": 1, "target": 0, "move_id": 0x7DF}])
             L.step(state_at(410, human=dict(thrown, health=130)), [])
-            L.step(state_at(420, human=dict(thrown, health=130)), [dict(hit(420, 12), move_id=0x6A6)])
+            L.step(state_at(418, human=dict(thrown, health=118)), [])
+            L.step(state_at(420, human=dict(thrown, health=118)), [dict(hit(420, 12), move_id=0x6A6)])
             second = [m for m in L.moments if m["kind"] == "throw"][1]
             self.assertEqual(second["damage"], 10)
             self.assertEqual(L.throw_moments, [])
@@ -620,6 +621,117 @@ class LearningTest(unittest.TestCase):
             summary = L.summary(state_at(600), 1)
             self.assertEqual([m["damage"] for m in summary["biggest_moments"]], [35, 15, 12])
             L.step(state_at(610), [decision(610, "low_defense", "hit", False, start_frame=None)])
+        finally:
+            rig.close()
+
+    def test_sequencer_move_drives_the_pull(self):
+        from game.sequencer import Move
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("low_defense", "hit", False)
+            L = rig.learning
+            boosts = L.boosts(state_at(600))
+            entry = L.pick("low", OPTIONS["classes"]["low"], boosts["low"], L3)
+            mine = int(entry["move_id"], 16)
+            move = Move(entry["notation"], [])
+            L.decided("low", boosts, state_at(600), move)
+            L.step(state_at(610, bot={"move_id": mine, "free_movement": 0, "frame_in_move": 5, "move_total": 30}), [])
+            self.assertFalse(L.pull["started"])
+            L.step(state_at(612), [dict(hit(612, 20), move_id=mine)])
+            self.assertEqual(len(L.pulls), 1)
+            move.start_frame = 620
+            L.step(state_at(621, bot={"move_id": mine, "free_movement": 0, "frame_in_move": 1, "move_total": 30}), [])
+            self.assertTrue(L.pull["started"])
+            self.assertEqual(L.pull["start_frame"], 621)
+            L.step(state_at(640), [dict(hit(640, 20), move_id=mine)])
+            self.assertEqual(L.pulls, [])
+            self.assertAlmostEqual(L.bandit.arms["low_defense|hit"][entry["notation"]][0], 0.8, places=3)
+            entry = L.pick("low", OPTIONS["classes"]["low"], boosts["low"], L3)
+            cancelled = Move(entry["notation"], [], cancelled=True)
+            L.decided("low", boosts, state_at(700), cancelled)
+            before = {k: list(v) for k, v in L.bandit.arms["low_defense|hit"].items()}
+            L.step(state_at(705), [dict(hit(705, 25), move_id=int(entry["move_id"], 16))])
+            self.assertEqual(L.pulls, [])
+            self.assertEqual({k: list(v) for k, v in L.bandit.arms["low_defense|hit"].items()}, before)
+        finally:
+            rig.close()
+
+    def test_idless_entry_learns_its_id_from_the_sequencer(self):
+        from game.sequencer import Move
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("throw_break", "none", False)
+            L = rig.learning
+            boosts = L.boosts(state_at(600))
+            throws = [e for e in OPTIONS["classes"]["throw"] if e["notation"] == "uf+1+2"]
+            entry = L.pick("throw", throws, boosts["throw"], L3)
+            self.assertEqual(L.next_pull["ids"], set())
+            move = Move("uf+1+2", [], start_frame=600)
+            L.decided("throw", boosts, state_at(600), move)
+            L.step(state_at(601, bot={"move_id": 0x5A, "free_movement": 0, "frame_in_move": 1, "move_total": 3, "hit_level": 0xC000001D, "hit_level_name": "none"}), [])
+            self.assertEqual(L.pull["ids"], set())
+            L.step(state_at(604, bot={"move_id": 0x8B3, "free_movement": 0, "frame_in_move": 1, "move_total": 45, "hit_level": 0xA000050F, "hit_level_name": "high"}), [])
+            self.assertEqual(L.pull["ids"], {0x8B3})
+            self.assertIn("0x8b3", throws[0]["move_ids"])
+            L.step(state_at(612), [{"t": "event", "session_id": SID, "frame": 612, "round": 1, "kind": "throw", "actor": 1, "target": 0, "move_id": 0x8B3}])
+            self.assertTrue(L.pull["thrown"])
+            L.step(state_at(650, human={"health": 155}), [])
+            self.assertEqual(len(L.pulls), 1)
+            L.step(state_at(800, human={"health": 155}), [])
+            self.assertEqual(L.pulls, [])
+            self.assertAlmostEqual(L.bandit.arms["throw_break|none"]["uf+1+2"][0], 1.0, places=3)
+            entry = L.pick("throw", throws, boosts["throw"], L3)
+            self.assertEqual(L.next_pull["ids"], {0x8B3})
+        finally:
+            rig.close()
+
+    def test_landed_throw_with_ids_is_rewarded_and_a_break_is_not(self):
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("low_defense", "blocked", True)
+            L = rig.learning
+            boosts = L.boosts(state_at(600))
+            grab = [e for e in OPTIONS["classes"]["throw"] if e["notation"] == "1+3"]
+            entry = L.pick("throw", grab, boosts["throw"], L3)
+            L.decided("throw", boosts, state_at(600))
+            L.step(state_at(615), [{"t": "event", "session_id": SID, "frame": 615, "round": 1, "kind": "throw", "actor": 1, "target": 0, "move_id": 0x814}])
+            self.assertTrue(L.pull["thrown"])
+            L.step(state_at(700, human={"health": 155}), [])
+            self.assertEqual(len(L.pulls), 1)
+            L.step(state_at(800, human={"health": 155}), [])
+            self.assertEqual(L.pulls, [])
+            self.assertAlmostEqual(L.bandit.arms["low_defense|blocked"]["1+3"][0], 1.0, places=3)
+            L.pick("throw", grab, boosts["throw"], L3)
+            L.decided("throw", boosts, state_at(900))
+            L.step(state_at(915), [{"t": "event", "session_id": SID, "frame": 915, "round": 1, "kind": "throw", "actor": 1, "target": 0, "move_id": 0x71B}])
+            L.step(state_at(925), [{"t": "event", "session_id": SID, "frame": 925, "round": 1, "kind": "throw_break", "actor": 0, "target": 1}])
+            self.assertEqual(L.pulls, [])
+            s, f = L.bandit.arms["low_defense|blocked"]["1+3"]
+            self.assertAlmostEqual(f, 1.0, places=3)
+        finally:
+            rig.close()
+
+    def test_previous_whiff_does_not_settle_a_new_pull(self):
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("low_defense", "hit", False)
+            L = rig.learning
+            boosts = L.boosts(state_at(600))
+            entry = L.pick("low", OPTIONS["classes"]["low"], boosts["low"], L3)
+            mine = int(entry["move_id"], 16)
+            L.decided("low", boosts, state_at(600))
+            L.step(state_at(601, bot={"move_id": mine, "free_movement": 0, "frame_in_move": 40, "move_total": 41}), [])
+            whiff = {"t": "event", "session_id": SID, "frame": 602, "round": 1, "kind": "whiff", "actor": 1, "move_id": mine, "hit_level": "low",
+                     "detail": {"start_frame": 561}}
+            L.step(state_at(602), [whiff])
+            self.assertEqual(len(L.pulls), 1)
+            L.step(state_at(630), [dict(hit(630, 20), move_id=mine)])
+            self.assertEqual(L.pulls, [])
+            self.assertAlmostEqual(L.bandit.arms["low_defense|hit"][entry["notation"]][0], 0.8, places=3)
         finally:
             rig.close()
 

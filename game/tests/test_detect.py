@@ -249,6 +249,47 @@ class AfterBlockTest(unittest.TestCase):
         self.assertEqual(ev["detail"]["response_move_id"], JAB)
         self.assertEqual(ev["frame"], free + 12)
 
+    def test_rage_art_out_of_stun_is_a_press(self):
+        seq, c, free = self.setup(def_total=5)
+
+        def rage(f, h):
+            if f == free - 2:
+                h.update(game_buttons=0x03FC0000 | (1 << 6))
+            if f >= free:
+                h.update(move_id=0x84C, frame_in_move=f - free + 1, move_total=192, free_movement=0, hit_reaction=0)
+
+        respond(seq, free - 2, rage)
+        ev = only(self, run(seq)[1], "after_block:df1", "press", True)
+        self.assertEqual(ev["detail"]["response_move_id"], 0x84C)
+        self.assertTrue(ev["detail"]["buffered"])
+
+    def test_stun_tail_slide_is_not_a_backdash(self):
+        seq, c, free = self.setup()
+
+        def tail(f, h):
+            if free <= f < free + 8:
+                h.update(move_id=0x720, frame_in_move=f - c + 1, move_total=19, free_movement=1, hit_reaction=1,
+                         position=(-6000.0, 1040.0, -1000.0 - 30.0 * (f - free + 1)))
+            elif f >= free + 8:
+                h.update(position=(-6000.0, 1040.0, -1240.0))
+
+        respond(seq, free, tail)
+        ev = only(self, run(seq)[1], "after_block:df1", "none", False)
+        self.assertEqual(ev["frame"], free + 20)
+        seq, c, free = self.setup(def_total=5)
+
+        def tail_then_jab(f, h):
+            if free <= f < free + 4:
+                h.update(move_id=0x720, frame_in_move=f - c + 1, move_total=5, free_movement=1, hit_reaction=1,
+                         position=(-6000.0, 1040.0, -1000.0 - 40.0 * (f - free + 1)))
+            elif f >= free + 4:
+                h.update(move_id=JAB, frame_in_move=f - free - 3, move_total=27, free_movement=0, hit_level=HIGH, hit_level_name="high",
+                         position=(-6000.0, 1040.0, -1160.0))
+
+        respond(seq, free, tail_then_jab)
+        ev = only(self, run(seq)[1], "after_block:df1", "press", True)
+        self.assertEqual(ev["detail"]["response_move_id"], JAB)
+
     def test_non_attack_move_out_of_stun_opens_the_window(self):
         seq, c, free = self.setup()
 

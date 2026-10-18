@@ -146,11 +146,11 @@ class Tactical:
         entry = self.pick_entry(chosen, bucket, boosts)
         notation = entry["notation"]
         prepress = not bot["free_movement"]
-        self.seq.submit(notation, prepress=True, frame=frame, tactical=chosen)
+        move = self.seq.submit(notation, prepress=True, frame=frame, tactical=chosen)
         self.last_decision = frame
         self.last_option = chosen
         if self.learning is not None:
-            self.learning.decided(chosen, boosts, state)
+            self.learning.decided(chosen, boosts, state, move)
         source = "habit" if boosts.get(chosen) else "default"
         detail = {
             "move": notation,
