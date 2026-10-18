@@ -41,6 +41,7 @@ Three services, all JSON over HTTP. Bodies validate against the schemas in this 
 | GET | `/stats/{session_id}` | — | `{"session_id", "rounds": [{"round", "damage_taken_by_situation": {situation: int}, "punish_rate", "throw_break_rate", "low_block_rate", "counter_hits_taken", "counter_hits_given", "avg_adv_after_block"}], "totals": {same keys}}` |
 | GET | `/trends/{player}/{character}` | `?stat=<name>` optional | `{"player", "character", "series": [{"session_id", "started_at", "values": {stat: number}}]}` |
 | GET | `/learning/{session_id}` | — | `metrics.schema.json` |
+| GET | `/insights/{session_id}` | `?limit=1..50` optional, default 5 moments | `insights.schema.json`; 404 unknown session, 422 bad id or limit, 503 sources unavailable or changing |
 
 Rates are 0–1 or `null` when the situation never occurred.
 
