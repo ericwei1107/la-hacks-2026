@@ -171,10 +171,29 @@ class DemoReplayTest(unittest.TestCase):
         for f in range(103, 120):
             runner.on_state({"frame": f, "players": [player(x=1000.0), dict(bot, free_movement=False)]})
             seq.on_frame(f, bot)
-        runner.on_state({"frame": 120, "players": [player(x=1000.0, health=180, hit_reaction=10), dict(bot, free_movement=False)]})
+        runner.on_state({"frame": 120, "players": [player(x=1000.0, health=180, hit_reaction=10),
+                                                   dict(bot, free_movement=False, move_id=0x696)]})
         self.assertEqual(runner.connect_frame, 120)
         self.assertEqual(route["learned_reach"], 550)
         self.assertEqual(runner.fire_distance(), 962 + 550)
+
+    def test_whiffed_opener_does_not_teach_reach(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"})
+        route.update(connect_distance=1285, opener_reach=150)
+        seq = Sequencer(fake_pad()[0], 2)
+        runner = ComboRunner(route, seq, 1, name="ws12")
+        bot = player(side=0, x=0.0)
+        self.assertIsNone(runner.on_state({"frame": 50, "players": [player(x=1774.0), bot]}))
+        self.assertEqual(runner.on_state({"frame": 51, "players": [player(x=1400.0), bot]}), "ws1,2")
+        seq.on_frame(51, bot)
+        busy = dict(bot, free_movement=False, move_id=0x697)
+        runner.on_state({"frame": 60, "players": [player(x=1100.0), busy]})
+        seq.on_frame(60, busy)
+        runner.on_state({"frame": 61, "players": [player(x=1100.0, health=178, hit_reaction=12), busy]})
+        self.assertEqual(runner.connect_frame, 61)
+        self.assertIsNone(runner.reach)
+        self.assertNotIn("learned_reach", route)
 
     def test_counter_hit_opener_marks_route(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))

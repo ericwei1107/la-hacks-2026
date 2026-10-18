@@ -224,7 +224,8 @@ def replay_demo(reader, args):
               "together); Kazuya walks in until df+2 will connect at the demo's distance "
               f"({route.get('connect_distance')}), then fires", flush=True)
     else:
-        print("the opener waits for the same round frame as the demo", flush=True)
+        print(f"the opener waits for the same round frame as the demo, then Kazuya walks in until it will connect at "
+              f"the demo's distance ({route.get('connect_distance')})", flush=True)
     pad = connect_pad()
     try:
         if args.trace:

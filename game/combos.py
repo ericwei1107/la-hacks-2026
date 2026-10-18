@@ -300,7 +300,7 @@ class ComboRunner:
                 return None
             if not self._ready(bot):
                 return None
-            if ki:
+            if self.captured.get("launcher_inputs_replay"):
                 if self._approach(frame, bot, target):
                     return None
                 self.opener_distance = distance(bot, target)
@@ -316,7 +316,7 @@ class ComboRunner:
             if self.move.start_frame is not None and connect_signal(prev_target, target):
                 self.connect_frame = frame
                 self.connects[0] = frame
-                if self.opener_distance is not None:
+                if self.opener_distance is not None and self._opener_landed(bot):
                     self.reach = round(self.opener_distance - distance(bot, target))
                     reaches = self.captured.setdefault("reaches", [])
                     reaches.append(self.reach)
@@ -360,6 +360,10 @@ class ComboRunner:
         self.seq.queue.append(move)
         self.replay = move
         self.submitted.append({"frame": connect, "link": 1, "notation": move.notation, "error": error})
+
+    def _opener_landed(self, bot):
+        hits = self.captured.get("hits") or []
+        return not hits or bot["move_id"] == int(hits[0][2], 16)
 
     def fire_distance(self):
         reach = self.captured.get("learned_reach", self.captured.get("opener_reach"))
