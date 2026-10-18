@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import Annotated
 
 from fastapi import Body, FastAPI, HTTPException
@@ -7,6 +8,7 @@ from jsonschema import Draft202012Validator
 
 from replay.coach import CoachTip, OpenAIProvider, RoundCoach
 from replay.config import ROOT, Settings
+from replay.reports import REPORT_SCHEMA, ReportService
 
 SCHEMA = json.loads((ROOT / "contracts/round_summary.schema.json").read_text())
 VALIDATOR = Draft202012Validator(SCHEMA)
@@ -27,6 +29,7 @@ def create_app() -> FastAPI:
     if settings.mode == "auto" and settings.api_key:
         provider = OpenAIProvider(settings.api_key, settings.model)
     app.state.coach = RoundCoach(provider)
+    app.state.reports = ReportService(settings.data_dir)
 
     @app.get("/health")
     async def health():
@@ -46,6 +49,24 @@ def create_app() -> FastAPI:
                 for error in errors
             ])
         return await app.state.coach.coach(summary)
+
+    @app.post("/analyze/{session_id}", responses={200: {"content": {"application/json": {"schema": REPORT_SCHEMA}}}})
+    async def analyze(session_id: str):
+        try:
+            return await app.state.reports.analyze(session_id)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="No extracted recording found for this session")
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid session ID, recording or report data")
+
+    @app.get("/reports/{session_id}", responses={200: {"content": {"application/json": {"schema": REPORT_SCHEMA}}}})
+    async def get_report(session_id: str):
+        try:
+            return await asyncio.to_thread(app.state.reports.get, session_id)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Session has not been analyzed")
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid session ID or saved report")
 
     return app
 
