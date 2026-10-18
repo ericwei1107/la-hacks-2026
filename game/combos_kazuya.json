@@ -1,0 +1,537 @@
+{
+  "character": "kazuya",
+  "character_id": 8,
+  "game_version": "3.02.02",
+  "source": "Applay's Tekken 8 Library, Kazuya tab (Season 2)",
+  "notation_note": "Each route is a list of links (the guide's arrow). A link's input is its lead (a short dash is f,F) followed by the command of its last planned hit; a hit's command is the full string up to that hit, so cutting a route keeps a valid prefix. T! is the tornado property of the hit marked tornado, not an input. f,f+3 is f,F+3 (tap, then hold forward with 3). Hits marked optional are the guide's bracketed hits.",
+  "damage_note": "damage is the per-hit base damage from characters/kazuya/moves.json (Wavu Wiki and TekkenDocs) before combo scaling; the guide lists none. move_id is from characters/kazuya/moves.json or prep/ids.md, null where unknown.",
+  "routes": {
+    "ewgf_reliable": {
+      "guide": "EWGF ⏵ (short dash) b+2,2 ⏵ df+1,df+2 T!",
+      "launcher": "f,n,d,df+2",
+      "launcher_move_ids": ["0x701", "0x702"],
+      "requires": null,
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,n,d,df+2",
+              "move_id": "0x701",
+              "damage": 23,
+              "note": "electric; 0x702 and 20 damage if not electric"
+            }
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {
+              "command": "b+2",
+              "move_id": "0x685",
+              "damage": 12
+            },
+            {
+              "command": "b+2,2",
+              "move_id": null,
+              "damage": 14
+            }
+          ],
+          "note": "f,F landed 3/4 and 4/5 live; f,f and a single f landed 0/5 each; holding b 1-2 frames before 2 landed 0/7"
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "df+1",
+              "move_id": "0x6A6",
+              "damage": 11
+            },
+            {
+              "command": "df+1,df+2",
+              "move_id": null,
+              "damage": 20,
+              "tornado": true
+            }
+          ]
+        }
+      ],
+      "listed_damage": 80,
+      "note": "shortened: ends on the df+1,df+2 tornado because the b+2,2,1+2 ender whiffs live; the full guide route is ewgf_full. Live (practice, L5, 10 attempts): 8/10 completed, 48 damage each, both misses dropped at the f,F b+2,2 link"
+    },
+    "ewgf_full": {
+      "guide": "EWGF ⏵ (short dash) b+2,2 ⏵ df+1,df+2 T! ⏵ b+2,2,1+2",
+      "launcher": "f,n,d,df+2",
+      "requires": null,
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,n,d,df+2",
+              "move_id": "0x701",
+              "damage": 23,
+              "note": "electric; 0x702 and 20 damage if not electric"
+            }
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {
+              "command": "b+2",
+              "move_id": "0x685",
+              "damage": 12
+            },
+            {
+              "command": "b+2,2",
+              "move_id": null,
+              "damage": 14
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "df+1",
+              "move_id": "0x6A6",
+              "damage": 11
+            },
+            {
+              "command": "df+1,df+2",
+              "move_id": null,
+              "damage": 20,
+              "tornado": true
+            }
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {
+              "command": "b+2",
+              "move_id": "0x685",
+              "damage": 12
+            },
+            {
+              "command": "b+2,2",
+              "move_id": null,
+              "damage": 14
+            },
+            {
+              "command": "b+2,2,1+2",
+              "move_id": null,
+              "damage": 20
+            }
+          ]
+        }
+      ],
+      "listed_damage": 126,
+      "experimental": true,
+      "note": "0/13 live on the ender with no lead or a single f (delays 0-6 after actionable): df+1,df+2 (0x6AA) sends the target into move 0x0026 (reaction 4) and carries it from 974 to 2607 distance by the time Kazuya can act, so b+2 whiffs. With an f,F dash before the ender: 1/10 completed, the ender connected once in 6 attempts that reached it"
+    },
+    "ff3": {
+      "guide": "f,f+3 ⏵ f,n,d,df+1+2 T!",
+      "launcher": "f,F+3",
+      "requires": null,
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,F+3",
+              "move_id": null,
+              "damage": 21
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,n,d,df+1+2",
+              "move_id": null,
+              "damage": 33,
+              "tornado": true
+            }
+          ]
+        }
+      ],
+      "listed_damage": 54,
+      "note": "shortened: ends on the f,n,d,df+1+2 tornado; the full guide route is ff3_full. Live: both links landed 10/10, 28 damage each"
+    },
+    "ff3_full": {
+      "guide": "f,f+3 ⏵ f,n,d,df+1+2 T! ⏵ (1,2),4,3 ⏵ (short dash) b+2,2,1+2",
+      "launcher": "f,F+3",
+      "requires": null,
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,F+3",
+              "move_id": null,
+              "damage": 21
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,n,d,df+1+2",
+              "move_id": null,
+              "damage": 33,
+              "tornado": true
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "1",
+              "move_id": "0x659",
+              "damage": 5,
+              "optional": true
+            },
+            {
+              "command": "1,2",
+              "move_id": null,
+              "damage": 8,
+              "optional": true
+            },
+            {
+              "command": "1,2,4",
+              "move_id": null,
+              "damage": 18
+            },
+            {
+              "command": "1,2,4,3",
+              "move_id": null,
+              "damage": 25
+            }
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {
+              "command": "b+2",
+              "move_id": "0x685",
+              "damage": 12
+            },
+            {
+              "command": "b+2,2",
+              "move_id": null,
+              "damage": 14
+            },
+            {
+              "command": "b+2,2,1+2",
+              "move_id": null,
+              "damage": 20
+            }
+          ]
+        }
+      ],
+      "listed_damage": 156,
+      "experimental": true,
+      "note": "0/10 live: 1,2,4,3 whiffed every time after f,n,d,df+1+2 (also a tornado move), likely the same carry-away as ewgf_full; not yet traced"
+    },
+    "ch_df2": {
+      "guide": "CH (df+1),df+2 ⏵ EWGF ⏵ (short dash) b+2,2 ⏵ df+1,df+2 T!",
+      "launcher": "df+2",
+      "requires": "counter_hit",
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "df+2",
+              "move_id": "0x6AF",
+              "damage": 22,
+              "note": "crumple on counter hit only"
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,n,d,df+2",
+              "move_id": "0x701",
+              "damage": 23,
+              "note": "electric; 0x702 and 20 damage if not electric"
+            }
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {
+              "command": "b+2",
+              "move_id": "0x685",
+              "damage": 12
+            },
+            {
+              "command": "b+2,2",
+              "move_id": null,
+              "damage": 14
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "df+1",
+              "move_id": "0x6A6",
+              "damage": 11
+            },
+            {
+              "command": "df+1,df+2",
+              "move_id": null,
+              "damage": 20,
+              "tornado": true
+            }
+          ]
+        }
+      ],
+      "listed_damage": 102,
+      "note": "0/10 live: the EWGF after df+2 whiffed every time and the opener never read as a counter hit (reaction 12, not 10 or 11). Wavu notes a micro sidestep is needed before the EWGF after CH df+2; untested",
+      "experimental": true
+    },
+    "ch_df2_full": {
+      "guide": "CH (df+1),df+2 ⏵ EWGF ⏵ (short dash) b+2,2 ⏵ df+1,df+2 T! ⏵ b+2,2,1+2",
+      "launcher": "df+2",
+      "requires": "counter_hit",
+      "segments": [
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "df+2",
+              "move_id": "0x6AF",
+              "damage": 22,
+              "note": "crumple on counter hit only"
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "f,n,d,df+2",
+              "move_id": "0x701",
+              "damage": 23,
+              "note": "electric; 0x702 and 20 damage if not electric"
+            }
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {
+              "command": "b+2",
+              "move_id": "0x685",
+              "damage": 12
+            },
+            {
+              "command": "b+2,2",
+              "move_id": null,
+              "damage": 14
+            }
+          ]
+        },
+        {
+          "lead": "",
+          "hits": [
+            {
+              "command": "df+1",
+              "move_id": "0x6A6",
+              "damage": 11
+            },
+            {
+              "command": "df+1,df+2",
+              "move_id": null,
+              "damage": 20,
+              "tornado": true
+            }
+          ]
+        },
+        {
+          "lead": "f,F",
+          "hits": [
+            {
+              "command": "b+2",
+              "move_id": "0x685",
+              "damage": 12
+            },
+            {
+              "command": "b+2,2",
+              "move_id": null,
+              "damage": 14
+            },
+            {
+              "command": "b+2,2,1+2",
+              "move_id": null,
+              "damage": 20
+            }
+          ]
+        }
+      ],
+      "listed_damage": 148,
+      "experimental": true,
+      "note": "same as ch_df2 plus the ewgf_full ender problem; untested past link 2"
+    }
+  },
+  "punishers": {
+    "note": "From the guide's PUNISHERS startup table. EWGF speed depends on execution; it punishes -13 in theory and is practical against -15.",
+    "standing": [
+      {
+        "startup": 10,
+        "command": "1,1,2",
+        "hits": [
+          {
+            "command": "1",
+            "move_id": "0x659",
+            "damage": 5
+          },
+          {
+            "command": "1,1",
+            "move_id": "0x639",
+            "damage": 6
+          },
+          {
+            "command": "1,1,2",
+            "move_id": "0x63A",
+            "damage": 14
+          }
+        ],
+        "listed_damage": 25
+      },
+      {
+        "startup": 12,
+        "command": "1+2",
+        "hits": [
+          {
+            "command": "1+2",
+            "move_id": "0x64A",
+            "damage": 5
+          },
+          {
+            "command": "1+2",
+            "move_id": "0x64B",
+            "damage": 20
+          }
+        ],
+        "listed_damage": 25
+      },
+      {
+        "startup": 14,
+        "command": "df+2",
+        "note": "range",
+        "hits": [
+          {
+            "command": "df+2",
+            "move_id": "0x6AF",
+            "damage": 22
+          }
+        ],
+        "listed_damage": 22
+      },
+      {
+        "startup": 15,
+        "command": "f,n,d,df+2",
+        "note": "EWGF",
+        "hits": [
+          {
+            "command": "f,n,d,df+2",
+            "move_id": "0x701",
+            "damage": 23
+          }
+        ],
+        "listed_damage": 23
+      },
+      {
+        "startup": 15,
+        "command": "df+1,4",
+        "hits": [
+          {
+            "command": "df+1",
+            "move_id": "0x6A6",
+            "damage": 11
+          },
+          {
+            "command": "df+1,4",
+            "move_id": null,
+            "damage": 20
+          }
+        ],
+        "listed_damage": 31
+      }
+    ],
+    "crouching": [
+      {
+        "startup": 10,
+        "command": "d+1",
+        "note": "FC d+1",
+        "hits": [
+          {
+            "command": "d+1",
+            "move_id": "0x6D5",
+            "damage": 5
+          }
+        ],
+        "listed_damage": 5
+      },
+      {
+        "startup": 11,
+        "command": "ws+4,4",
+        "hits": [
+          {
+            "command": "ws+4",
+            "move_id": null,
+            "damage": 13
+          },
+          {
+            "command": "ws+4,4",
+            "move_id": null,
+            "damage": 16
+          }
+        ],
+        "listed_damage": 29
+      },
+      {
+        "startup": 13,
+        "command": "ws+1,2",
+        "hits": [
+          {
+            "command": "ws+1",
+            "move_id": "0x696",
+            "damage": 10
+          },
+          {
+            "command": "ws+1,2",
+            "move_id": null,
+            "damage": 12
+          }
+        ],
+        "listed_damage": 22
+      },
+      {
+        "startup": 16,
+        "command": "ws+2",
+        "hits": [
+          {
+            "command": "ws+2",
+            "move_id": "0x698",
+            "damage": 25
+          }
+        ],
+        "listed_damage": 25
+      }
+    ]
+  }
+}
