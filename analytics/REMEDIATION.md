@@ -35,11 +35,11 @@ Run the complete offline suites and contracts from the repo root:
 ## Owner handoffs and completion gates
 
 - [Sahil: decision tracing](handoffs/sentry-brain.md). Requires owner code and a retained `decision` waterfall covering the actual read/decode/reflex/tactical/input pipeline.
-- [Garrett: coach monitoring](handoffs/sentry-replay.md). Requires owner code and a retained real provider run, including model and any actual tool activity.
+- [Garrett: coach monitoring](handoffs/sentry-replay.md). Replay B5 evidence verified October 18: PRs #15/#16 are merged and the owner record retains a real HTTP → agent → OpenAI provider trace with model/usage and release/environment. Eric and Chloe approved local fallback and the existing one-second budget. The requested [GPT-6 Luna text-coaching migration](handoffs/coach-model.md) and demo voice check remain owner work. See [retained evidence](SENTRY_VERIFICATION.md#b5-retained-replay-coach-evidence--october-18-2026).
 - [Chloe: throw counts and learning display](handoffs/app-stats.md). The app currently adds successful breaks to a throw count that already includes them.
 - Sentry org invitations remain manually unverified. No messages or account permission changes were made.
 
-**Cross-track Sentry sponsor completion is blocked on the owner traces above.** Save their retained trace URLs and a decision-waterfall screenshot under `analytics/evidence/` after those real traces exist. An analytics waterfall must not be presented as a game decision trace.
+**Cross-track Sentry sponsor completion remains blocked on Sahil's decision trace, waterfall screenshot and tracing on/off timings.** Analytics and replay evidence is retained in [the evidence index](evidence/README.md); the game waterfall is still pending. Independent service traces do not establish distributed propagation across services. Demo-environment execution also remains unverified.
 
 ## Partial and deferred work
 
