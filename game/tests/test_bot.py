@@ -147,5 +147,58 @@ class LoopTest(unittest.TestCase):
         self.assertEqual([hex(p["move_id"]) for p in snap.players], ["0x85a", "0x874"])
 
 
+class LayaStartupTest(unittest.TestCase):
+    def run_main(self, *extra, reasons=(MATCH_OVER, INTERRUPTED)):
+        sessions = []
+        script = iter(reasons)
+
+        def session(reader, args, hooks, outlet):
+            sessions.append((args.player, hooks.player, hooks.fresh))
+            return next(script)
+
+        pad = SimpleNamespace(check_kill=lambda: None, release_all=lambda: None)
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {"DATA_DIR": tmp}), \
+                mock.patch.object(bot.laya, "start_background") as start, \
+                mock.patch.object(bot, "Reader", return_value=SimpleNamespace(close=lambda: None)), \
+                mock.patch.object(bot, "run_gate", return_value=True), \
+                mock.patch.object(bot, "connect_pad", return_value=pad), \
+                mock.patch.object(bot, "Pacer"), \
+                mock.patch.object(bot, "run_session", side_effect=session), \
+                mock.patch.object(bot, "wait_for_match") as wait:
+            code = bot.main(["--bot", "kazuya", "--no-api", *extra])
+        return code, start.call_count, wait.call_count, sessions
+
+    def test_flag_defaults_off(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertFalse(bot.parse_args(["--bot", "kazuya"], root=Path(tmp)).no_laya)
+            self.assertTrue(bot.parse_args(["--bot", "kazuya", "--no-laya"], root=Path(tmp)).no_laya)
+
+    def test_loop_with_demo_loads_laya_once_and_keeps_playing_fresh_sessions(self):
+        code, starts, waits, sessions = self.run_main("--loop", "--demo")
+        self.assertEqual((code, starts, waits), (0, 1, 1))
+        self.assertEqual(sessions, [("guest", "guest", True), ("guest", "guest", True)])
+
+    def test_no_laya_skips_the_load(self):
+        code, starts, waits, sessions = self.run_main("--loop", "--demo", "--no-laya")
+        self.assertEqual((code, starts, waits, len(sessions)), (0, 0, 1, 2))
+
+    def test_without_loop_one_session_and_one_load(self):
+        code, starts, waits, sessions = self.run_main(reasons=(MATCH_OVER,))
+        self.assertEqual((code, starts, waits, len(sessions)), (0, 1, 0, 1))
+
+    def test_background_load_failure_does_not_raise(self):
+        logs = []
+
+        def broken(model):
+            raise RuntimeError("no gpu")
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {"DATA_DIR": tmp}):
+            thread = bot.laya.start_background(log=lambda m, **_: logs.append(m), rounds=1, factory=broken)
+            thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertTrue(thread.daemon)
+        self.assertIn("not loaded (no gpu)", logs[-1])
+
+
 if __name__ == "__main__":
     unittest.main()

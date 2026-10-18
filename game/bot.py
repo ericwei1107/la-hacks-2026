@@ -2,7 +2,7 @@ import argparse
 import random
 import sys
 
-from game import api, trace
+from game import api, laya, trace
 from game.coach import Outlet, replay_url
 from game.comboplay import ComboPlay, describe as describe_combos, load_play_routes
 from game.detect import Detector
@@ -125,6 +125,7 @@ def parse_args(argv=None, root=None):
     parser.add_argument("--host", default=api.HOST, help="address the brain API listens on, e.g. this laptop's Tailscale IP for remote clients")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--timing", action="store_true", help="time every frame iteration and print count, p50, p95 and max at session end")
+    parser.add_argument("--no-laya", action="store_true", help="do not load Laya at startup (DATA_DIR/models/laya-ft when present, else base)")
     args = parser.parse_args(argv)
     args.player_flag = args.player
     args.player = resolve_player(args, root)
@@ -177,6 +178,8 @@ def main(argv=None):
             print(f"brain API on http://{args.host}:{api.PORT} (DATA_DIR {data_dir().resolve()}); coach at {replay_url()}/coach/round", flush=True)
             outlet = Outlet(api.publish)
 
+    if not args.no_laya:
+        laya.start_background()
     reader = Reader(args.offsets)
     pad = None
     try:
