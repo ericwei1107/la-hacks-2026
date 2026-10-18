@@ -410,6 +410,7 @@ class Learning:
         self.next_pull = None
         self.learned_ids = {}
         self.prev_bot_reacting = False
+        self.prev_bot_move = None
         self.session_id = None
         self.learning_path = None
         self.round = None
@@ -743,11 +744,15 @@ class Learning:
         if pull["cls"] not in ATTACK_CLASSES or not pull["started"] or pull["move"] is None or pull["lapsed"]:
             return
         move = pull["move"]
+        over = move.cancelled or (move.done_frame is not None and frame > move.done_frame + START_SLACK)
+        if (over and not pull["busy"]) or (pull["busy"] and (bot["free_movement"] or bot["hit_reaction"] != 0)):
+            pull["lapsed"] = True
+            pull["lapsed_at"] = frame
+            pull["busy"] = False
+            if not pull["ids"]:
+                self._settle(pull, None)
+            return
         if bot["free_movement"] or bot["hit_reaction"] != 0:
-            if pull["busy"] or move.cancelled or (move.done_frame is not None and frame > move.done_frame + START_SLACK):
-                pull["lapsed"] = True
-                if not pull["ids"]:
-                    self._settle(pull, None)
             pull["busy"] = False
             return
         if bot["move_id"] == pull["base_move"] or bot["hit_level"] == "none" or bot["move_id"] in INPUT_IDS:
@@ -768,8 +773,11 @@ class Learning:
 
     def _track_bot_move(self, state):
         bot = state["players"][1 - state["human_slot"]]
-        struck = bot["hit_reaction"] != 0 and not bot["free_movement"] and not self.prev_bot_reacting
+        reacting = bot["hit_reaction"] != 0 and not bot["free_movement"]
+        restarted = self.prev_bot_move is not None and (bot["move_id"] != self.prev_bot_move[0] or bot["frame_in_move"] < self.prev_bot_move[1])
+        struck = reacting and (not self.prev_bot_reacting or restarted)
         self.prev_bot_reacting = bot["hit_reaction"] != 0
+        self.prev_bot_move = (bot["move_id"], bot["frame_in_move"])
         for pull in list(self.pulls):
             if state["round"] != pull["round"] or state["frame"] < pull["frame"]:
                 continue
@@ -793,6 +801,8 @@ class Learning:
         bot = 1 - state["human_slot"]
         for pull in list(self.pulls):
             if ev["round"] != pull["round"] or ev["frame"] < pull["frame"] or not pull["ids"]:
+                continue
+            if pull["lapsed"] and ev["frame"] > pull["lapsed_at"]:
                 continue
             if not pull["started"]:
                 if pull["move"] is None and ev.get("actor") == bot and ev.get("move_id") in pull["ids"]:
