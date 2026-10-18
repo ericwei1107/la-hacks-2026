@@ -10,6 +10,7 @@ import time
 from collections import deque
 from pathlib import Path
 
+import anyio
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -246,33 +247,39 @@ def create_app(root=None, hub=None):
 
     async def stream(ws, channel):
         sub = hub.subscribe(channel)
+        close_code = None
         try:
             await ws.accept()
+            async with anyio.create_task_group() as tg:
 
-            async def send():
-                while True:
-                    batch = await sub.next_batch()
-                    if sub.overflow:
-                        return 1013
-                    for text in batch:
-                        await asyncio.wait_for(ws.send_text(text), timeout=SEND_TIMEOUT)
+                async def send():
+                    nonlocal close_code
+                    try:
+                        while not sub.overflow:
+                            batch = await sub.next_batch()
+                            if sub.overflow:
+                                break
+                            for text in batch:
+                                with anyio.fail_after(SEND_TIMEOUT):
+                                    await ws.send_text(text)
+                    except Exception:
+                        pass
+                    close_code = 1013
+                    tg.cancel_scope.cancel()
 
-            async def receive():
-                while True:
-                    message = await ws.receive()
-                    if message["type"] == "websocket.disconnect":
-                        return None
+                async def receive():
+                    try:
+                        while (await ws.receive())["type"] != "websocket.disconnect":
+                            pass
+                    except Exception:
+                        pass
+                    tg.cancel_scope.cancel()
 
-            sender = asyncio.create_task(send())
-            receiver = asyncio.create_task(receive())
-            done, rest = await asyncio.wait((sender, receiver), return_when=asyncio.FIRST_COMPLETED)
-            for task in rest:
-                task.cancel()
-            await asyncio.gather(*rest, return_exceptions=True)
-            if sender in done:
-                code = 1013 if sender.exception() is not None else sender.result()
+                tg.start_soon(send)
+                tg.start_soon(receive)
+            if close_code is not None:
                 try:
-                    await ws.close(code=code)
+                    await ws.close(code=close_code)
                 except Exception:
                     pass
         finally:
