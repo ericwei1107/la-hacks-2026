@@ -265,9 +265,10 @@ class RoundCoach:
                 result = await asyncio.wait_for(self.provider(summary, advice), timeout=self.timeout)
                 chosen, source = accept(result, advice, summary)
                 outcome(span, source)
-            except Exception:
+            except Exception as error:
                 outcome(span, "fallback")
-                logger.warning("Round coach used local fallback after a provider failure or invalid reply")
+                logger.warning("Round coach used local fallback after a provider failure or invalid reply: %s: %s",
+                               type(error).__name__, str(error)[:300])
         if advice.candidates:
             self.remember(summary, advice.candidates[0].topic)
         self.last = {"session_id": summary["session_id"], "round": summary.get("round"), "source": source,

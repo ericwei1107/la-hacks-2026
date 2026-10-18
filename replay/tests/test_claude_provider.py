@@ -41,11 +41,27 @@ class FakeClient:
         return False
 
 
-def fake_anthropic(monkeypatch, reply, stop_reason="end_turn", beta_error=False):
+def fake_anthropic(monkeypatch, reply, stop_reason="end_turn", beta_error=False, options=None):
     log = []
-    monkeypatch.setattr(claude_provider.anthropic, "AsyncAnthropic",
-                        lambda **kwargs: FakeClient(log, reply, stop_reason, beta_error))
+
+    def make(**kwargs):
+        if options is not None:
+            options.append(kwargs)
+        return FakeClient(log, reply, stop_reason, beta_error)
+
+    monkeypatch.setattr(claude_provider.anthropic, "AsyncAnthropic", make)
     return log
+
+
+def test_workspace_id_becomes_a_client_header(monkeypatch):
+    options = []
+    fake_anthropic(monkeypatch, {"text": "Press 2 as the grab starts.", "moves": ["2"]}, options=options)
+    monkeypatch.setenv("ANTHROPIC_WORKSPACE_ID", "wrkspc_test")
+    asyncio.run(claude_provider.ClaudeRoundProvider()({"round": 1}, candidate_advice()))
+    assert options[0]["default_headers"] == {"anthropic-workspace-id": "wrkspc_test"}
+    monkeypatch.delenv("ANTHROPIC_WORKSPACE_ID")
+    asyncio.run(claude_provider.ClaudeRoundProvider()({"round": 1}, candidate_advice()))
+    assert "default_headers" not in options[1]
 
 
 def candidate_advice():

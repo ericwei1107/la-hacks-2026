@@ -139,8 +139,9 @@ class ChatService:
                 selected = list(dict.fromkeys(identifiers))
                 if not isinstance(plan, list):
                     composed = getattr(plan, "text", "") or ""
-            except Exception:
-                logger.warning("Coach chat used verified local evidence after a provider failure or invalid answer plan")
+            except Exception as error:
+                logger.warning("Coach chat used verified local evidence after a provider failure or invalid answer plan: %s: %s",
+                               type(error).__name__, str(error)[:300])
         facts = [tools.facts[identifier] for identifier in selected]
         prefix = "This is synthetic test data. " if tools.synthetic else ""
         bounded = []

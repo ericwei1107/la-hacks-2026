@@ -37,7 +37,9 @@ def create_app() -> FastAPI:
 
         provider = ClaudeRoundProvider(settings.anthropic_round_model)
         chat_provider = ClaudeChatProvider(settings.anthropic_chat_model)
-        print(f"coach model: Claude ({settings.anthropic_round_model} between rounds, {settings.anthropic_chat_model} in chat)", flush=True)
+        workspace = os.getenv("ANTHROPIC_WORKSPACE_ID", "").strip()
+        print(f"coach model: Claude ({settings.anthropic_round_model} between rounds, {settings.anthropic_chat_model} in chat)"
+              + (f", workspace {workspace}" if workspace else ", no ANTHROPIC_WORKSPACE_ID (needed for an organization key)"), flush=True)
     elif settings.llm == "openai":
         provider = OpenAIProvider(settings.api_key, settings.model)
         chat_provider = OpenAIChatProvider(settings.api_key, os.getenv("OPENAI_CHAT_MODEL", settings.model))

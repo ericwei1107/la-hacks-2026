@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 import anthropic
 
@@ -29,6 +30,14 @@ def _selection_schema(texts):
             "required": ["text"], "additionalProperties": False}
 
 
+def client_options():
+    options = {}
+    workspace = os.getenv("ANTHROPIC_WORKSPACE_ID", "").strip()
+    if workspace:
+        options["default_headers"] = {"anthropic-workspace-id": workspace}
+    return options
+
+
 class ClaudeClient:
     def __init__(self, model, timeout, effort="low"):
         self.model = model
@@ -39,13 +48,13 @@ class ClaudeClient:
         output_config = {"format": {"type": "json_schema", "schema": schema}, "effort": self.effort}
         request = {"model": self.model, "max_tokens": max_tokens, "system": system,
                    "messages": [{"role": "user", "content": json.dumps(payload)}], "output_config": output_config}
-        async with anthropic.AsyncAnthropic(timeout=self.timeout, max_retries=0) as client:
+        async with anthropic.AsyncAnthropic(timeout=self.timeout, max_retries=0, **client_options()) as client:
             if self.model in FALLBACK_MODELS:
                 try:
                     response = await client.beta.messages.create(betas=[FALLBACK_BETA], fallbacks="default", **request)
                     return _text(response)
-                except anthropic.BadRequestError:
-                    logger.warning("Claude refused the fallback parameters; retrying the request without them")
+                except anthropic.BadRequestError as error:
+                    logger.warning("Claude rejected the request with fallbacks (%s); retrying without them", error.message)
             response = await client.messages.create(**request)
             return _text(response)
 
