@@ -3,6 +3,7 @@
   "focus": {
     "action": null,
     "metric": null,
+    "min_opportunities": 5,
     "mode": "automatic",
     "reason": "More observations needed",
     "rule_version": 1

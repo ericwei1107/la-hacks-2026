@@ -10,7 +10,7 @@ Field names below are v1 names. Internal-only names appear in brackets where the
 | --- | --- | --- |
 | `metrics.*.successes/opportunities` | Supplied fraction for the completed-round population, e.g. “0 of 16 lows blocked” | Recomputing counts from the sampled evidence or moment list |
 | `observed` | Fraction and optional percentage when value is numeric | Treating five observations as statistical confidence or a causal finding |
-| `early_signal` | “3 lows seen; need 5 for an automatic focus” plus the observed fraction | Hiding a usable early count or suggesting automatic focus before the threshold |
+| `early_signal` | “3 lows seen; need `focus.min_opportunities` (5) for an automatic focus” plus the observed fraction; read the number from the response, don't hard-code it | Hiding a usable early count or suggesting automatic focus before the threshold |
 | `no_opportunities` | “No opportunities observed” and “—” for rate | Rendering null as 0% or implying no mistakes occurred |
 | Metric `invalid` | “Data needs review”; hide its rate and advice; retain diagnostic counts in a review view | Dividing, clamping or presenting an orphan 1/0 break count as a valid percentage |
 | `quality=invalid` [`quality.state`] | Suppress coaching recommendations and show a source-data problem | Continuing to display stale advice as current |

@@ -161,11 +161,14 @@ interface InsightsV1 {
     reason: string
     action: string | null
     action_reviewed: boolean
+    min_opportunities: number
   }
   habits: Record<string, Habit>
   moments: Moment[]
   moments_total: number
 }
 ```
+
+`focus.min_opportunities` is the observation count a metric needs before it can be chosen automatically (currently 5), so the app shows "need N" without copying the backend rule; Chloe asked for it as her approval condition. A move name or notation next to `move_id` is deferred: it would make analytics depend on Garrett's character data.
 
 The public view drops internal habit details (`n`, `p`, `mastery`, `action`); the existing `/learning` route continues to serve them. `focus.action_reviewed` is true when the action text has Garrett's approval (all current actions); show neutral "Review these moments" text only if it is false.

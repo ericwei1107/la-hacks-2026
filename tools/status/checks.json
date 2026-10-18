@@ -22,7 +22,7 @@
     {"id": "sentry-init", "due": "1-3", "todo": "Add sentry_sdk.init to the analytics service (project kumite-analytics)", "grep": "sentry_sdk\\.init", "paths": ["analytics"]},
     {"id": "sentry-environment", "due": "14-16", "todo": "Read SENTRY_ENVIRONMENT in sentry_sdk.init; demo on the demo laptop from integration onward", "grep": "SENTRY_ENVIRONMENT", "paths": ["analytics"]},
     {"id": "sentry-org-invites", "due": "1-3", "todo": "Invite Sahil, Garrett and Chloe to the Sentry org so their agents can look up their own DSNs", "grep": null, "paths": []},
-    {"id": "insights-review", "due": "14-16", "todo": "Eleven generated full internal insight examples, display rules and a TypeScript sketch are in the review package. Chloe reviews the examples; public transport and live consumer still require interface agreement", "doc": "analytics/handoffs/insights-ui.md", "grep": null, "paths": []},
+    {"id": "insights-review", "due": "14-16", "todo": "Eleven generated full internal insight examples, display rules and a TypeScript sketch are in the review package. Chloe reviews the examples; public transport and live consumer still require interface agreement: Sahil approved the route and additive contracts change, Garrett approved the route and owes a yes on the contracts addition, Chloe pending", "doc": "analytics/handoffs/insights-ui.md", "grep": null, "paths": []},
     {"id": "report-fixture-integration", "due": "14-16", "todo": "Provide the exact PR #8 synthetic bundle paths, then validate the published real report API; decision counts/observed frequencies are current scope, mastery/learning is follow-up", "doc": "analytics/handoffs/report-integration.md", "grep": null, "paths": []}
   ],
   "runtime": [

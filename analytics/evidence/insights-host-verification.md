@@ -29,6 +29,22 @@ Sahil confirmed the layout: brain, replay and analytics share `C:\Users\sahil\la
 | Smokes | `smoke.py`, `live_learning_smoke.py` and the extended `demo_host_smoke.py` (relative metadata, before/after CLI, continuous writer) pass with clean shutdown |
 | Native host | Pending Sahil's pasted output; nothing has been run on the laptop by Track D |
 
+## `/insights` stall during live play: fixed (October 18)
+
+Chloe reported `/insights` stalling or timing out from about 20 to 45 seconds in the mock live scenario at `--rate 240`, so the focus card skipped round 3. Reproduced and fixed on Eric's Mac (local measurements, not native-host evidence). Method: the mock live scenario with real analytics and `KUMITE_EXPERIMENTAL_INSIGHTS=1` on a temporary folder; `/insights`, `/stats` and `/learning` requested concurrently once a second, as the app does.
+
+**Cause.** A cache miss cost about 2.7 s, 95% of it JSON-schema validation of all 10,336 recording lines. During live play the recording changes every flush, so every request missed the cache, and requests queued behind the repository lock.
+
+**Fix.** `InsightRepository` now keeps the parsed result of the recording prefix it has already read and validates only newly appended complete lines, mirroring `TailReader` for `/stats`. A rewritten, truncated or replaced file triggers a full reparse. Snapshots are identical to a fresh full parse (new regression tests), and an append validates only the new lines.
+
+| Run | `/insights` OK | Timeouts | p50 / p95 / max | Rounds observed |
+| --- | --- | --- | --- | --- |
+| Before, `--rate 240` | 28/50 | 22 (19–40 s) | 872 / 4080 / 4966 ms | 1, 2, 4 |
+| After, `--rate 240` | 50/50 | 0 | 183 / 266 / 459 ms | 1, 2, 3, 4 |
+| After, real speed (60 fps, full session) | 174/174 | 0 | 94 / 235 / 608 ms | 1, 2, 3, 4 |
+
+After the fix `/insights` matches `/stats` under identical load (at 4x speed: 259 ms p95; at real speed: 232 ms p95), so the remaining latency is shared machine contention, not the route. Each round shows pending learning for about 3 seconds, then observed, ending at 0/16 lows with low-defense focus.
+
 ## Source/HTTP rehearsal
 
 The new smoke starts `game.api` and `analytics.demo_host serve` with the same temporary absolute DATA_DIR, with database, telemetry and external keys disabled. It calls the exact `analytics.demo_host check` CLI and verifies four completed real-fixture rounds, matching recording-prefix hashes and stats/learning parity.

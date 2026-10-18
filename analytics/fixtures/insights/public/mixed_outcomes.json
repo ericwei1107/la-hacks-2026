@@ -3,6 +3,7 @@
     "action": null,
     "action_reviewed": false,
     "metric": null,
+    "min_opportunities": 5,
     "mode": "automatic",
     "reason": "More observations needed",
     "state": null

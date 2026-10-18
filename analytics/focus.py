@@ -26,9 +26,9 @@ def select(metrics, override=None, punish_validated=False):
         chosen, mode = override, 'manual'
     if chosen is None:
         reason = 'No qualifying weakness observed' if any(m['opportunities'] >= MIN_OPPORTUNITIES and m['state'] == 'observed' for m in metrics.values()) else 'More observations needed'
-        return {'rule_version': RULE_VERSION, 'mode': mode, 'metric': None, 'reason': reason, 'action': None}
+        return {'rule_version': RULE_VERSION, 'mode': mode, 'metric': None, 'reason': reason, 'action': None, 'min_opportunities': MIN_OPPORTUNITIES}
     metric = metrics[chosen]
     return {'rule_version': RULE_VERSION, 'mode': mode, 'metric': chosen,
             'reason': f"{metric['successes']}/{metric['opportunities']} successful observed opportunities; {metric['failures']} failures",
             'action': ACTIONS[chosen], 'action_status': 'reviewed',
-            'state': metric['state'], 'population': 'completed_rounds'}
+            'state': metric['state'], 'population': 'completed_rounds', 'min_opportunities': MIN_OPPORTUNITIES}
