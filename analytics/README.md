@@ -61,7 +61,7 @@ Per-round blocks plus `totals`, in the `contracts/api.md` shape, computed by `an
 | `damage_taken_by_situation` | damage from `hit`/`counter_hit`/`throw` on the human, keyed by the event's `situation`, else the brain's `derived.situation` at that frame, else `neutral` (real events carry no `situation`) |
 | `punish_rate` | blocks of a bot move at frame advantage ≤ −10 (the actor's advantage) that the human punished with a hit within `abs(advantage) + 10` frames |
 | `throw_break_rate` | human `throw_break` events ÷ bot `throw` events on the human; the real tracker emits `throw` for every throw and adds `throw_break` when it's broken |
-| `low_block_rate` | bot lows and special lows on the human: blocked ÷ blocked + hit |
+| `low_block_rate` | bot lows (`hit_level` `low`) on the human: blocked ÷ blocked + hit. Special lows are excluded: they're stand-blockable, so they don't test the crouch-block habit, and this matches `game/detect.py`'s `low_defense` |
 | `counter_hits_taken`, `counter_hits_given` | counter hits with the human as target / actor |
 | `avg_adv_after_block` | mean frame advantage from the human's side after blocking |
 | `rounds_won` | extra: 1/0/null per round; the human's wins in `totals` |

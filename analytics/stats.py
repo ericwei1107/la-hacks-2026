@@ -3,12 +3,12 @@ from collections import defaultdict
 
 from analytics.observability import traced
 
-CALCULATION_VERSION = 3
+CALCULATION_VERSION = 4
 PUNISHABLE = -10
 PUNISH_WINDOW = 10
 CONNECT = ("hit", "counter_hit")
 DAMAGING = CONNECT + ("throw",)
-LOWS = ("low", "special_low")
+LOWS = ("low",)
 TIMELINE_STEP = 30
 
 
