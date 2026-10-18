@@ -5,6 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from game.notation import compile_notation
+from game.options import MOVEMENT_CLASSES
 from game.sequencer import first_press
 from game.state import DOWNED_BIT, GENERIC_BASE, GENERIC_MASK, JUGGLED_BIT, PUNISH_THRESHOLD, active, lying
 
@@ -134,6 +135,12 @@ class Reflex:
     def live(self, state):
         return state["derived"]["situation"] != "round_over" and all(p["health"] > 0 for p in state["players"])
 
+    def pending(self, state):
+        bot = state["players"][1 - state["human_slot"]]
+        moves = list(self.seq.queue) + ([self.seq.active] if self.seq.active is not None else [])
+        return (self.guard != "n" or self.pending_guard is not None or self.wake is not None
+                or bot["being_thrown"] != "none" or any(m.tag.get("reflex") for m in moves))
+
     def reset(self):
         self.lying_run = 0
         self.wake = None
@@ -166,7 +173,8 @@ class Reflex:
     def _block(self, state, bot, opp):
         frame = state["frame"]
         out = []
-        attacking = opp["hit_level"] not in ("none", "throw") and not opp["free_movement"]
+        spent = opp["last_active"] > 0 and opp["frame_in_move"] > opp["last_active"] + BLOCK_TAIL
+        attacking = opp["hit_level"] not in ("none", "throw") and not opp["free_movement"] and not spent
         incapable = bool(bot["status"] & (DOWNED_BIT | JUGGLED_BIT)) or bot["being_thrown"] != "none"
         if incapable:
             self._set_guard("n")
@@ -175,11 +183,19 @@ class Reflex:
         threat = (opp["move_id"], opp["hit_level"])
         if not attacking:
             self.handled = None
+        active = self.seq.active
+        if attacking and threat != self.handled and active is not None and active.tag.get("tactical") in MOVEMENT_CLASSES:
+            self.seq.abort_active(frame)
+            out.append(self.record(state, "tactical_abort", frame, [active.notation, "none"], "none",
+                                   reason="opponent attacked", move_id=opp["move_id"], option=active.tag.get("tactical")))
         if attacking and threat != self.handled and self.seq.active is None:
             self.handled = threat
             for move in self.seq.discard(lambda m: m.tag.get("reflex") == "punish", frame):
                 out.append(self.record(state, "punish_cancel", frame, [move.notation, "none"], "none",
                                        reason="opponent attacked first", move_id=opp["move_id"]))
+            for move in self.seq.discard(lambda m: m.tag.get("tactical"), frame):
+                out.append(self.record(state, "tactical_cancel", frame, [move.notation, "none"], "none",
+                                       reason="opponent attacked first", move_id=opp["move_id"], option=move.tag.get("tactical")))
             guard = "db" if opp["hit_level"] in LOW_LEVELS else "b"
             if guard == self.guard and self.pending_guard is None:
                 delay, at = 0, frame

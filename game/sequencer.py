@@ -91,6 +91,16 @@ class Sequencer:
         self.background = NEUTRAL
         self.pad.release_all()
 
+    def abort_active(self, frame=None):
+        move = self.active
+        if move is None:
+            return None
+        move.cancelled = True
+        move.done_frame = frame
+        self.finished.append(move)
+        self.active = None
+        return move
+
     def discard(self, predicate, frame=None):
         dropped = [m for m in self.queue if predicate(m)]
         for move in dropped:

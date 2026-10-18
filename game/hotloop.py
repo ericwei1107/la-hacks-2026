@@ -21,14 +21,27 @@ def fmt_event(ev):
         parts.append(f"adv {ev['frame_advantage']:+d}")
     if "damage" in ev:
         parts.append(f"dmg {ev['damage']}")
+    if "situation" in ev:
+        parts.append(f"{ev['situation']} -> {ev.get('action')}")
     if ev.get("detail"):
-        parts.append(" ".join(f"{k}={v}" for k, v in ev["detail"].items() if not k.startswith(("attacker_", "defender_"))))
+        parts.append(" ".join(f"{k}={v}" for k, v in ev["detail"].items()
+                              if not k.startswith(("attacker_", "defender_")) and k != "state_text"))
     return " ".join(parts)
 
 
 def fmt_record(rec):
     if rec.get("t") == "event":
         return fmt_event(rec)
+    if rec.get("t") == "plan":
+        weights = " ".join(f"{k}={v}" for k, v in rec.get("option_weights", {}).items())
+        return f"r{rec['round']} f{rec['frame']:>6} plan         {rec.get('note', '')!r} {weights}"
+    if rec.get("t") == "tactical" and rec.get("source") != "reflex":
+        detail = rec.get("tactical") or {}
+        p = rec.get("probabilities", {}).get(rec.get("chosen"))
+        extra = " ".join(f"{k}={v}" for k, v in detail.items()
+                         if k in ("situation", "distance_bucket", "frame_advantage", "direction", "hit_level") and v is not None)
+        return (f"r{rec['round']} f{rec['frame']:>6} {rec.get('source'):<12} {rec.get('chosen')} -> {detail.get('move')} "
+                f"p={p} {extra}")
     detail = rec.get("reflex") or {}
     extra = " ".join(f"{k}=0x{v:04X}" if k.endswith("move_id") and isinstance(v, int) else f"{k}={v}"
                      for k, v in detail.items() if k != "kind" and v is not None)
