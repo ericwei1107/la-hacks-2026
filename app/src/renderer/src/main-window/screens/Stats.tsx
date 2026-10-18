@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { characterName, dayLabel, EmptyState, habitShort, notation, oneDecimal, percent, Select, share, shortClock, Skeleton, situationName } from '../../design'
 import { useRecording, useStats, useTrends, type SessionMeta, type SessionStats, type TrendPoint } from '../../services'
-import { useFrame } from '../frame'
+import { SavingNote, useFrame } from '../frame'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
 import { isExploited, lastSummary, throwCounts } from '../setData'
 
@@ -99,7 +99,7 @@ function Headline({ stats, session, previous, exploited, throws }: {
           <SmallStat
             value={percent(totals.throw_break_rate)}
             label="Throw break rate"
-            note={totals.throw_break_rate === null ? "Didn't come up this set" : throws ? `${throws.broken} of ${throws.total} broken` : null}
+            note={totals.throw_break_rate === null ? "Didn't come up this set" : throws && throws.total > 0 ? `${throws.broken} of ${throws.total} broken` : null}
             divided
           />
         </div>
@@ -237,6 +237,7 @@ function StatsBody({ session }: { session: SessionMeta }) {
   const throws = recording.data ? throwCounts(recording.data.events, session.human_slot) : null
   return (
     <>
+      <SavingNote sessionId={session.session_id} rounds={stats.data.rounds} />
       <Headline stats={stats.data} session={session} previous={previous} exploited={exploited} throws={throws} />
       <div className="flex gap-12">
         <DamageBySituation stats={stats.data} exploited={exploited} />

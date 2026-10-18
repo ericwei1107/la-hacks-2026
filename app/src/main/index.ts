@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { SERVICES_CHANNEL } from '../shared/bridge'
-import { overlayEnabled, readAppEnv, resolveServiceAddresses } from './services'
+import { OVERLAY_CHANNEL, SERVICES_CHANNEL } from '../shared/bridge'
+import { overlayMode, readAppEnv, resolveServiceAddresses } from './services'
 import { handleMicrophone, handleVoice, readVoiceSettings } from './voice'
 
 const OVERLAY_DESIGN_WIDTH = 1920
@@ -83,13 +83,17 @@ function createOverlayWindow(): BrowserWindow {
 app.whenReady().then(() => {
   const fileValues = readAppEnv()
   const services = resolveServiceAddresses(fileValues)
+  const overlay = overlayMode(fileValues)
   ipcMain.on(SERVICES_CHANNEL, (event) => {
     event.returnValue = services
+  })
+  ipcMain.on(OVERLAY_CHANNEL, (event) => {
+    event.returnValue = overlay === 'always' ? 'always' : 'demo'
   })
   handleVoice(readVoiceSettings(fileValues))
   handleMicrophone(isAppPage)
   mainWindow = createMainWindow()
-  if (overlayEnabled(fileValues)) createOverlayWindow()
+  if (overlay !== 'off') createOverlayWindow()
   app.on('activate', () => {
     if (mainWindow === null) mainWindow = createMainWindow()
   })

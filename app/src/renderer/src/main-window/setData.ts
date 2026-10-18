@@ -37,6 +37,6 @@ export interface ThrowCounts {
 
 export function throwCounts(events: GameEvent[], humanSlot: number): ThrowCounts {
   const broken = events.filter((event) => event.kind === 'throw_break' && event.actor === humanSlot).length
-  const landed = events.filter((event) => event.kind === 'throw' && event.target === humanSlot).length
-  return { broken, total: landed + broken }
+  const total = events.filter((event) => event.kind === 'throw' && event.target === humanSlot).length
+  return { broken, total }
 }

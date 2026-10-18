@@ -8,7 +8,7 @@ Design: `stats-design.md`
 - [ ] **MAIN-STATS-002**: When the trends hold a set before the selected one, the headline shall add the change in low block rate as "Down <n> from last set", "Up <n> from last set" or "Same as last set", in whole percentage points.
 - [ ] **MAIN-STATS-003**: When `low_defense` appears in the `exploited` list of the selected set's last round summary, the headline shall add "This is the habit <bot character> is hunting."
 - [ ] **MAIN-STATS-004**: The Stats screen shall show punish rate and counter hits given, each with its signed change since the previous set as "+<n> vs last set" when the trends hold one.
-- [ ] **MAIN-STATS-005**: The Stats screen shall show throw break rate with "<k> of <n> broken", where k is the human's throw-break events and n is k plus the throw events targeting the human in the set's recording.
+- [ ] **MAIN-STATS-005**: The Stats screen shall show throw break rate with "<k> of <n> broken", where k is the human's throw-break events and n is the throw events targeting the human in the set's recording, each attempt counted once whether broken or not.
 - [ ] **MAIN-STATS-006**: The Stats screen shall show counter hits taken with "<total over round count> per round".
 - [ ] **MAIN-STATS-007**: The Stats screen shall treat the trend point immediately before the selected set's point, by start time, as "last set".
 - [ ] **MAIN-STATS-008**: When a rate is null, the Stats screen shall show an em dash with "Didn't come up this set".
@@ -30,6 +30,7 @@ Design: `stats-design.md`
 - [ ] **MAIN-STATS-030**: While the stats are loading for the first time, the Stats screen shall show skeleton headline numbers and bars.
 - [ ] **MAIN-STATS-031**: While the brain lists no sets, the Stats screen shall show the empty state "No stats yet." with "Play a set against Kumite and its numbers show up here."
 - [ ] **MAIN-STATS-032**: While analytics is offline, the Stats screen shall show the offline banner for analytics above any stats it already holds.
+- [ ] **MAIN-STATS-033**: While the frame is waiting for round <n> of the selected set and the stats do not yet include round <n>, the Stats screen shall show "Round <n> is still being saved." in muted text under the page header.
 
 ## Implemented in
 

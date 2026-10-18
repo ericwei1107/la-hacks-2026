@@ -1,5 +1,18 @@
 # Tiger Data verification — 2026-10-17
 
+## B4: approved real live-learning sample upload
+
+Owner approval: "you may upload". Uploaded only session `2026-10-18T05-14-03_sahil_djin_vs_kaz` from `data/samples/live_learning/`, using baseline `a360f8d`, calculation version **4** and the existing configured store.
+
+- First backfill: `imported=4 unchanged=0 invalid_sessions=0`.
+- Immediate repeat: `imported=0 unchanged=4 invalid_sessions=0`.
+- Stored session rows: **10,080 frames, 238 events, 12 round metrics** (four summaries, four learning records, four calculated rounds).
+- All four import fingerprints and calculated-round payloads match local preparation. The aggregate's source signature and all **28 final metric values** match the file endpoint.
+- The real hybrid repository and FastAPI HTTP routes pass with the hybrid file trend reducer disabled, proving aggregate-backed reads. Health/stats/learning and both full/filtered trend routes return 200. The HTTP check uses FastAPI TestClient; the earlier loopback smoke remains separate.
+- All four pre-existing other-session checkpoints remain unchanged. Source recording/learning/metadata hashes remain unchanged. No credentials were printed, no profile/eval was uploaded, no schema was reset, and no existing API/watcher was restarted.
+
+The earlier rejected request was not executed. This run followed explicit approval. Full source identity, boundaries and repeat commands are in [B4 verification](../LIVE_LEARNING_VERIFICATION.md). A credential-free local result is retained at ignored `data/verification/live-learning-cloud.json`. The importer preserves its unknown-type policy: free-form `learning_event` records remain in the source recording rather than database event rows.
+
 ## B3: calculation version 4 refresh
 
 Completed on 2026-10-18 UTC (2026-10-17 PDT) using `Eric` at `58ff04a`.

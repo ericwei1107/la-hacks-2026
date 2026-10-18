@@ -111,7 +111,7 @@ export function Controls() {
             <section className="flex flex-col gap-4 border-t-2 border-solid border-t-primary pt-4">
               <div className="flex items-baseline justify-between">
                 <h2 className="text-[18px] leading-[22px] font-bold text-text">Difficulty</h2>
-                <span className="text-sm leading-[18px] text-text-muted">Presets set the three sliders below</span>
+                <span className="text-sm leading-[18px] text-text-muted">Presets set the three sliders below. Changes apply from the next match.</span>
               </div>
               <div className="flex gap-2">
                 {PRESETS.map((item, index) => {
