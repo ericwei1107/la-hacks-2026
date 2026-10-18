@@ -210,6 +210,17 @@ class IntegrationCheckTest(unittest.TestCase):
         self.assertTrue(any('went back' in reset for reset in report['advance']['resets']))
         self.assertEqual(report['exit_code'], check.EXIT_NO_ADVANCE)
 
+    def test_reset_after_partial_advance_does_not_count(self):
+        urls = self.healthy(
+            stats_route=[stats([1, 2, 3, 4]), stats([1, 2, 3, 4, 5]), stats([1, 2, 3, 4])],
+            learning_route=[learning([1, 2, 3, 4]), learning([1, 2, 3, 4]), learning([1, 2, 3, 4, 5])]
+        )
+        report = self.run_check(urls, watch_seconds=0.6, poll_seconds=0.1, require_advance=True)
+        self.assertFalse(report['advance']['advanced'])
+        self.assertEqual(report['advance']['reached'], {'stats': None, 'learning': 5})
+        self.assertTrue(any('stats went back from round 5 to 4' in reset for reset in report['advance']['resets']))
+        self.assertEqual(report['exit_code'], check.EXIT_NO_ADVANCE)
+
     def test_request_timeout_is_bounded(self):
         urls = self.healthy(stats_route=(200, stats([1]), 1.5))
         started = time.monotonic()

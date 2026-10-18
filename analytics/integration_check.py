@@ -152,9 +152,7 @@ def run(session_id, urls, watch_seconds=0.0, poll_seconds=5.0, timeout_seconds=5
                 stats = reading
             else:
                 learning = reading
-            later = advanced_past(reading, baseline[kind])
-            if later is not None and (reached[kind] is None or later > reached[kind]):
-                reached[kind] = later
+            reached[kind] = advanced_past(reading, baseline[kind])
     advanced = reached['stats'] is not None and reached['learning'] is not None
     report = {
         'session_id': session_id,
