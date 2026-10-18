@@ -38,9 +38,9 @@ function AccuracyChart({ rounds, detection }: { rounds: LearningRound[]; detecti
   const changedLast = Boolean(points[last]?.player_changed)
   return (
     <section className="flex grow basis-0 flex-col gap-4 rounded-md border-2 border-solid border-primary bg-surface px-6 pt-[20px] pb-4">
-      <h2 className="text-base/sm font-bold text-text">Prediction accuracy by round</h2>
+      <h2 className="text-base/sm font-bold text-text">How often the bot guessed your next move</h2>
       <div className="relative h-[236px] w-[600px] shrink-0">
-        <svg width="600" height="236" viewBox="0 0 600 236" className="absolute top-0 left-0" role="img" aria-label="Prediction accuracy by round">
+        <svg width="600" height="236" viewBox="0 0 600 236" className="absolute top-0 left-0" role="img" aria-label="How often the bot guessed your next move, by round">
           <path d={gridValues.map((value) => `M${CHART_LEFT} ${yFor(value)}H${CHART_RIGHT}`).join('')} fill="none" stroke="#1D1B161F" />
           <path d={`M${CHART_LEFT} ${BASELINE}H${CHART_RIGHT}`} fill="none" stroke="#1D1B1666" />
           {points.map((round, index) =>
@@ -153,10 +153,10 @@ function HabitsTable({ metrics, rounds, exploited }: { metrics: LearningMetrics;
     .sort((a, b) => Number(b.target) - Number(a.target) || (a.habit.mastery ?? 0) - (b.habit.mastery ?? 0))
   return (
     <section className="flex grow basis-0 flex-col border-t-2 border-solid border-t-primary pt-4">
-      <div className="flex items-center gap-4 pb-2">
+      <div className="flex items-end gap-4 pb-2">
         <h2 className="grow basis-0 text-[18px] leading-[22px] font-bold text-text">Habits</h2>
         <span className="w-[118px] shrink-0 text-sm leading-[18px] font-medium text-text-muted">
-          Belt, R{history[0].round} to R{history[history.length - 1].round}
+          How well you&apos;ve learned the right answer, R{history[0].round} to R{history[history.length - 1].round}
         </span>
         <span className="w-[76px] shrink-0 text-right text-sm leading-[18px] font-medium text-text-muted">To detect</span>
         <span className="w-[76px] shrink-0 text-right text-sm leading-[18px] font-medium text-text-muted">To master</span>
@@ -177,7 +177,7 @@ function HabitsTable({ metrics, rounds, exploited }: { metrics: LearningMetrics;
                 {beltName(level)}
                 {level.rank === 'black' ? ', fixed' : ''}
                 {slipped ? `. Fixed in round ${master}, slipped since` : ''}
-                {target ? ". The bot's target." : slipped ? '.' : ''}
+                {target ? '. The habit the bot is attacking right now.' : slipped ? '.' : ''}
               </span>
             </span>
             <span className="w-[118px] shrink-0">
@@ -262,9 +262,9 @@ function LearningBody({ sessionId }: { sessionId: string }) {
             {heroPercent}%
           </span>
           <span className="text-[22px] leading-[30px] font-bold text-text">
-            of your next moves predicted
+            of your next moves the bot
             <br />
-            in round {hero.round}.
+            guessed right in round {hero.round}.
           </span>
           <span className="text-lg/lg text-text-muted">
             Round {first.round}: {Math.round((first.prediction_accuracy as number) * 100)}%.
