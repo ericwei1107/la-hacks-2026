@@ -27,6 +27,10 @@ def log_weights(weights):
     return {k: (math.log(w) if w > EPS else -math.inf) for k, w in weights.items()}
 
 
+def target_keys(targets):
+    return sorted((t["situation"], t["action"]) for t in targets)
+
+
 def weighted_choice(rng, items, weights):
     total = sum(weights)
     if total <= 0:
@@ -116,6 +120,14 @@ class Tactical:
         if self.last_frame is not None and frame < self.last_frame:
             self.last_decision = None
         self.last_frame = frame
+        if self.learning is not None:
+            targets = self.learning.targets()
+            current = self.plan.get("target_habits", [])
+            if target_keys(targets) != target_keys(current):
+                self.plan = {**self.plan, "target_habits": targets, "note": self.learning.note(targets)}
+                self.plan_logged = False
+            elif targets != current:
+                self.plan = {**self.plan, "target_habits": targets}
         if not self.plan_logged and reflex.live(state):
             self.plan_logged = True
             out.append(self.plan_record(state))
@@ -137,6 +149,8 @@ class Tactical:
         self.seq.submit(notation, prepress=True, frame=frame, tactical=chosen)
         self.last_decision = frame
         self.last_option = chosen
+        if self.learning is not None:
+            self.learning.decided(chosen, boosts, state)
         source = "habit" if boosts.get(chosen) else "default"
         detail = {
             "move": notation,

@@ -35,6 +35,13 @@ def fmt_record(rec):
     if rec.get("t") == "plan":
         weights = " ".join(f"{k}={v}" for k, v in rec.get("option_weights", {}).items())
         return f"r{rec['round']} f{rec['frame']:>6} plan         {rec.get('note', '')!r} {weights}"
+    if rec.get("t") == "learning_event":
+        return f"r{rec['round']} f{rec['frame']:>6} learning     {rec.get('event')} {rec.get('situation', '')}"
+    if rec.get("t") == "round_summary":
+        habits = "; ".join(f"{h['situation']} {h['action']} p={h['p']:.2f} n={h['n']}" for h in rec.get("top_habits", []))
+        return (f"r{rec['round']} f{rec.get('frame', 0):>6} summary      winner P{rec['winner'] + 1 if rec.get('winner') is not None else '?'} "
+                f"human took {rec['human_damage_taken']}, bot took {rec['bot_damage_taken']}; exploited {rec.get('exploited', [])}; "
+                f"fixed {rec.get('newly_fixed', [])}; regressed {rec.get('regressed', [])}; {habits or 'no habits yet'}")
     if rec.get("t") == "tactical" and rec.get("source") != "reflex":
         detail = rec.get("tactical") or {}
         p = rec.get("probabilities", {}).get(rec.get("chosen"))

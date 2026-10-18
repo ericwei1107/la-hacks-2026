@@ -1,6 +1,7 @@
 import argparse
 import copy
 import json
+import random
 import sys
 from collections import Counter
 from pathlib import Path
@@ -8,12 +9,34 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 from game.detect import Detector
+from game.difficulty import Difficulty
 from game.hotloop import fmt_event
-from game.options import load_options
+from game.learning import Learning
+from game.notation import Timing
+from game.options import CLASSES, load_options
+from game.pad import load_config
+from game.reflex import Reflex, load_punishers, load_wakeups
+from game.replay_reflex import RecordingPad
+from game.sequencer import Sequencer
 from game.state import Tracker
 from game.summarize import CONTRACTS, find_session, load_jsonl
+from game.tactical import Tactical
 
-EVENT_V = Draft202012Validator(json.loads((CONTRACTS / "event.schema.json").read_text()), format_checker=FormatChecker())
+DEFAULT_DATA = Path("data") / "replay"
+
+
+def schema(name, sub=None):
+    data = json.loads((CONTRACTS / f"{name}.schema.json").read_text())
+    if sub:
+        data = {**data["$defs"][sub], "$defs": data["$defs"]}
+    return Draft202012Validator(data, format_checker=FormatChecker())
+
+
+EVENT_V = schema("event")
+SUMMARY_V = schema("round_summary")
+ROUND_V = schema("metrics", "round")
+PROFILE_V = schema("profile")
+PLAN_V = schema("gameplan")
 
 
 def subject_slot(states, subject):
@@ -46,6 +69,72 @@ def run_detector(states, subject="human", mode="practice", rounds_to_win=3, tabl
     return events, decisions, detector
 
 
+class Run:
+    def __init__(self):
+        self.events = []
+        self.decisions = []
+        self.records = []
+        self.summaries = []
+        self.boosts = []
+        self.learning = None
+        self.detector = None
+        self.tactical = None
+        self.last_state = None
+
+
+def run_learning(states, player="replay", difficulty=3, mode="practice", rounds_to_win=3, root=DEFAULT_DATA, seed=0,
+                 tactical=False, predictor=True, config=None):
+    versus = mode == "versus"
+    sid = states[0]["session_id"] if states else ""
+    tracker = Tracker(sid, timeouts=versus, rounds_to_win=rounds_to_win if versus else None)
+    diff = Difficulty.preset(difficulty)
+    rng = random.Random(seed)
+    run = Run()
+    seq = reflex = None
+    for raw in states:
+        if tracker.match_over and tracker.prev is not None and raw["frame"] < tracker.prev["frame"]:
+            break
+        state = copy.deepcopy(raw)
+        evs = tracker.step(state)
+        human = state["human_slot"]
+        if run.learning is None:
+            bot_char = state["players"][1 - human]["character"]
+            options = load_options(bot_char)[0]
+            run.detector = Detector(human, options)
+            run.learning = Learning(player, state["players"][human]["character"], options, diff, rng, root, predictor=predictor)
+            if tactical:
+                config = config or load_config()
+                latency = config["input_latency_frames"]
+                seq = Sequencer(RecordingPad(config), latency, diff, rng, Timing.from_config(config.get("timing")))
+                reflex = Reflex(seq, diff, latency, load_punishers(bot_char)[0], rng, load_wakeups(bot_char)[0])
+                run.tactical = Tactical(seq, diff, latency, options, rng, learning=run.learning)
+        found = run.detector.step(state, evs)
+        run.records += run.learning.step(state, evs + found)
+        if run.tactical is not None:
+            run.records += reflex.step(state, evs)
+            run.records += run.tactical.step(state, evs, reflex)
+            seq.on_frame(state["frame"], state["players"][1 - human], reflex.live(state))
+            seq.pop_finished()
+        for ev in evs:
+            if ev["kind"] == "round_end":
+                probe = copy.deepcopy(state)
+                probe["derived"]["situation"] = "neutral"
+                run.boosts.append((state["round"], run.learning.boosts(probe)))
+                run.summaries += run.learning.round_end(state, ev)
+        run.events += evs
+        run.decisions += found
+        run.last_state = state
+    final = tracker.finish()
+    for ev in final:
+        if ev["kind"] == "round_end" and run.last_state is not None:
+            probe = copy.deepcopy(run.last_state)
+            probe["derived"]["situation"] = "neutral"
+            run.boosts.append((run.last_state["round"], run.learning.boosts(probe)))
+            run.summaries += run.learning.round_end(run.last_state, ev)
+    run.events += final
+    return run
+
+
 def situation_table(decisions):
     rows = {}
     for ev in decisions:
@@ -65,12 +154,72 @@ def print_table(rows):
         print(f"  {situation:<24} n={row['n']:<4} correct {row['correct'] / row['n']:.0%}  actions: {acts}")
 
 
+def fmt_boosts(boosts):
+    if not boosts:
+        return "none"
+    return ", ".join(f"{cls} x{b['factor']} ({b['situation']} {b['action']} p={b['p']} n={b['n']}{' retest' if b['retest'] else ''})"
+                     for cls, b in sorted(boosts.items()))
+
+
+def print_learning(run):
+    learning = run.learning
+    print("learning per round:")
+    for rec in learning.rounds:
+        acc = "n/a" if rec["prediction_accuracy"] is None else f"{rec['prediction_accuracy']:.0%}"
+        print(f"  round {rec['round']}: prediction accuracy {acc}" + (", player changed" if rec["player_changed"] else ""))
+        for key, row in rec["habits"].items():
+            print(f"    {key:<24} {row['action']:<11} p={row['p']:.2f} n={row['n']:<3} mastery={row['mastery']:.2f}"
+                  + ("  fixed" if row["fixed"] else ""))
+        for key, arms in rec["bandit"].items():
+            print(f"    bandit {key}: " + ", ".join(f"{arm} {rate:.2f}" for arm, rate in arms.items()))
+    for rnd, boosts in run.boosts:
+        print(f"  boosts after round {rnd}: {fmt_boosts(boosts)}")
+    for rec in run.records:
+        if rec.get("t") == "learning_event":
+            print(f"  r{rec['round']} f{rec['frame']} learning_event {rec['event']} {rec.get('situation', '')}")
+    for s in run.summaries:
+        habits = "; ".join(f"{h['situation']} {h['action']} p={h['p']:.2f} n={h['n']}" for h in s["top_habits"])
+        print(f"  round_summary r{s['round']}: winner {s['winner']}, human took {s['human_damage_taken']}, bot took {s['bot_damage_taken']}, "
+              f"exploited {s['exploited']}, fixed {s['newly_fixed']}, regressed {s['regressed']}; top: {habits}")
+    print(f"  profile {learning.profile_path} (session {learning.sessions}), learning file {learning.learning_path}")
+
+
+def validate_run(run):
+    failures = 0
+    for ev in run.decisions:
+        failures += len(list(EVENT_V.iter_errors(ev)))
+    for s in run.summaries:
+        for e in SUMMARY_V.iter_errors(s):
+            failures += 1
+            print(f"  FAIL round_summary r{s['round']}: {e.message}")
+    for rec in run.learning.rounds:
+        for e in ROUND_V.iter_errors(rec):
+            failures += 1
+            print(f"  FAIL learning_round r{rec['round']}: {e.message}")
+    for e in PROFILE_V.iter_errors(run.learning.profile()):
+        failures += 1
+        print(f"  FAIL profile: {e.message}")
+    for rec in run.records:
+        if rec.get("t") == "plan":
+            body = {k: v for k, v in rec.items() if k not in ("t", "round", "frame", "session_id")}
+            for e in PLAN_V.iter_errors(body):
+                failures += 1
+                print(f"  FAIL plan: {e.message}")
+    return failures
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Replay a recording through the tracker and the situation detector (no game needed)")
+    parser = argparse.ArgumentParser(description="Replay a recording through the tracker, the situation detector and the learners (no game needed)")
     parser.add_argument("recording")
     parser.add_argument("--subject", default="human", choices=("human", "bot"), help="whose responses to detect (bot = mirror check)")
     parser.add_argument("--sentences", type=int, default=3, help="how many state_text samples to print")
     parser.add_argument("--all", action="store_true", help="print every decision_point event")
+    parser.add_argument("--player", default="replay", help="profile name under <data-dir>/profiles")
+    parser.add_argument("--difficulty", type=int, default=3, choices=range(1, 6))
+    parser.add_argument("--data-dir", default=str(DEFAULT_DATA), help="where profiles/ and learning/ are written")
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--tactical", action="store_true", help="also dry-run the tactical layer with the learners (shows habit-driven picks)")
+    parser.add_argument("--no-predictor", action="store_true")
     args = parser.parse_args(argv)
 
     records = load_jsonl(args.recording)
@@ -78,11 +227,18 @@ def main(argv=None):
     sid = states[0]["session_id"] if states else ""
     found = find_session(args.recording, sid)
     mode = json.loads(found[1]).get("mode", "practice") if found else "practice"
-    events, decisions, detector = run_detector(states, args.subject, mode)
-    slot = detector.subject if detector else "?"
-    print(f"{args.recording}: {len(states)} states, {len(events)} tracker events, subject {args.subject} (slot {slot}), "
-          f"{len(decisions)} decision points")
     failures = 0
+    if args.subject == "bot":
+        events, decisions, detector = run_detector(states, args.subject, mode)
+        print(f"{args.recording}: {len(states)} states, {len(events)} tracker events, subject bot (slot {detector.subject}), "
+              f"{len(decisions)} decision points")
+        run = None
+    else:
+        run = run_learning(states, args.player, args.difficulty, mode, root=args.data_dir, seed=args.seed, tactical=args.tactical,
+                           predictor=not args.no_predictor)
+        events, decisions = run.events, run.decisions
+        print(f"{args.recording}: {len(states)} states, {len(events)} tracker events, subject human (slot {run.detector.subject}), "
+              f"{len(decisions)} decision points")
     for ev in decisions:
         errors = [e.message for e in EVENT_V.iter_errors(ev)]
         if errors:
@@ -96,6 +252,23 @@ def main(argv=None):
             print("  " + fmt_event(ev))
     for ev in decisions[: args.sentences]:
         print(f"  state_text r{ev['round']} f{ev['detail']['start_frame']}: {ev['detail']['state_text']}")
+    if run is not None:
+        print_learning(run)
+        if args.tactical:
+            picks = [r for r in run.records if r.get("t") == "tactical" and r.get("source") in ("default", "habit")]
+            sources = Counter(r["source"] for r in picks)
+            by_source = {s: Counter(r["chosen"] for r in picks if r["source"] == s) for s in sources}
+            print(f"tactical dry run: {len(picks)} decisions (" + ", ".join(f"{s} {n}" for s, n in sources.most_common()) + ")")
+            for s, mix in by_source.items():
+                print(f"  {s}: " + ", ".join(f"{k} {n}" for k, n in mix.most_common()))
+            habit_moves = Counter((r["tactical"].get("move"), r["chosen"]) for r in picks if r["source"] == "habit")
+            if habit_moves:
+                print("  habit picks: " + ", ".join(f"{m} ({c}) {n}" for (m, c), n in habit_moves.most_common(8)))
+            for rec in run.records:
+                if rec.get("t") == "plan":
+                    print(f"  plan r{rec['round']} f{rec['frame']}: {rec['note']!r} targets {rec['target_habits']}")
+        failures += validate_run(run)
+        print(f"schema: round_summary {len(run.summaries)}, learning_round {len(run.learning.rounds)}, profile checked")
     print("PASS" if failures == 0 else f"{failures} failure(s)")
     return 1 if failures else 0
 
