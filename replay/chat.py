@@ -72,6 +72,7 @@ class OpenAIChatProvider:
             "the selected verified sentences verbatim. Prefer concise relevant facts; include important uncertainty. "
             "For questions asking what to practice or how to improve, select the supplied practice priorities and drills, "
             "not mastery estimates. Progress questions such as 'Have I improved?' still require recorded learning evidence. "
+            "For progress, prefer supplied interpretations of observed round results over technical estimate listings. "
             "If no exact answer exists, select an unavailable-information fact. Character frame data is not a guaranteed "
             "punish; learner/Jev estimates do not establish improvement or success. Ask tools for moves named in the question, "
             "related recorded moments, or analytics learning curves when useful. Do not use history claims as facts.")
@@ -129,7 +130,8 @@ class ChatService:
         facts = bounded
         text = prefix + " ".join(fact["text"] for fact in facts)
         for caveat in ("These estimates alone do not confirm improvement.",
-                       "This is a model estimate, not proof of improvement."):
+                       "This is a model estimate, not proof of improvement.",
+                       "This describes the recorded exchanges, not proof of lasting improvement."):
             if text.count(caveat) > 1:
                 text = " ".join(text.replace(caveat, "").split()) + " " + caveat
         citations = []

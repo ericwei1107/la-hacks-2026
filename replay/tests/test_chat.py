@@ -216,7 +216,7 @@ def test_analytics_curve_uses_frozen_endpoint_and_session_validation(client):
     response = client.post("/coach/chat", json={**QUESTION, "message": "Show my learning curve"})
     assert response.status_code == 200
     assert "0.22" in response.json()["text"]
-    assert "do not confirm improvement" in response.json()["text"]
+    assert "cannot compare rounds yet" in response.json()["text"]
     assert response.json()["citations"] == []
     client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(
         200, json={"session_id": "other", "rounds": []}))
@@ -345,7 +345,7 @@ def test_learning_questions_scope_local_estimates_to_requested_situation(client,
     response = client.post("/coach/chat", json={**QUESTION, "message": question})
     assert response.status_code == 200
     assert str(value) in response.json()["text"]
-    assert label.replace("_", " ") in response.json()["text"]
+    assert {"low_defense": "blocking lows", "throw_break": "breaking throws"}[label] in response.json()["text"]
     assert "after block" not in response.json()["text"]
 
 
@@ -433,6 +433,62 @@ def test_progress_answer_keeps_one_copy_of_shared_caveat(client):
     text = response.json()["text"]
     assert text.count("These estimates alone do not confirm improvement.") == 1
     assert all(f"Round {index}" in text for index in (1, 2, 3))
+
+
+def test_between_round_progress_interprets_analytics_in_plain_language(client):
+    path = client.app.state.settings.data_dir / "recordings" / f"{SESSION}.jsonl"
+    state = json.loads(path.read_text().splitlines()[0])
+    with path.open("a") as output:
+        output.write(json.dumps({**state, "round": 3}) + "\n")
+    metrics = {"session_id": SESSION, "rounds": [
+        {"round": number, "prediction_accuracy": None,
+         "habits": {"low_defense": {"p": 0.7, "n": 4, "mastery": value}}}
+        for number, value in [(1, 0.2), (2, 0.6), (3, 0.4)]]}
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(200, json=metrics))
+    reply = client.post("/coach/chat", json={**QUESTION, "message": "am i at least improving in between rounds"}).json()
+    assert "went up and down" in reply["text"]
+    assert "blocking lows" in reply["text"]
+    assert "Analytics reports" not in reply["text"] and "low_defense" not in reply["text"]
+    assert "do not confirm improvement" in reply["text"]
+
+
+def test_single_round_progress_explains_why_it_cannot_compare(client):
+    metrics = {"session_id": SESSION, "rounds": [{"round": 1, "prediction_accuracy": None,
+               "habits": {"after_block:any": {"p": 0.7, "n": 4, "mastery": 0.285}}}]}
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(200, json=metrics))
+    reply = client.post("/coach/chat", json={**QUESTION, "message": "am i at least improving in between rounds"}).json()
+    assert "only one" in reply["text"].lower() and "cannot compare" in reply["text"].lower()
+    assert "decisions after blocking" in reply["text"]
+    assert "after block:any" not in reply["text"] and "Analytics reports" not in reply["text"]
+
+
+def test_progress_identifies_learning_that_has_not_caught_up_with_recording(client):
+    path = client.app.state.settings.data_dir / "recordings" / f"{SESSION}.jsonl"
+    state = json.loads(path.read_text().splitlines()[0])
+    with path.open("a") as output:
+        output.write(json.dumps({**state, "round": 3}) + "\n")
+    metrics = {"session_id": SESSION, "rounds": [
+        {"round": number, "prediction_accuracy": None,
+         "habits": {"low_defense": {"p": 0.7, "n": 4, "mastery": value}}}
+        for number, value in [(1, 0.2), (2, 0.4)]]}
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(200, json=metrics))
+    text = client.post("/coach/chat", json={**QUESTION, "message": "Am I improving?"}).json()["text"]
+    assert "only reaches round 2" in text and "cannot assess the later rounds" in text
+
+
+def test_progress_prefers_attributable_human_round_outcomes_even_when_analytics_is_down(client):
+    path = client.app.state.settings.data_dir / "recordings" / f"{SESSION}.jsonl"
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    for frame in [10, 20]:
+        rows.extend([{**copy.deepcopy(rows[0]), "round": 2, "frame": frame},
+                     {**copy.deepcopy(rows[1]), "round": 2, "frame": frame, "action": "blocked"}])
+    path.write_text("\n".join(map(json.dumps, rows)) + "\n")
+    client.app.state.chat.analytics_transport = httpx.MockTransport(lambda request: httpx.Response(503))
+    reply = client.post("/coach/chat", json={**QUESTION, "message": "Am I improving my low blocking?"}).json()
+    assert "larger share" in reply["text"]
+    assert "1 of 2 in round 1" in reply["text"] and "2 of 2 in round 2" in reply["text"]
+    assert "not proof of lasting improvement" in reply["text"]
+    assert reply["citations"] == [{"round": 1, "frame": 10}, {"round": 2, "frame": 20}]
 
 
 def test_progress_question_mentioning_practice_still_checks_learning(client):

@@ -459,6 +459,17 @@ The API still returns only `{text, citations}`, and the app requires no changes.
 
 ## Correctness follow-up
 
+Progress questions now interpret verified evidence in plain language. When
+attributable low-block or throw-break outcomes cover multiple rounds, chat
+compares their observed fractions and cites recorded exchanges. It describes
+mixed results instead of cherry-picking endpoints, and does not equate a better
+round with lasting improvement. Unknown outcomes are excluded explicitly.
+Otherwise it explains whether learning estimates rose, fell, varied or stayed
+similar, using friendly topic names. One snapshot cannot establish a trend;
+missing current estimates and learning that has not caught up stay explicit.
+These are interpreted verified facts, available in local/fallback mode as well
+as model selection; chat does not need free-form unsupported model claims.
+
 Round advice no longer treats pressing while the bot is minus as a repeated
 weakness. Guarding guidance requires the explicit `bot_plus` bucket or a
 uniquely verified bot move with positive on-block advantage; pooled or unknown

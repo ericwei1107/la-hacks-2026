@@ -15,6 +15,7 @@ from replay.inspection import build_inspection
 from replay.learning import finite_numbers, latest_mastery
 from replay.move_coaching import labeled_move
 from replay.options import generate_options
+from replay.progress import estimate_progress, observed_progress
 from replay.reader import read_recording
 from replay.reports import within
 
@@ -214,15 +215,14 @@ class ChatTools:
     def get_mastery(self, situation=""):
         path = within(self.reports.data_dir, self.reports.data_dir / "learning" / f"{self.session}.jsonl")
         mastery, warnings = latest_mastery(path, self.session, self.last_round)
-        caveat = " " + " ".join(warnings) if warnings else ""
-        matching = [(label, estimate) for label, estimate in mastery.items() if not situation or situation in label]
-        facts = [self.fact(f"The learner's latest valid {words(label)} mastery estimate is {estimate['mastery']:.3g}, "
-                           f"from round {estimate['round']}'s recorded learning snapshot. "
-                           "This is a model estimate, not proof of improvement." + caveat)
-                 for label, estimate in matching[:5]]
+        rows = {}
+        for label, estimate in mastery.items():
+            row = rows.setdefault(estimate["round"], {"round": estimate["round"], "habits": {}})
+            row["habits"][label] = {"mastery": estimate["mastery"]}
+        facts = [self.fact(**entry) for entry in estimate_progress(list(rows.values()), situation)]
         if warnings:
-            facts.append(self.fact(" ".join(warnings[:2]) + ". Improvement cannot be confirmed from missing or invalid learning data."))
-        return facts or [self.fact("Learning mastery is unavailable for the requested situation; improvement cannot be confirmed.")]
+            facts.append(self.fact("Some learning history is missing or unavailable, so I cannot confirm progress through the latest round."))
+        return facts or [self.fact("I do not have enough learning history for that topic to tell whether you improved yet.")]
 
     def saved_preference(self, moment):
         if (self.report is None or not moment["human_action"] or not moment["context"]
@@ -351,17 +351,18 @@ class ChatTools:
             rows = [row for row in metrics["rounds"] if row["round"] <= self.last_round]
             if any(row.get("session_id", self.session) != self.session for row in rows):
                 raise ValueError("Learning session mismatch")
-            labels = sorted({label for row in rows for label, habit in row["habits"].items()
-                             if "mastery" in habit and (not situation or situation in label)})
-            facts = []
-            for label in labels[:4]:
-                values = [f"round {row['round']}: {row['habits'][label]['mastery']:.3g}" for row in sorted(rows, key=lambda item: item["round"])
-                          if label in row["habits"] and "mastery" in row["habits"][label]]
-                facts.append(self.fact(f"Analytics reports {words(label)} learner mastery estimates of " + "; ".join(values[-6:])
-                                       + ". These estimates alone do not confirm improvement."))
-            return facts or [self.fact("Analytics has no matching mastery estimates for the recorded rounds.")]
+            estimates = estimate_progress(rows, situation)
+            observed = observed_progress(self.decisions, situation)
+            if not observed and rows and max(row["round"] for row in rows) < self.last_round:
+                latest = max(row["round"] for row in rows)
+                for entry in estimates:
+                    entry["text"] += f" Learning data only reaches round {latest}; I cannot assess the later rounds yet."
+            interpreted = observed or estimates
+            return [self.fact(**entry) for entry in interpreted] or [self.fact("I do not have comparable learning evidence for those rounds yet.")]
         except (httpx.HTTPError, httpx.InvalidURL, ValueError, TimeoutError):
-            return [self.fact("The analytics learning curve is unavailable; I can only check local recorded estimates."), *self.get_mastery(situation)]
+            observed = observed_progress(self.decisions, situation)
+            facts = [self.fact(**entry) for entry in observed] if observed else self.get_mastery(situation)
+            return [*facts, self.fact("The learning service is unavailable; this answer uses only the evidence saved with this set.")]
 
     async def initial(self, request):
         practice = asks_for_practice(request.message)
