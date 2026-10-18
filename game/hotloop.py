@@ -2,6 +2,7 @@ import time
 from datetime import datetime, timezone
 
 from game import state as st
+from game import trace
 from game.pacer import Pacer
 from game.recorder import Recorder, iso_utc, result_text, session_meta
 
@@ -78,22 +79,26 @@ def stall_message(rf):
             f"because a controller was plugged in or unplugged). Unpause in the game; waiting")
 
 
-def frames(reader, pacer, on_poll=None, log=print):
+def frames(reader, pacer, on_poll=None, log=print, timer=None):
     prev = None
     last_change = time.monotonic()
     stalled = False
     while True:
         rf = reader.poll_round_frame()
         if rf is not None and rf != prev:
-            snap = reader.snapshot()
-            if snap is not None and snap.round_frame != prev:
-                gap = 0 if prev is None or snap.round_frame < prev else snap.round_frame - prev - 1
-                prev = snap.round_frame
-                last_change = time.monotonic()
-                if stalled:
-                    log(f"round frame counter moving again at {prev}")
-                    stalled = False
-                yield snap, gap
+            with trace.decision(timer) as mark:
+                with trace.span("read"):
+                    snap = reader.snapshot()
+                if snap is not None and snap.round_frame != prev:
+                    gap = 0 if prev is None or snap.round_frame < prev else snap.round_frame - prev - 1
+                    prev = snap.round_frame
+                    last_change = time.monotonic()
+                    if stalled:
+                        log(f"round frame counter moving again at {prev}")
+                        stalled = False
+                    mark.yielded = True
+                    yield snap, gap
+                    mark.complete = True
         elif rf is None:
             reader.resolve_blocks()
             reader.resolve_human()
@@ -174,26 +179,31 @@ def run_session(reader, args, hooks=None, outlet=None):
     skipped_states = 0
     last = None
     reason = STOPPED
+    timer = trace.FrameTimer() if getattr(args, "timing", False) else None
 
     def on_poll():
         recorder.tick()
         hooks.poll()
 
+    loop = frames(reader, pacer, on_poll, timer=timer)
+
     try:
-        for snap, gap in frames(reader, pacer, on_poll):
+        for snap, gap in loop:
             gaps += gap
-            gs = st.build_state(snap.players, snap.human_slot, snap.round_frame, sid)
-            if gs is None:
-                skipped_states += 1
-                continue
-            if tracker.match_over and tracker.prev is not None and gs["frame"] < tracker.prev["frame"]:
-                score = "-".join(str(tracker.wins[i]) for i in (human, 1 - human))
-                print(f"match over ({score} for the human): the counter reset into the post-match scene; stopping", flush=True)
-                reason = MATCH_OVER
-                break
-            count += 1
-            last = gs
-            events = tracker.step(gs)
+            with trace.span("decode"):
+                gs = st.build_state(snap.players, snap.human_slot, snap.round_frame, sid)
+                if gs is None:
+                    skipped_states += 1
+                    continue
+                if tracker.match_over and tracker.prev is not None and gs["frame"] < tracker.prev["frame"]:
+                    score = "-".join(str(tracker.wins[i]) for i in (human, 1 - human))
+                    print(f"match over ({score} for the human): the counter reset into the post-match scene; stopping", flush=True)
+                    reason = MATCH_OVER
+                    break
+                count += 1
+                last = gs
+                events = tracker.step(gs)
+            trace.data(frame=gs["frame"], round=gs["round"])
             extra = hooks.frame(gs, events)
             recorder.events(events)
             recorder.events(extra)
@@ -208,6 +218,7 @@ def run_session(reader, args, hooks=None, outlet=None):
     except KeyboardInterrupt:
         reason = INTERRUPTED
     finally:
+        loop.close()
         hooks.close()
         final = tracker.finish()
         extra = []
@@ -234,4 +245,6 @@ def run_session(reader, args, hooks=None, outlet=None):
         print(f"events: {kinds}", flush=True)
         print(f"unknown codes: {unknown}", flush=True)
         print(f"wrote {recorder.recording_path} ({recorder.lines} lines) and {recorder.session_path}", flush=True)
+        if timer is not None:
+            print(timer.summary(gaps), flush=True)
     return reason

@@ -2,7 +2,7 @@ import argparse
 import random
 import sys
 
-from game import api
+from game import api, trace
 from game.coach import Outlet, replay_url
 from game.detect import Detector
 from game.difficulty import Difficulty
@@ -66,16 +66,19 @@ class BotHooks(Hooks):
         self.pad.check_kill()
 
     def frame(self, state, events):
-        records = self.reflex.step(state, events)
-        decisions = self.detector.step(state, events)
-        records += decisions
-        learned = self.learning.step(state, events + decisions)
-        records += learned
-        records += self.tactical.step(state, events, self.reflex)
+        with trace.span("reflex"):
+            records = self.reflex.step(state, events)
+        with trace.span("tactical"):
+            decisions = self.detector.step(state, events)
+            records += decisions
+            learned = self.learning.step(state, events + decisions)
+            records += learned
+            records += self.tactical.step(state, events, self.reflex)
         self.report(learned)
-        bot = state["players"][1 - state["human_slot"]]
-        self.seq.on_frame(state["frame"], bot, self.reflex.live(state))
-        self.seq.pop_finished()
+        with trace.span("input"):
+            bot = state["players"][1 - state["human_slot"]]
+            self.seq.on_frame(state["frame"], bot, self.reflex.live(state))
+            self.seq.pop_finished()
         return records
 
     def report(self, learned):
@@ -113,6 +116,7 @@ def parse_args(argv=None, root=None):
     parser.add_argument("--no-api", action="store_true", help="do not serve the brain API on :8765")
     parser.add_argument("--host", default=api.HOST, help="address the brain API listens on, e.g. this laptop's Tailscale IP for remote clients")
     parser.add_argument("--seed", type=int)
+    parser.add_argument("--timing", action="store_true", help="time every frame iteration and print count, p50, p95 and max at session end")
     args = parser.parse_args(argv)
     args.player_flag = args.player
     args.player = resolve_player(args, root)
@@ -151,7 +155,9 @@ def describe(cfg, difficulty, player, fresh, root=None):
 
 
 def main(argv=None):
+    tracing = trace.init()
     args = parse_args(argv)
+    print(tracing, flush=True)
     cfg, errors = apply_cli(args)
     for error in errors:
         print(f"warning: config.json not updated from the command line: {error}", flush=True)
