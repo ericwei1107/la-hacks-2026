@@ -82,13 +82,35 @@ that fail the frozen schema. `/docs` provides the interactive API reference.
 
 ## Recording integration notes
 
-The game team reports that reflex decisions are recorded as `t: tactical` with
-`source: reflex`. Future replay readers must preserve this source and accept
-unrecognized source values for forward compatibility. These are bot decisions;
-do not count them as the human's chosen actions. The source list in
+The future coach-agent tool `get_learning_curve(session)` must call
+`GET /learning/{session_id}` on Eric's analytics service, port 8767.
+Use `KUMITE_ANALYTICS_URL` as its base URL (normally `http://127.0.0.1:8767`)
+and the response format in `contracts/metrics.schema.json`. This tool is not
+implemented in the current round-coach milestone.
+
+The game team reports that `kind: decision_point` events use `actor` for the
+human's slot and populate the top-level `situation` and `action` fields. Future
+readers should consume these explicit human decision labels and identify the
+human by `human_slot`, never by assuming slot 0.
+
+Bot decisions are recorded as `t: tactical`, including `source: reflex`,
+`source: default`, and `source: habit`. Future replay readers must preserve these sources and accept
+unrecognized source values for forward compatibility. Do not count tactical
+records as the human's chosen actions. The source list in
 `contracts/recording.md` currently omits `reflex`; only the team can approve a
 change to that frozen contract. The current contract validator skips tactical
 records, so a passing validation does not validate their contents.
+
+The game team reports these shapes exist as of commit `8018810`: one
+`round_summary` at every round end; `learning_event` records with `event` equal to
+`fixed`, `regressed`, or `player_changed`; explicit human decision-point labels;
+and `learning_round` lines in `data/learning/`. Those shapes can be integrated now;
+the upcoming audit is expected to change numbers, not shapes. Inspection of that
+commit confirms the learning-event discriminator is `event`, not `kind`.
+However, `8018810` was not an ancestor of the fetched `origin/main` at `48545f7`
+when the coaching branch was synchronized. New sample availability must still be
+verified directly. The current round endpoint is verified against
+`contracts/examples/round_summary.json`, not a newly recorded round summary.
 
 The game team's sample is distributed as
 `data/samples/versus_djin_vs_kaz_l3.zip`. Extract its JSONL before passing it to
@@ -101,4 +123,63 @@ Get-ChildItem data/samples/versus_djin_vs_kaz_l3 -Recurse -Filter *.jsonl | ForE
 }
 ```
 
-The sample archive was not present in this checkout when these notes were added.
+The versus archive was retrieved from `origin/main` at `7bac2fa` and extracted
+to the directory above. Contract validation passed with 15,108 state records,
+305 event records, and 281 tactical records. That recording contains no
+`round_summary` records; it does not establish availability of the later
+round-summary or learning samples. The downloaded ZIP and extracted samples
+have not been added to a new commit on Garrett's branch.
+
+## Local recording inspection
+
+Generate an observation report from an extracted recording, without Jev or any
+model calls:
+
+```powershell
+.\replay\.venv\Scripts\python.exe -m replay.inspect data/samples/versus_djin_vs_kaz_l3/versus_djin_vs_kaz_l3.jsonl
+```
+
+The CLI writes `<session>.inspection.json` and `<session>.inspection.md` under
+`DATA_DIR/inspections/` (normally `data/inspections/`). Open the Markdown file to
+review the moments, and use the JSON for downstream development. Pass
+`--output-dir PATH` to choose another directory. Existing reports are protected;
+pass `--overwrite` explicitly to regenerate them. ZIP input produces extraction
+instructions rather than attempting to read binary data as JSONL.
+
+Each moment includes its round, frame, original JSONL line, event evidence,
+human/opponent roles, nearby state context, logged event damage, and a separate
+following-60-frame health-loss window. Unknown actions, situation labels, missing
+states, incomplete frame coverage, and health increases are marked. Frame numbers
+reset each round; seconds derived from those counters are not video timestamps.
+Health-loss windows may overlap, so do not sum them or call their damage avoidable.
+No move names, punish recommendations, probabilities, or best options are invented.
+
+The real sample yields 291 observed moments: 59 human hit/counter-hit events,
+143 human attacks blocked by the bot, 10 human whiffs, plus landed hits,
+knockdowns, throws and breaks. Its 281 bot reflex choices remain separate from
+human actions. It has no explicit human decision labels or round summaries.
+
+The reader validates known record schemas, preserves source line numbers, ignores
+unknown record types, and accepts new tactical source values. A truncated final
+write is ignored with a warning; malformed interior records, invalid known
+records, duplicate player slots, and mixed session IDs fail with a line number.
+Output uses an inspection-specific format, not `contracts/report.schema.json`;
+the future scored report and API endpoints remain separate work.
+
+The optional real-sample regression test runs when the extracted sample exists;
+synthetic edge-case tests run in every checkout:
+
+```powershell
+.\replay\.venv\Scripts\python.exe -m pytest replay/tests -q
+```
+
+## Follow-up after Jev
+
+Make the coach specific using recorded `biggest_moments[].move_id` and the bot's
+`characters/<bot>/moves.json`: resolve the move name, resolve the bot move in
+`after_block:<move>`, and retrieve the one-line fix from matchup notes. Have the
+LLM compose the sentence from those facts, validate every named move against the
+move list, and retain templates as the fallback. For a genuinely fixed low-defense
+habit, prefer spoken wording such as "You've fixed your low blocking. I'll test
+it again later." over "marked as improved". This is planned follow-up, not current
+endpoint behavior.
