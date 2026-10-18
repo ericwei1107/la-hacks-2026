@@ -456,3 +456,35 @@ questions retain their verified lookups. The optional model cannot replace an
 advice request with unrelated mastery facts; provider failures use the same
 grounded local advice. Shared identical learning caveats appear once per reply.
 The API still returns only `{text, citations}`, and the app requires no changes.
+
+## Correctness follow-up
+
+Round advice no longer treats pressing while the bot is minus as a repeated
+weakness. Guarding guidance requires the explicit `bot_plus` bucket or a
+uniquely verified bot move with positive on-block advantage; pooled or unknown
+after-block evidence keeps an uncertainty-only fallback. Round summaries with
+non-finite numbers return 422 before coaching, including unknown extension
+fields. Word limits and provider deadlines are unchanged.
+
+Conflicting snapshots at the same round/frame remain in the original recording,
+but their events are explicitly unattributable rather than scored as human
+decisions. Identical duplicate snapshots do not create an identity conflict.
+Analysis captures, scoring and publication are serialized per session, while
+different sessions can still analyze concurrently. A cancelled request retains
+its transaction lock until in-flight work finishes, preventing a delayed save
+from overwriting a later report.
+
+Each newly analyzed decision includes `evidence_fingerprint`, a versioned hash
+of its original event evidence, state context, scorer inputs and candidate
+menu. Chat reuses a saved Jev preference only if that fingerprint and the
+existing menu/distribution checks agree with current evidence. Legacy reports
+without fingerprints remain readable, but their preferences are unavailable
+to chat until analysis is run again. No score is invented or refreshed by chat.
+
+Retrospective questions about whether practice improved performance use learning
+evidence; requests for what to practice use grounded drills. Own-move lookups
+retain neutral verified frame data rather than drills for defending against
+the player's own attack. Queries for absent moments explicitly report missing
+evidence. The additive insights contract approval, including
+`focus.min_opportunities`, is recorded in [INSIGHTS_CONTRACT_APPROVAL.md](INSIGHTS_CONTRACT_APPROVAL.md);
+that approval does not change contracts or enable punishment focus.

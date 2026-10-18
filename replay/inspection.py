@@ -15,6 +15,12 @@ class RoundContext:
     def __init__(self, states, events):
         self.states = sorted(states, key=lambda record: (record.data["frame"], record.line))
         self.keys = [(record.data["frame"], record.line) for record in self.states]
+        snapshots, self.ambiguous_frames = {}, set()
+        for record in self.states:
+            frame = record.data["frame"]
+            if frame in snapshots and snapshots[frame] != record.data:
+                self.ambiguous_frames.add(frame)
+            snapshots[frame] = record.data
         ends = [record.data["frame"] for record in events if record.data["kind"] == "round_end"]
         self.end = min(ends) if ends else None
 
@@ -121,6 +127,10 @@ def build_inspection(recording: Recording) -> dict:
             if event["kind"] not in MOMENT_KINDS:
                 continue
             state = context.before(record)
+            ambiguous = (event["frame"] in context.ambiguous_frames
+                         or state is not None and state.data["frame"] in context.ambiguous_frames)
+            if ambiguous:
+                state = None
             human = state.data["human_slot"] if state else None
             kind = moment_kind(event, human)
             if kind is None:
@@ -142,6 +152,9 @@ def build_inspection(recording: Recording) -> dict:
                 }
                 if snapshot["age_frames"]:
                     missing.append(f"State context is {snapshot['age_frames']} frame(s) older than the event")
+            elif ambiguous:
+                missing.extend(["Conflicting state snapshots prevent human attribution at this event",
+                                "Human identity is unknown at this event"])
             else:
                 missing.extend(["No prior state in this round", "Human identity is unknown at this event"])
             if event.get("actor") is None:

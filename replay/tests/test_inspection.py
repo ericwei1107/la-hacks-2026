@@ -272,3 +272,31 @@ def test_real_sample_remains_an_observation_report():
                    for m in report["moments"])
     assert all(m["human_action"] is None for m in report["moments"])
     assert len([m for m in report["moments"] if m["kind"] == "human_hit"]) == 59
+
+
+@pytest.mark.parametrize("field", ["human_slot", "health", "distance"])
+def test_conflicting_coordinate_retains_event_without_human_attribution(tmp_path, field):
+    first = state(10)
+    conflicting = copy.deepcopy(first)
+    if field == "human_slot":
+        conflicting["human_slot"] = 0
+    elif field == "health":
+        conflicting["players"][0]["health"] -= 1
+    else:
+        conflicting["derived"]["distance_mm"] += 1
+    decision = event("decision_point", 10, actor=1, situation="low_defense", action="hit")
+    moment, = inspect(tmp_path, [first, decision, conflicting])["moments"]
+    assert moment["kind"] == "unattributed_event"
+    assert moment["human_slot"] is None and moment["context"] is None
+    assert moment["human_action"] is None
+    assert moment["evidence"][0]["record"] == decision
+    assert moment["outcome"]["human_health_loss"] is None
+    assert "conflicting" in " ".join(moment["missing_information"]).lower()
+
+
+def test_identical_coordinate_duplicates_preserve_human_attribution(tmp_path):
+    snapshot = state(10)
+    decision = event("decision_point", 10, actor=1, situation="low_defense", action="hit")
+    moment, = inspect(tmp_path, [snapshot, copy.deepcopy(snapshot), decision])["moments"]
+    assert moment["kind"] == "human_decision" and moment["human_action"] == "hit"
+    assert not any("conflicting" in value.lower() for value in moment["missing_information"])

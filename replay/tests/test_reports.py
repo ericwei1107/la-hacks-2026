@@ -352,3 +352,177 @@ def test_neutral_sample_preserves_all_59_recorded_human_actions(tmp_path):
     assert all(not point["options"] for point in report["decision_points"])
     assert report["source"]["tactical_sources"] == {"default": 220, "reflex": 152}
     Draft202012Validator(SCHEMA).validate(report)
+
+
+def test_conflicting_state_is_not_scored_or_counted_as_habit(client):
+    path = client.app.state.settings.data_dir / "recordings/test_session.jsonl"
+    rows = [json.loads(row) for row in path.read_text().splitlines()]
+    conflicting = copy.deepcopy(rows[0])
+    conflicting["human_slot"] = 0
+    rows.insert(1, conflicting)
+    path.write_text("\n".join(map(json.dumps, rows)))
+
+    def forbidden(*args):
+        pytest.fail("An ambiguous decision must not request candidates")
+
+    client.app.state.reports.option_generator = forbidden
+    report = client.post("/analyze/test_session").json()
+    assert report["decision_points"] == [] and report["habits"] == []
+    point, = report["unattributed_decisions"]
+    assert point["evidence"][0]["record"]["action"] == "hit"
+    assert report["scoring_summary"] == {"scored": 0, "unavailable": 0}
+
+
+def test_report_fingerprint_binds_event_context_and_candidate_description(client):
+    from replay.evidence import decision_fingerprint
+    from replay.inspection import build_inspection
+    from replay.reader import read_recording
+
+    client.app.state.reports.option_generator = generate
+    report = client.post("/analyze/test_session").json()
+    point, = report["decision_points"]
+    path = client.app.state.settings.data_dir / "recordings/test_session.jsonl"
+    moment, = build_inspection(read_recording(path))["moments"]
+    fingerprint = decision_fingerprint(moment, OPTIONS)
+    assert point["evidence_fingerprint"] == fingerprint
+    assert len(fingerprint) == 64
+    reordered = {key: moment[key] for key in reversed(moment)}
+    assert decision_fingerprint(reordered, OPTIONS) == fingerprint
+    for field in ("context", "evidence", "recorded_frame_advantage", "missing_information"):
+        changed = copy.deepcopy(moment)
+        if field == "context":
+            changed[field]["human"]["health"] -= 1
+        elif field == "evidence":
+            changed[field][0]["record"]["detail"] = {"revision": 2}
+        elif field == "missing_information":
+            changed[field].append("New uncertainty")
+        else:
+            changed[field] = 5
+        assert decision_fingerprint(changed, OPTIONS) != fingerprint
+    options = copy.deepcopy(OPTIONS)
+    options[0]["description"] += " revised"
+    assert decision_fingerprint(moment, options) != fingerprint
+    invalid = copy.deepcopy(moment)
+    invalid["context"]["distance_mm"] = float("nan")
+    with pytest.raises(ValueError):
+        decision_fingerprint(invalid, OPTIONS)
+
+
+def test_overlapping_analysis_serializes_capture_and_keeps_latest_recording(client):
+    import asyncio
+
+    service = client.app.state.reports
+    service.option_generator = generate
+    path = service.data_dir / "recordings/test_session.jsonl"
+
+    async def run():
+        entered, release = asyncio.Event(), asyncio.Event()
+
+        class DelayedScorer:
+            calls = 0
+
+            async def score(self, items):
+                self.calls += 1
+                if self.calls == 1:
+                    entered.set()
+                    await release.wait()
+                return {}, "Offline test"
+
+        scorer = DelayedScorer()
+        service.scorer = scorer
+        first = asyncio.create_task(service.analyze("test_session"))
+        await asyncio.wait_for(entered.wait(), 2)
+        rows = [json.loads(row) for row in path.read_text().splitlines()]
+        with path.open("a") as output:
+            output.write(json.dumps(rows[1]) + "\n")
+        second = asyncio.create_task(service.analyze("test_session"))
+        try:
+            await asyncio.sleep(0.1)
+            assert scorer.calls == 1
+        finally:
+            release.set()
+            results = await asyncio.wait_for(asyncio.gather(first, second), 3)
+        assert [len(report["decision_points"]) for report in results] == [1, 2]
+        assert len(service.get("test_session")["decision_points"]) == 2
+        assert service._analysis_locks == {}
+
+    asyncio.run(run())
+
+
+def test_analysis_for_different_sessions_runs_concurrently_and_cleans_locks(client):
+    import asyncio
+
+    service = client.app.state.reports
+    service.option_generator = generate
+    path = service.data_dir / "recordings/test_session.jsonl"
+    path.with_name("second_session.jsonl").write_text(path.read_text().replace("test_session", "second_session"))
+
+    async def run():
+        both_entered, release = asyncio.Event(), asyncio.Event()
+
+        class DelayedScorer:
+            calls = 0
+
+            async def score(self, items):
+                self.calls += 1
+                if self.calls == 2:
+                    both_entered.set()
+                await release.wait()
+                return {}, "Offline test"
+
+        service.scorer = DelayedScorer()
+        tasks = [asyncio.create_task(service.analyze(session)) for session in ("test_session", "second_session")]
+        try:
+            await asyncio.wait_for(both_entered.wait(), 2)
+        finally:
+            release.set()
+            await asyncio.wait_for(asyncio.gather(*tasks), 3)
+        assert service._analysis_locks == {}
+        with pytest.raises(FileNotFoundError):
+            await service.analyze("missing")
+        assert service._analysis_locks == {}
+
+    asyncio.run(run())
+
+
+def test_cancelled_analysis_keeps_transaction_lock_and_cleans_waiters(client):
+    import asyncio
+
+    service = client.app.state.reports
+    service.option_generator = generate
+
+    async def run():
+        entered, release = asyncio.Event(), asyncio.Event()
+
+        class DelayedScorer:
+            calls = 0
+
+            async def score(self, items):
+                self.calls += 1
+                if self.calls == 1:
+                    entered.set()
+                    await release.wait()
+                return {}, "Offline test"
+
+        scorer = DelayedScorer()
+        service.scorer = scorer
+        first = asyncio.create_task(service.analyze("test_session"))
+        await asyncio.wait_for(entered.wait(), 2)
+        waiter = asyncio.create_task(service.analyze("test_session"))
+        await asyncio.sleep(0)
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        first.cancel()
+        second = asyncio.create_task(service.analyze("test_session"))
+        try:
+            await asyncio.sleep(0.1)
+            assert scorer.calls == 1 and not first.done()
+        finally:
+            release.set()
+            with pytest.raises(asyncio.CancelledError):
+                await first
+            await asyncio.wait_for(second, 3)
+        assert scorer.calls == 2 and service._analysis_locks == {}
+
+    asyncio.run(run())
