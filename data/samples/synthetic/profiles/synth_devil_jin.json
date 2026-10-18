@@ -1,0 +1,89 @@
+{
+  "player": "synth",
+  "character": "devil_jin",
+  "sessions": 1,
+  "habits": {
+    "low_defense": {
+      "hit": [
+        7,
+        1
+      ],
+      "blocked": [
+        8,
+        1
+      ],
+      "low_parry": [
+        0,
+        1
+      ]
+    },
+    "after_block:df1": {
+      "block_high": [
+        12,
+        1
+      ],
+      "block_low": [
+        7,
+        1
+      ],
+      "duck": [
+        1,
+        1
+      ]
+    },
+    "throw_break": {
+      "break_1": [
+        2,
+        1
+      ],
+      "none": [
+        1,
+        1
+      ]
+    }
+  },
+  "mastery": {
+    "low_defense": {
+      "p_learned": 0.88,
+      "observations": 15,
+      "fixed": true,
+      "last_retest": "2026-10-17T13:05:00Z"
+    },
+    "after_block:df1": {
+      "p_learned": 0.62,
+      "observations": 20,
+      "fixed": false,
+      "last_retest": null
+    },
+    "throw_break": {
+      "p_learned": 0.6,
+      "observations": 3,
+      "fixed": false,
+      "last_retest": null
+    }
+  },
+  "bandits": {
+    "after_block:df1|block_high": {
+      "low": [
+        3,
+        7
+      ],
+      "mid": [
+        7,
+        3
+      ]
+    },
+    "after_block:df1|duck": {
+      "mid": [
+        8,
+        2
+      ],
+      "throw": [
+        2,
+        8
+      ]
+    }
+  },
+  "predictor": null,
+  "history": []
+}

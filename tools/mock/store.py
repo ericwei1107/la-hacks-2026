@@ -2,15 +2,20 @@ import json
 import os
 import sys
 import subprocess
+import logging
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACTS = ROOT / "contracts"
 sys.path.insert(0, str(CONTRACTS))
+sys.path.insert(0, str(ROOT))
 
 from validate import load_schemas, validator
 
 SCHEMAS = load_schemas()
+from analytics.repository import DataError, read_lines
+logger = logging.getLogger(__name__)
 
 
 def data_dir():
@@ -22,33 +27,48 @@ def check(name, obj, sub=None):
     return [f"{'/'.join(map(str, e.absolute_path)) or '(root)'}: {e.message}" for e in errors]
 
 
-def load_jsonl(path):
-    records = []
-    raw = Path(path).read_text(encoding="utf-8")
-    lines = raw.splitlines()
-    for i, line in enumerate(lines):
-        if not line.strip():
-            continue
-        try:
-            rec = json.loads(line)
-        except json.JSONDecodeError as exc:
-            if i == len(lines) - 1 and not raw.endswith("\n") and line.lstrip().startswith("{") and (exc.pos >= len(line.rstrip()) - 1 or exc.msg.startswith("Unterminated string")):
-                break
-            raise ValueError(f"{path}:{i + 1}: invalid JSON: {exc.msg}") from exc
-        if isinstance(rec, dict) and "t" in rec:
-            records.append(rec)
-    return records
+def load_jsonl(path, text=None):
+    try:
+        if text is None:
+            text = Path(path).read_text(encoding='utf-8')
+        return [record for record in read_lines(text, str(path)) if isinstance(record.get('t'), str)]
+    except DataError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+def load_archive(path):
+    try:
+        with zipfile.ZipFile(path) as archive:
+            recordings = [info for info in archive.infolist() if not info.is_dir() and info.filename.endswith('.jsonl') and not info.filename.endswith('.learning.jsonl')]
+            if len(recordings) != 1:
+                raise ValueError(f'{path}: expected exactly one recording JSONL member; found {len(recordings)}')
+            recording = recordings[0]
+            meta_name = recording.filename.removesuffix('.jsonl') + '.session.json'
+            metadata = [info for info in archive.infolist() if info.filename == meta_name]
+            if len(metadata) != 1:
+                raise ValueError(f'{path}: expected one paired metadata member {meta_name}; found {len(metadata)}')
+            return recording.filename, archive.read(recording), meta_name, archive.read(metadata[0]).decode('utf-8')
+    except zipfile.BadZipFile as exc:
+        raise ValueError(f'{path}: invalid ZIP archive') from exc
 
 
 class Session:
     def __init__(self, path):
         self.path = Path(path)
-        self.records = load_jsonl(self.path)
+        self.recording_bytes = None
+        if self.path.suffix == '.zip':
+            member, self.recording_bytes, meta_member, meta_text = load_archive(self.path)
+            self.records = load_jsonl(f'{self.path}:{member}', self.recording_bytes.decode('utf-8'))
+            meta_path = f'{self.path}:{meta_member}'
+        else:
+            self.records = load_jsonl(self.path)
         self.id = next((r["session_id"] for r in self.records if r.get("session_id")), self.path.stem)
-        meta_path = self.find_meta()
-        if meta_path is None:
-            raise ValueError(f"{self.path}: missing metadata; provide {self.path.stem}.session.json or DATA_DIR/sessions/{self.id}.json")
-        self.meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        if self.recording_bytes is None:
+            meta_path = self.find_meta()
+            if meta_path is None:
+                raise ValueError(f"{self.path}: missing metadata; provide {self.path.stem}.session.json or DATA_DIR/sessions/{self.id}.json")
+            meta_text = meta_path.read_text(encoding="utf-8")
+        self.meta = json.loads(meta_text)
         errors = check("session", self.meta)
         if errors or self.meta["session_id"] != self.id:
             raise ValueError(f"{meta_path}: invalid session metadata: {errors or 'session_id does not match recording'}")
@@ -71,11 +91,13 @@ class Session:
         return None
 
     def load_learning(self):
+        path = data_dir() / "learning" / f"{self.id}.jsonl"
+        if path.exists():
+            return [r for r in load_jsonl(path) if r['t'] == 'learning_round']
         inline = [r for r in self.records if r["t"] == "learning_round"]
         if inline:
             return inline
-        path = data_dir() / "learning" / f"{self.id}.jsonl"
-        return [r for r in load_jsonl(path) if r["t"] == "learning_round"] if path.exists() else []
+        return []
 
     def stream(self):
         return [r for r in self.records if r["t"] in ("state", "event", "round_summary")]
@@ -88,15 +110,24 @@ class Store:
     def __init__(self, recordings=None):
         self.explicit = [Path(p) for p in recordings] if recordings else None
         self.sessions = {}
+        self.errors = {}
         self.refresh()
 
     def paths(self):
         found = list(self.explicit or [])
         if not self.explicit:
-            found.extend(sorted((ROOT / "data" / "samples").glob("*.jsonl")))
-            found.extend(sorted((data_dir() / "recordings").glob("*.jsonl")))
+            for directory in (data_dir() / 'samples', data_dir() / 'recordings'):
+                found.extend(sorted(directory.glob('*.jsonl')))
+                found.extend(sorted(directory.glob('*.zip')))
         for meta_path in sorted((data_dir() / "sessions").glob("*.json")):
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                if check('session', meta):
+                    raise ValueError('invalid session metadata')
+            except (OSError, ValueError, TypeError):
+                self.errors[meta_path.stem] = DataError(f'{meta_path.name}: invalid session metadata')
+                logger.warning('Session metadata unavailable: %s', meta_path.name)
+                continue
             reference = meta.get("recording")
             if reference:
                 path = Path(reference)
@@ -106,11 +137,28 @@ class Store:
         return list(dict.fromkeys(p.resolve() for p in found))
 
     def refresh(self):
-        self.sessions = {s.id: s for s in (Session(path) for path in self.paths())}
+        found = {}
+        self.errors = {}
+        for path in self.paths():
+            try:
+                session = Session(path)
+                if session.id not in self.errors:
+                    found[session.id] = session
+            except (ValueError, OSError) as exc:
+                if self.explicit and path in [p.resolve() for p in self.explicit]:
+                    if self.sessions:
+                        raise DataError(f'{path.name}: invalid session data') from exc
+                    raise
+                sid = next((s.id for s in self.sessions.values() if s.path.resolve() == path), path.stem)
+                self.errors[sid] = DataError(f'{path.name}: invalid session data')
+                logger.warning('Session unavailable: %s', path.name)
+        self.sessions = found
 
     def get(self, sid):
         if sid not in self.sessions:
             self.refresh()
+        if sid in self.errors:
+            raise self.errors[sid]
         return self.sessions.get(sid)
 
     def newest(self):
@@ -145,10 +193,15 @@ def git_sha():
 def make_app(service):
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
 
     app = FastAPI(title=f"kumite-mock-{service}")
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
     version = git_sha()
+
+    @app.exception_handler(DataError)
+    async def unavailable(request, exc):
+        return JSONResponse(status_code=503, content={'detail': str(exc)})
 
     @app.get("/health")
     def health():

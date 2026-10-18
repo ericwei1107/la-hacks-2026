@@ -19,3 +19,4 @@ Only edit the folders your owner owns. Cross-track needs go through `contracts/`
 - Every service reads `DATA_DIR` and exposes `GET /health`.
 - `game/` only: read-only `ReadProcessMemory` on `Polaris-Win64-Shipping.exe`. Never write game memory, never inject, never attach a debugger. Offline modes only.
 - End every task with the exact command to run and what the owner should see.
+- Run `/team-status` (or `python3 tools/status/status.py`) before merging or integrating; it reports every branch's progress, conflicts and contract violations.

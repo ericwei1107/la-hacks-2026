@@ -5,8 +5,7 @@ from datetime import datetime
 
 from analytics.metrics import learning_metrics, trend_values
 from analytics.repository import DataError, FileRepository
-
-FORMAT = 1
+from analytics import stats
 
 
 def signature(repository, meta, recording):
@@ -22,7 +21,7 @@ def signature(repository, meta, recording):
             digest = hashlib.sha256(text.encode()).hexdigest() if text is not None else None
             repository.parsed[key] = (stamp, digest)
         content.append(digest)
-    return hashlib.sha256(json.dumps([FORMAT, content], sort_keys=True, allow_nan=False, separators=(',', ':')).encode()).hexdigest()
+    return hashlib.sha256(json.dumps([stats.CALCULATION_VERSION, content], sort_keys=True, allow_nan=False, separators=(',', ':')).encode()).hexdigest()
 
 
 @dataclass(frozen=True)

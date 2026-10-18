@@ -57,7 +57,7 @@ Snapshots contain cumulative measurements within one session. The [continuous ag
 
 Discover canonical `sessions/*.json` and paired `samples/*.session.json` / `.jsonl`, preferring canonical metadata. Canonical recording references resolve from the repository root; absent references use `recordings/<id>.jsonl` with paired-sample fallback. Read companion `learning/<id>.jsonl` and optional `eval/<id>.json`. Producer files are never modified.
 
-Validate recognized records against the frozen contracts, preserve unknown fields, ignore unsupported types and tolerate an incomplete trailing JSONL object. Malformed complete records or mismatched ids identify the affected session/file. An invalid session is skipped; invalid discovery metadata aborts that scan.
+Validate recognized records against the frozen contracts, preserve unknown fields, ignore unsupported types and tolerate an incomplete trailing JSONL object. Malformed complete records or mismatched ids identify the affected session/file. An invalid session is skipped; invalid discovery metadata is isolated and counted while healthy sessions continue importing.
 
 Only a recorded `round_end` or round summary closes a round. Active rounds remain untouched. Each completed round transaction replaces changed raw/calculated rows and updates its fingerprint checkpoint. Unchanged rounds are skipped. Corrections, late learning and changed prior-round durations invalidate affected imports. A failed transaction restores previous rows and checkpoints.
 
@@ -88,3 +88,7 @@ TIGERDATA_RUN_INTEGRATION=1 python -m unittest discover -s analytics/tests -p te
 ```
 
 The live test creates and removes only its uniquely named `kumite_test_*` schema. It verifies four hypertables, the continuous aggregate, expected row counts, file/database trend parity, API database reads and outage fallback, repeat imports, corrections, late learning, actual constraint-triggered rollback and reconnection. A result containing `skipped=1` does not verify the database. Offline tests cover source edge cases, snapshot replacement/rollback, failed refresh retry, freshness and credential-free recovery. Cloud application and the expanded integration test must run after this schema update; prior successful tests of the foundation do not validate the new aggregate. This update was applied and verified on the configured service on 2026-10-17; see [verification results](VERIFICATION.md).
+
+## Calculation version 3 remediation
+
+Both round fingerprints and trend signatures include `analytics.stats.CALCULATION_VERSION`. This update rebuilds state-derived situation totals, winner resolution and one-to-one punish matches. Restart the API and watcher, then backfill; unchanged input is reimported once after a calculation-version change. API connections/statements use two-second limits and do not hold the shared file lock while waiting for the database; importer timeouts remain unchanged. See [verification](VERIFICATION.md) and [remediation](../REMEDIATION.md).

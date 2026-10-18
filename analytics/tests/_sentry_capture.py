@@ -56,4 +56,6 @@ for event in transactions:
     assert event['environment'] == 'instrumentation-test'
     assert event['release'] == 'kumite-analytics@instrumentation-test'
     assert event['contexts']['trace']['op'] == 'http.server'
-print(json.dumps({'transactions': sorted(expected), 'initializations': len(calls), 'network_transport': False}))
+operations = {span['op'] for event in transactions for span in event.get('spans', [])}
+assert {'file.load', 'stats.reduce', 'learning.derive'} <= operations, operations
+print(json.dumps({'transactions': sorted(expected), 'initializations': len(calls), 'network_transport': False, 'operations': sorted(operations)}))

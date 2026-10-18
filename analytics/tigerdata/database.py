@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import math
 from pathlib import Path
+from analytics.observability import traced
 
 TABLES = ('frames', 'events', 'round_metrics')
 
@@ -9,13 +10,13 @@ class DatabaseError(Exception):
     pass
 
 
-def connection(url):
+def connection(url, api=False):
     try:
         import psycopg
     except ImportError:
         raise DatabaseError('Install analytics/tigerdata/requirements.txt before using database commands') from None
     try:
-        return psycopg.connect(url, autocommit=True, connect_timeout=5, options='-c statement_timeout=15000 -c lock_timeout=5000')
+        return psycopg.connect(url, autocommit=True, connect_timeout=2 if api else 5, options='-c statement_timeout=2000 -c lock_timeout=1000' if api else '-c statement_timeout=15000 -c lock_timeout=5000')
     except Exception:
         raise DatabaseError('Database connection failed; check DATABASE_URL and network access') from None
 
@@ -50,6 +51,7 @@ class Database:
         except Exception:
             raise DatabaseError('Schema initialization failed; verify database permissions and TimescaleDB support') from None
 
+    @traced('tigerdata.ingest')
     def ingest(self, batch):
         meta = batch.meta
         sid = meta['session_id']
@@ -70,6 +72,7 @@ class Database:
         except Exception:
             raise DatabaseError(f'Round import failed for session {sid}, round {batch.number}; transaction rolled back') from None
 
+    @traced('tigerdata.publish')
     def publish(self, snapshot):
         if not snapshot.rows:
             return
@@ -105,6 +108,7 @@ class Database:
                 except Exception:
                     pass
 
+    @traced('tigerdata.read')
     def trends(self, session_ids):
         try:
             rows = self.conn.execute(self.sql.SQL('SELECT i.session_id,i.signature,i.metric_count,v.metric,v.value FROM {} i JOIN LATERAL (SELECT DISTINCT ON (metric) metric,value FROM {} WHERE session_id=i.session_id ORDER BY metric,bucket DESC) v ON TRUE WHERE i.ready AND i.session_id=ANY(%s)').format(self.table('trend_imports'), self.table('session_trends')), (session_ids,)).fetchall()

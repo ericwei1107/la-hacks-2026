@@ -1,6 +1,6 @@
 # Analytics service
 
-The real analytics service serves stats, learning metrics and per-session trends on port 8767. It works from files without a running game. Optional Tiger Data integration serves current trends from a continuous aggregate and falls back to files. Existing Sentry configuration is retained.
+The real analytics service serves stats, learning metrics and per-session trends on port 8767. It works from files without a running game. Optional Tiger Data integration serves current trends from a continuous aggregate and falls back to files. Sentry retains HTTP transactions with loading, reduction and learning operation spans. See [remediation status and owner handoffs](REMEDIATION.md).
 
 ## Run
 
@@ -38,8 +38,9 @@ Match player and human character exactly; include synthetic sessions if they mat
 
 | Values key | Meaning |
 |---|---|
-| `punish_rate`, `throw_break_rate`, `low_block_rate`, `counter_hits_taken`, `counter_hits_given`, `avg_adv_after_block` | Per-session event totals/rates |
+| `punish_rate`, `throw_break_rate`, `low_block_rate`, `counter_hits_taken`, `counter_hits_given`, `avg_adv_after_block`, `rounds_won` | Per-session event totals/rates |
 | `damage_taken_by_situation:<situation>` | Human damage taken from hits, counter-hits and throws, grouped by situation; missing situations use `neutral` |
+| `throw_breaks_by_type:<input>` | Successful human breaks by input |
 | `habit_probability:<habit>` | Last available recorded habit probability in this session |
 | `mastery:<habit>` | Last available recorded mastery probability in this session |
 | `time_to_mastery:<habit>` | First fixed round in this session |
@@ -49,34 +50,34 @@ Match player and human character exactly; include synthetic sessions if they mat
 
 Event calculations preserve the existing mock reducer conventions: frame advantage is actor-relative; a punish opportunity requires a blocked bot move at -10 or worse, and a human hit/counter-hit in the same round within `abs(frame_advantage) + 10` frames. The extra 10-frame allowance is provisional. Throw-break rate follows the real tracker: human breaks divided by bot throws on the human, capped at 1. The tracker records every throw and emits an additional break event when it is broken.
 
-Round winners start with metadata and are updated by recorded round-end events/summaries in file order. Unknown winners do not enter the denominator. The service does not aggregate match win rates across sessions or difficulties.
+Round winners start with metadata and are updated by non-null recorded round-end events/summaries in file order. One hit can satisfy only the most recent unmatched qualifying punish opportunity in the same round. Unknown winners do not enter the denominator. The service does not aggregate match win rates across sessions or difficulties.
 
 ## Stats: GET /stats/{session_id}
 
-Per-round blocks plus `totals`, in the `contracts/api.md` shape, computed by `analytics/stats.py` from the session's recording. The mock's `/stats` loads the same file, so the two always agree. Rates are 0–1, or null when the situation never happened.
+Per-round blocks plus `totals`, in the `contracts/api.md` shape, computed by `analytics/stats.py` from the session's recording. The mock's `/stats` uses the same reducer. Mock and real trend/learning derivation and evaluation validation also share implementations. Rates are 0–1, or null when the situation never happened.
 
 | Field | Meaning |
 |---|---|
 | `damage_taken_by_situation` | damage from `hit`/`counter_hit`/`throw` on the human, keyed by the event's `situation`, else the brain's `derived.situation` at that frame, else `neutral` (real events carry no `situation`) |
 | `punish_rate` | blocks of a bot move at frame advantage ≤ −10 (the actor's advantage) that the human punished with a hit within `abs(advantage) + 10` frames |
 | `throw_break_rate` | human `throw_break` events ÷ bot `throw` events on the human; the real tracker emits `throw` for every throw and adds `throw_break` when it's broken |
-| `low_block_rate` | bot lows and special lows on the human: blocked ÷ blocked + hit |
+| `low_block_rate` | bot lows (`hit_level` `low`) on the human: blocked ÷ blocked + hit. Special lows are excluded: they're stand-blockable, so they don't test the crouch-block habit, and this matches `game/detect.py`'s `low_defense` |
 | `counter_hits_taken`, `counter_hits_given` | counter hits with the human as target / actor |
 | `avg_adv_after_block` | mean frame advantage from the human's side after blocking |
 | `rounds_won` | extra: 1/0/null per round; the human's wins in `totals` |
 | `throw_breaks_by_type` | extra: the human's breaks by input (`press_1`, …) |
 
-Top-level extras: `health_timeline` (`{round: [[frame, human_hp, bot_hp], ...]}`, every 30 frames plus each round's last frame) and `skipped_lines` (unreadable recording lines).
+Top-level extras: `health_timeline` (`{round: [[frame, human_hp, bot_hp], ...]}`, every 30 frames plus each round's last frame) and `skipped_lines` (unreadable or schema-invalid recording lines). Unsupported record types are ignored before reduction and do not create rounds.
 
-Recordings grow during live play, so `/stats` reads only the bytes added since the last request. A partial last line waits until it's complete; a file that shrinks or is rewritten is reread from the start. Unlike `/learning` and `/trends`, an unreadable line in a recording is skipped and counted in `skipped_lines` rather than failing the request, so one bad write during a live set doesn't take the panel down. Unknown session: 404.
+Recordings grow during live play, so `/stats` parses newly appended complete lines after verifying the previously consumed byte prefix whenever the file changes. A partial last line waits until it's complete; a changed inode, shorter file or modified consumed prefix resets the reader, including larger replacements and in-place corrections. Prefix verification reads old bytes without reparsing their records. Unlike `/learning` and `/trends`, an unreadable line in a recording is skipped and counted in `skipped_lines` rather than failing the request, so one bad write during a live set doesn't take the panel down. Unknown session: 404.
 
 ## Files, refresh and failures
 
 Discover canonical metadata in `DATA_DIR/sessions/*.json` and paired `DATA_DIR/samples/<name>.session.json` / `<name>.jsonl` samples. Canonical metadata wins for duplicate session ids. Recording references in canonical metadata resolve relative to the repository root, or may be absolute. Without a reference, use `DATA_DIR/recordings/<session_id>.jsonl`, falling back to its paired sample if available. Session ids come from metadata, not the sample filename.
 
-Each request checks modification time and size of relevant metadata, recording, learning and evaluation files. Unchanged parsed data and derived results are cached; changed or removed files invalidate affected results. Recording data is needed for trends, not for learning. Unknown recording types are ignored and recognized records use the frozen schemas. An incomplete final JSONL record without a newline is tolerated; malformed complete records fail.
+Each request checks modification time and size of relevant metadata, recording, learning and evaluation files. Unchanged parsed data and derived results are cached; changed or removed files invalidate affected results. Recording data is needed for trends, not for learning. Unknown recording types are ignored and recognized records use the frozen schemas. Invalid metadata is isolated: unrelated sessions remain available and requesting the invalid session returns 503. An incomplete final JSONL record without a newline is tolerated; malformed complete records fail.
 
-Invalid required data or an invalid optional file that exists returns HTTP 503 with a concise diagnostic and an error log. Missing optional learning/evaluation files are unavailable data, not zero measurements. No files are repaired or fabricated. With `DATABASE_URL`, the repository reads ready, source-matching Tiger Data trend aggregates and uses files for missing/stale imports or database outages. Stats and learning continue reading files. Database failures log a credential-free warning and retry after two seconds. See [Tiger Data setup](tigerdata/README.md) for explicit schema initialization, backfill, watcher lifecycle and cloud verification commands.
+Invalid required data or an invalid optional file that exists returns HTTP 503 with a concise diagnostic and an error log. Missing optional learning/evaluation files are unavailable data, not zero measurements. No files are repaired or fabricated. With `DATABASE_URL`, the repository reads ready, source-matching Tiger Data trend aggregates and uses files for missing/stale imports or database outages. Stats and learning continue reading files. API database connections/statements each have two-second limits; the importer keeps longer limits. Database I/O releases the shared file lock, so stats and learning remain responsive and other trend requests can fall back without waiting. Database failures log a credential-free warning and retry after two seconds. Calculation version 3 invalidates older round/aggregate fingerprints; restart and backfill after upgrading. See [Tiger Data setup](tigerdata/README.md) for explicit schema initialization, backfill, watcher lifecycle and cloud verification commands.
 
 ## Verify
 
@@ -89,3 +90,7 @@ python analytics/tests/smoke.py
 ```
 
 The analytics tests cover reducer calculations, schema validity, thresholds, regression, duplicate rounds, file changes, filtering, ordering and unavailable data. The smoke script requires free ports 8765–8767, generates data in a temporary directory, starts real analytics alongside mock brain/replay, exercises both endpoints and live evaluation refresh, and stops its servers afterward. It disables Sentry only in those test subprocesses.
+
+## Checked-in walkthrough
+
+Use [data/samples/synthetic](../data/samples/synthetic/README.md) for the reproducible three-round fixture and exact two-terminal commands. Its planted learning values are synthetic. No fine-tune improvement is fabricated. Health returns the Git SHA; Sentry uses its separate release identifier.

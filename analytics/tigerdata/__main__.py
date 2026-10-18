@@ -13,8 +13,11 @@ logger = logging.getLogger('analytics.tigerdata')
 
 
 def import_once(data_dir, database):
-    imported = skipped = failures = 0
-    for sid, (meta, recording) in discover(data_dir).items():
+    errors = {}
+    sessions = discover(data_dir, errors)
+    imported = skipped = 0
+    failures = len(errors)
+    for sid, (meta, recording) in sessions.items():
         try:
             initial = signature(FileRepository(data_dir), meta, recording)
             batches = prepare(meta, recording, data_dir)

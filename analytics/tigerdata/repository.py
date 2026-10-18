@@ -1,5 +1,7 @@
 import logging
 import time
+import threading
+from analytics.observability import traced
 
 from analytics.metrics import trend_values
 from analytics.repository import FileRepository
@@ -14,21 +16,30 @@ class TigerRepository(FileRepository):
         super().__init__(data_dir)
         self.url = url
         self.retry_at = 0
+        self.database_lock = threading.Lock()
 
+    @traced('tigerdata.trends')
     def trends(self, player, character, stat=None):
         with self.lock:
             sessions = [entry for entry in self._sessions().values() if entry[2]['player'] == player and entry[2]['human_character'] == character]
-            if not sessions:
-                return assemble(player, character, [])
-            stored = {}
-            if time.monotonic() >= self.retry_at:
+        if not sessions:
+            return assemble(player, character, [])
+        stored = {}
+        acquired = self.database_lock.acquire(blocking=False)
+        try:
+            if acquired and time.monotonic() >= self.retry_at:
                 try:
-                    with connection(self.url) as conn:
+                    with connection(self.url, api=True) as conn:
                         stored = Database(conn).trends([entry[2]['session_id'] for entry in sessions])
                     self.retry_at = 0
                 except Exception:
                     self.retry_at = time.monotonic() + 2
                     logger.warning('Tiger Data trends unavailable; serving files; retrying after two seconds')
+        finally:
+            if acquired:
+                self.database_lock.release()
+        with self.lock:
+            sessions = [entry for entry in self._sessions().values() if entry[2]['player'] == player and entry[2]['human_character'] == character]
             points = []
             for _, _, meta, recording in sessions:
                 sid = meta['session_id']
