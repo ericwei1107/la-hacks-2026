@@ -59,33 +59,38 @@ def winners(records, meta):
     return found
 
 
-def block(evs, human, situations, won):
+def opportunities(evs, human):
     bot = 1 - human
+    opps = [e for e in evs if e["kind"] == "block" and e.get("actor") == bot and e.get("target") == human and isinstance(e.get("frame_advantage"), int) and e["frame_advantage"] <= PUNISHABLE]
+    hits_by_human = [e for e in evs if e['kind'] in CONNECT and e.get('actor') == human and e.get('target') == bot]
+    matched = {}
+    for hit in sorted(hits_by_human, key=lambda h: (h['round'], h['frame'])):
+        candidates = [i for i, o in enumerate(opps) if i not in matched and o['round'] == hit['round'] and 0 < hit['frame'] - o['frame'] <= abs(o['frame_advantage']) + PUNISH_WINDOW]
+        if candidates:
+            matched[max(candidates, key=lambda i: (opps[i]['frame'], i))] = hit
+    throws = [e for e in evs if e["kind"] == "throw" and e.get("actor") == bot and e.get("target") == human]
+    breaks = [e for e in evs if e["kind"] == "throw_break" and e.get("actor") == human]
+    lows = [e for e in evs if e.get("actor") == bot and e.get("target") == human and e.get("hit_level") in LOWS and e["kind"] in ("block",) + CONNECT]
+    return {'low_defense': lows, 'throw_defense': throws, 'breaks': breaks, 'punish_conversion': opps, 'punish_matches': matched}
+
+
+def block(evs, human, situations, won):
+    counted = opportunities(evs, human)
     by_situation = defaultdict(int)
     for e in evs:
         if e["kind"] in DAMAGING and e.get("target") == human and (e.get("damage") or 0) > 0:
             key = e.get("situation") or situations.at(e.get("round"), e.get("frame", 0)) or "neutral"
             by_situation[key] += e["damage"]
-    opps = [e for e in evs if e["kind"] == "block" and e.get("actor") == bot and e.get("target") == human and isinstance(e.get("frame_advantage"), int) and e["frame_advantage"] <= PUNISHABLE]
-    hits_by_human = [e for e in evs if e['kind'] in CONNECT and e.get('actor') == human and e.get('target') == bot]
-    matched = set()
-    for hit in sorted(hits_by_human, key=lambda h: (h['round'], h['frame'])):
-        candidates = [i for i, o in enumerate(opps) if i not in matched and o['round'] == hit['round'] and 0 < hit['frame'] - o['frame'] <= abs(o['frame_advantage']) + PUNISH_WINDOW]
-        if candidates:
-            matched.add(max(candidates, key=lambda i: (opps[i]['frame'], i)))
-    punished = len(matched)
-    throws = sum(1 for e in evs if e["kind"] == "throw" and e.get("actor") == bot and e.get("target") == human)
-    breaks = [e for e in evs if e["kind"] == "throw_break" and e.get("actor") == human]
     by_type = defaultdict(int)
-    for e in breaks:
+    for e in counted['breaks']:
         d = e.get("detail") or {}
         by_type[d.get("input") or d.get("break") or "unknown"] += 1
-    lows = [e for e in evs if e.get("actor") == bot and e.get("target") == human and e.get("hit_level") in LOWS and e["kind"] in ("block",) + CONNECT]
+    lows = counted['low_defense']
     adv = [-e["frame_advantage"] for e in evs if e["kind"] == "block" and e.get("target") == human and isinstance(e.get("frame_advantage"), int)]
     return {
         "damage_taken_by_situation": dict(by_situation),
-        "punish_rate": rate(punished, len(opps)),
-        "throw_break_rate": rate(len(breaks), throws),
+        "punish_rate": rate(len(counted['punish_matches']), len(counted['punish_conversion'])),
+        "throw_break_rate": rate(len(counted['breaks']), len(counted['throw_defense'])),
         "low_block_rate": rate(sum(1 for e in lows if e["kind"] == "block"), len(lows)),
         "counter_hits_taken": sum(1 for e in evs if e["kind"] == "counter_hit" and e.get("target") == human),
         "counter_hits_given": sum(1 for e in evs if e["kind"] == "counter_hit" and e.get("actor") == human),
