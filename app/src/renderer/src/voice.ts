@@ -1,71 +1,144 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { TranscribeResult } from '../../shared/bridge'
-import { useConfig, useLatestCoach, useRoundBreak, type RoundBreak } from './services'
+import { useCoachListener, useConfig } from './services'
 import { Store } from './services/store'
 
-const speaking = new Store<string | null>(null)
-let audio: HTMLAudioElement | null = null
-let clipUrl: string | null = null
-let request = 0
-let currentTag: string | null = null
-
+const STREAM_TYPE = 'audio/mpeg'
 const ROUND_TAG = 'round'
 
-function release(): void {
-  if (audio) {
-    audio.onended = null
-    audio.onerror = null
-    audio.pause()
-    audio = null
-  }
-  if (clipUrl) {
-    URL.revokeObjectURL(clipUrl)
-    clipUrl = null
-  }
-  currentTag = null
-  if (speaking.get() !== null) speaking.set(null)
+interface Line {
+  text: string
+  tag: string
+  chunks: Uint8Array[]
+  done: boolean
+  wake: () => void
 }
 
-export function stopSpeaking(tagPrefix?: string): void {
-  if (tagPrefix !== undefined && !currentTag?.startsWith(tagPrefix)) return
-  request += 1
-  release()
-}
+const speaking = new Store<string | null>(null)
+const queue: Line[] = []
+let current: Line | null = null
 
-async function play(text: string, tag: string): Promise<void> {
-  stopSpeaking()
-  currentTag = tag
-  const id = request
+function fetchLine(line: Line): void {
   const bridge = window.kumite
+  const finish = (): void => {
+    line.done = true
+    line.wake()
+  }
   if (!bridge?.speak) {
-    currentTag = null
+    finish()
     return
   }
-  let result: Awaited<ReturnType<typeof bridge.speak>>
-  try {
-    result = await bridge.speak(text)
-  } catch {
-    if (id === request) currentTag = null
-    return
-  }
-  if (id !== request) return
-  if (!result.ok) {
-    currentTag = null
-    return
-  }
-  clipUrl = URL.createObjectURL(new Blob([result.audio], { type: 'audio/mpeg' }))
-  const clip = new Audio(clipUrl)
-  audio = clip
-  clip.onended = release
-  clip.onerror = release
-  clip.play().then(
-    () => {
-      if (id === request) speaking.set(tag)
-    },
-    () => {
-      if (id === request) release()
+  bridge
+    .speak(line.text, (chunk) => {
+      line.chunks.push(chunk)
+      line.wake()
+    })
+    .then(finish, finish)
+}
+
+function changed(line: Line): Promise<void> {
+  return new Promise((resolve) => {
+    line.wake = () => {
+      line.wake = () => {}
+      resolve()
     }
+  })
+}
+
+async function feed(line: Line, source: MediaSource, buffer: SourceBuffer): Promise<void> {
+  let next = 0
+  for (;;) {
+    if (source.readyState !== 'open') return
+    if (next < line.chunks.length) {
+      const chunk = line.chunks[next]
+      next += 1
+      const appended = new Promise<void>((resolve) => buffer.addEventListener('updateend', () => resolve(), { once: true }))
+      try {
+        buffer.appendBuffer(new Uint8Array(chunk))
+      } catch {
+        if (source.readyState === 'open' && !buffer.updating) source.endOfStream()
+        return
+      }
+      await appended
+    } else if (line.done) {
+      if (!buffer.updating) source.endOfStream()
+      return
+    } else {
+      await changed(line)
+    }
+  }
+}
+
+function streamClip(line: Line): string {
+  const source = new MediaSource()
+  source.addEventListener(
+    'sourceopen',
+    () => {
+      let buffer: SourceBuffer
+      try {
+        buffer = source.addSourceBuffer(STREAM_TYPE)
+      } catch {
+        source.endOfStream('decode')
+        return
+      }
+      void feed(line, source, buffer)
+    },
+    { once: true }
   )
+  return URL.createObjectURL(source)
+}
+
+async function wholeClip(line: Line): Promise<string> {
+  while (!line.done) await changed(line)
+  const parts = line.chunks.map((chunk) => new Uint8Array(chunk))
+  return URL.createObjectURL(new Blob(parts, { type: STREAM_TYPE }))
+}
+
+async function playLine(line: Line): Promise<void> {
+  while (line.chunks.length === 0 && !line.done) await changed(line)
+  if (line.chunks.length === 0) return
+  const url = MediaSource.isTypeSupported(STREAM_TYPE) ? streamClip(line) : await wholeClip(line)
+  const clip = new Audio()
+  try {
+    await new Promise<void>((resolve) => {
+      clip.onplaying = () => speaking.set(line.tag)
+      clip.onended = () => resolve()
+      clip.onerror = () => resolve()
+      clip.src = url
+      clip.play().catch(() => resolve())
+    })
+  } finally {
+    clip.onplaying = null
+    clip.onended = null
+    clip.onerror = null
+    URL.revokeObjectURL(url)
+  }
+}
+
+function advance(): void {
+  if (current) return
+  const line = queue.shift()
+  if (!line) return
+  current = line
+  playLine(line)
+    .catch(() => {})
+    .finally(() => {
+      current = null
+      speaking.set(null)
+      advance()
+    })
+}
+
+function enqueue(text: string, tag: string): void {
+  if (!text.trim()) return
+  const line: Line = { text, tag, chunks: [], done: false, wake: () => {} }
+  queue.push(line)
+  fetchLine(line)
+  advance()
+}
+
+function dropQueuedLines(): void {
+  queue.length = 0
 }
 
 export function useVoice() {
@@ -74,37 +147,19 @@ export function useVoice() {
   const playing = useSyncExternalStore(speaking.subscribe, speaking.get)
 
   useEffect(() => {
-    if (!enabled) stopSpeaking()
+    if (!enabled) dropQueuedLines()
   }, [enabled])
 
   const speak = useCallback((text: string, tag: string) => {
-    if (enabled) void play(text, tag)
+    if (enabled) enqueue(text, tag)
   }, [enabled])
 
-  return { speaking: playing !== null, speakingTag: playing, speak, stop: stopSpeaking }
+  return { speaking: playing !== null, speakingTag: playing, speak }
 }
 
-export function useBetweenRoundVoice(): void {
-  const { roundBreak } = useRoundBreak()
-  const coach = useLatestCoach()
-  const { speak, stop } = useVoice()
-  const spoken = useRef<RoundBreak | null>(null)
-  const previous = useRef<RoundBreak | null>(null)
-  const line = roundBreak && coach && coach.record.session_id === roundBreak.sessionId && coach.record.round === roundBreak.round
-    ? coach.record.text
-    : null
-
-  useEffect(() => {
-    if (roundBreak && line && spoken.current !== roundBreak) {
-      spoken.current = roundBreak
-      speak(line, ROUND_TAG)
-    }
-  }, [roundBreak, line, speak])
-
-  useEffect(() => {
-    if (previous.current && !roundBreak) stop(ROUND_TAG)
-    previous.current = roundBreak
-  }, [roundBreak, stop])
+export function useCoachRecordVoice(): void {
+  const { speak } = useVoice()
+  useCoachListener((message) => speak(message.text, ROUND_TAG))
 }
 
 const MIN_RECORDING_MS = 300
@@ -189,7 +244,6 @@ export function useHoldToTalk(onText: (text: string) => void, available: boolean
 
   const start = useCallback(async () => {
     if (!available || current.current || transcribing.current) return
-    stopSpeaking()
     setNote(null)
     const recording: Recording = { stream: null, recorder: null, chunks: [], startedAt: 0, released: false, timer: 0 }
     current.current = recording

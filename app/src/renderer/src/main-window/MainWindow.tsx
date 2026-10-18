@@ -6,7 +6,7 @@ import { Learning } from './screens/Learning'
 import { ReplayAnalysis } from './screens/ReplayAnalysis'
 import { Sessions } from './screens/Sessions'
 import { Stats } from './screens/Stats'
-import { useBetweenRoundVoice } from '../voice'
+import { useCoachRecordVoice } from '../voice'
 
 function CurrentScreen() {
   const { screen } = useFrame()
@@ -18,15 +18,15 @@ function CurrentScreen() {
   return <Sessions />
 }
 
-function BetweenRoundVoice() {
-  useBetweenRoundVoice()
+function CoachRecordVoice() {
+  useCoachRecordVoice()
   return null
 }
 
 export function MainWindow() {
   return (
     <FrameProvider>
-      <BetweenRoundVoice />
+      <CoachRecordVoice />
       <div className="mat-ground flex h-full overflow-hidden">
         <Sidebar />
         <div className="flex grow basis-0 flex-col overflow-auto">

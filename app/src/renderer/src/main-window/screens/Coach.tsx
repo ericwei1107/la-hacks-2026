@@ -5,7 +5,7 @@ import { answerBlocks, type AnswerBlock } from '../coachAnswer'
 import { useFrame } from '../frame'
 import { keyLabel, usePushToTalkKey } from '../pushToTalk'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
-import { stopSpeaking, useHoldToTalk, useVoice } from '../../voice'
+import { useHoldToTalk, useVoice } from '../../voice'
 
 interface Turn {
   role: 'user' | 'coach'
@@ -101,7 +101,6 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
   const end = useRef<HTMLDivElement>(null)
   const player = useVoice()
   const mounted = useRef(true)
-  const answers = `coach:${session.session_id}:`
 
   useEffect(() => {
     threads.set(session.session_id, turns)
@@ -112,13 +111,11 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
     mounted.current = true
     return () => {
       mounted.current = false
-      stopSpeaking(answers)
     }
-  }, [answers])
+  }, [])
 
   const ask = async (message: string) => {
     if (!message || chat.isPending) return
-    stopSpeaking(answers)
     const history = turns.filter((turn) => !turn.failed).map(({ role, text }) => ({ role, text }))
     const answerIndex = turns.length + 1
     setTurns((current) => [...current, { role: 'user', text: message }])
