@@ -1,6 +1,7 @@
 import json
 import math
 import re
+import statistics
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -317,7 +318,9 @@ class ComboRunner:
                 self.connects[0] = frame
                 if self.opener_distance is not None:
                     self.reach = round(self.opener_distance - distance(bot, target))
-                    self.captured["learned_reach"] = self.reach
+                    reaches = self.captured.setdefault("reaches", [])
+                    reaches.append(self.reach)
+                    self.captured["learned_reach"] = round(statistics.median(reaches))
                 self.index = 1
                 self._schedule(frame)
             elif self.move.done_frame is not None and bot["free_movement"]:
