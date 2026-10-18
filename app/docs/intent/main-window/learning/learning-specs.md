@@ -4,9 +4,9 @@ Design: `learning-design.md`
 
 ## Hero and chart
 
-- [ ] **MAIN-LEARNING-001**: The Learning screen shall show, in the display face, the prediction accuracy of the last round of the selected set that has a non-null accuracy, followed by "of your next moves predicted in round <n>." and "Round 1: <first accuracy>."
+- [ ] **MAIN-LEARNING-001**: The Learning screen shall show, in the display face, the prediction accuracy of the last round of the selected set that has a non-null accuracy, followed by "of your next moves the bot guessed right in round <n>." and "Round 1: <first accuracy>."
 - [ ] **MAIN-LEARNING-006**: The hero accuracy shall fit within its 380 px column, at 140 px for one or two digits and 120 px for 100%.
-- [ ] **MAIN-LEARNING-002**: The Learning screen shall frame in `--color-primary` a line chart titled "Prediction accuracy by round" with one point per round that has an accuracy, rounds labelled R1 to Rn in mono, and gridlines every 10 percentage points spanning the data.
+- [ ] **MAIN-LEARNING-002**: The Learning screen shall frame in `--color-primary` a line chart titled "How often the bot guessed your next move" with one point per round that has an accuracy, rounds labelled R1 to Rn in mono, and gridlines every 10 percentage points spanning the data.
 - [ ] **MAIN-LEARNING-003**: The accuracy chart shall fill and label the last point with its value.
 - [ ] **MAIN-LEARNING-004**: The accuracy chart shall mark each round flagged `player_changed` with a dashed `--color-bot` line labelled "you adapted".
 - [ ] **MAIN-LEARNING-005**: The accuracy chart shall mark the round where the earliest-detected habit was detected with "Spotted your <habit short form> habit".
@@ -19,8 +19,8 @@ Design: `learning-design.md`
 
 ## Habits table
 
-- [ ] **MAIN-LEARNING-020**: The habits table shall show one row per habit of the last round, with its belt, its name, its rank name, a belt square per round for the last six rounds, its rounds to detect, and its rounds to master, writing an em dash where a value is missing.
-- [ ] **MAIN-LEARNING-021**: When a habit's situation appears in the `exploited` list of the selected set's last round summary, its row shall add ". The bot's target." to the rank name and draw that line in `--color-bot`.
+- [ ] **MAIN-LEARNING-020**: The habits table shall show one row per habit of the last round, with its belt, its name, its rank name, a belt square per round for the last six rounds under the heading "How well you've learned the right answer, R<a> to R<b>", its rounds to detect, and its rounds to master, writing an em dash where a value is missing.
+- [ ] **MAIN-LEARNING-021**: When a habit's situation appears in the `exploited` list of the selected set's last round summary, its row shall add ". The habit the bot is attacking right now." to the rank name and draw that line in `--color-bot`.
 - [ ] **MAIN-LEARNING-022**: The habits table shall order rows with targeted habits first, then by mastery from lowest.
 - [ ] **MAIN-LEARNING-024**: Each habits table row shall be at least 56 px tall and grow to fit a rank line that wraps.
 - [ ] **MAIN-LEARNING-023**: When a habit has a `time_to_mastery` but is not `fixed` in the last round, its row shall add "Fixed in round <time to mastery>, slipped since." to the rank line and show its to-master value in `--color-text-muted`.

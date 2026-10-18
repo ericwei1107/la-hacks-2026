@@ -24,7 +24,7 @@ The conversation belongs to the selected set and lasts while the app runs: switc
 - **Type a question:** a text field, "Or type a question about this set", with a send arrow. Enter or the arrow sends; an empty field sends nothing.
 - **Coach voice:** a toggle bound to the brain config's `voice`, saved when changed.
 
-The "Speaking" indicator from Paper belongs to the voice update.
+When an answer arrives it is spoken, and while it plays its "Coach" label is followed by Paper's "Speaking" waveform (voice design). Asking again, switching sets or leaving the screen stops it.
 
 ## States
 
