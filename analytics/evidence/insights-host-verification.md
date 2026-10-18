@@ -14,6 +14,21 @@ Verified October 18, 2026 on Eric's Mac with Python 3.12.1. Base `c87dcbe` plus 
 | New host source/CLI smoke | Actual brain API plus actual analytics launcher/check CLI, temporary ports and canonical copy of the real fixture: passed |
 | Native host, live app and owner review | Pending; no actual host path/address supplied and no native run claimed |
 
+## Demo-host answers and follow-up (October 18, after PR #22 opened)
+
+Sahil confirmed the layout: brain, replay and analytics share `C:\Users\sahil\la-hacks-2026\data` on his laptop, with no remote execution before the demo. He will run the source check against a live session and paste the output, and accepted PR #22 limited to `analytics/` and `tools/`. Follow-up verified on Eric's Mac in the PR worktree:
+
+| Check | Result |
+| --- | --- |
+| Recorder-relative metadata | Recorder writes `DATA_DIR/recordings/<id>.jsonl`, relative when `DATA_DIR` is the default `data`. Such references now resolve to that canonical file when absent under the code checkout, so the check runs from a detached worktree. A unit test fails without the fix and passes with it |
+| Check during continuous writes | Mid-round growth no longer fails as "changing": prefix bytes must be unchanged and closed stats rounds plus closed, saved learning rounds must match. Static sources keep exact equality. Rewritten earlier bytes still fail |
+| One-command before/after | `--session-id latest --wait-for-round-seconds N` captures a passing check before and after a later completed round with saved learning (exit 0), or exits 2 on timeout |
+| Main vs branch reducers | `origin/main` analytics and this branch return byte-identical `/stats` and `/learning` bodies for the real and synthetic samples |
+| Full analytics suite | 161 cases: 160 passed, one opt-in cloud skip |
+| Mock suite, contracts, examples | 46/46; frozen examples pass; eleven examples match |
+| Smokes | `smoke.py`, `live_learning_smoke.py` and the extended `demo_host_smoke.py` (relative metadata, before/after CLI, continuous writer) pass with clean shutdown |
+| Native host | Pending Sahil's pasted output; nothing has been run on the laptop by Track D |
+
 ## Source/HTTP rehearsal
 
 The new smoke starts `game.api` and `analytics.demo_host serve` with the same temporary absolute DATA_DIR, with database, telemetry and external keys disabled. It calls the exact `analytics.demo_host check` CLI and verifies four completed real-fixture rounds, matching recording-prefix hashes and stats/learning parity.

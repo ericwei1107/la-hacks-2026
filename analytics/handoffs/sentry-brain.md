@@ -46,3 +46,5 @@ Sahil's minimum promised timing comparison is decision-loop **p50/p95 in millise
 Source presence alone does not close this handoff. No fake read or input spans should be added to the analytics service to simulate completion.
 
 Use the [brain evidence template](../evidence/brain-decision-template.md) for the return handoff. Sahil has committed to sending the 5% decision trace URL, waterfall screenshot and on/off timings after setting the corrected DSN; those artifacts have not yet been received or verified.
+
+**Sahil update, about 03:40 PT on October 18:** instrumentation is going in now. Within the hour he will send the trace URL, the waterfall screenshot, the full SHA used as release, environment `demo-laptop`, and tracing off/on p50/p95 with sample counts. Nothing has been received or verified yet; B5 stays open until those artifacts are checked against the template.

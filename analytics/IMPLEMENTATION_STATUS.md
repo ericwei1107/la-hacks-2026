@@ -14,7 +14,7 @@ Implementation date: October 18, 2026. Work began at `dc1f90c`; Chloe's C1/C2 ar
 | Chloe C2/C3 | C2 merged in PR #20; C3 optional | App typecheck/build pass; Chloe's static real-fixture acceptance is retained; growing-session/reconnect/native audio checks remain pending |
 | E4 local report integration | Locally verified | Real HTTP POST/saved GET/schema/source citations for synthetic + real bundles, providers disabled |
 | E4 data-source setup | Locally verified; host inputs requested | Portable absolute-DATA_DIR launcher and source/API parity check; actual HTTP rehearsal covers partial tails, delayed learning and wrong content |
-| E4 native host/B5 | Pending external evidence | Real Windows advancement/reconnect/shutdown/audio plus Sahil trace/waterfall/on-off timing |
+| E4 native host/B5 | Pending external evidence | Host layout confirmed: all services share `C:\Users\sahil\la-hacks-2026\data`, no remote exec. Sahil runs the one-command source check and pastes output; reconnect/shutdown/audio still pending. Sahil's trace/waterfall/on-off timing promised within the hour of 03:40 PT |
 | E5 B7 export/claim package | Implemented draft | Same export supplies numbers; claim ledger and Devpost/Sentry/Tiger Data drafts await owner/final evidence review |
 | History, pilot, diagnosis | Deferred | DA6/DA7/DA9 remain later releases; no invented producer trials/retests/evaluation |
 

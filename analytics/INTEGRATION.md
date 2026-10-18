@@ -6,7 +6,7 @@ Track D can verify local files, exports, mock streams and the published report A
 
 Use one authoritative `DATA_DIR` on Sahil's host for real recording, metadata and learning files. Tailscale access to the brain does not provide analytics access to those files. Share a working copy explicitly if services are split across hosts; verify source/session identity before interpreting freshness.
 
-The chosen integration layout is analytics running on Sahil's Windows laptop, beside the brain, reading that same host-local folder. Chloe's app uses HTTP/WebSocket service addresses. The [example handoff](handoffs/insights-ui.md) and [published fixture index](fixtures/insights/README.md) are sufficient for her offline review while host access is arranged. Actual laptop directory, Tailscale address and remote access have been requested; no native connection or run is claimed here.
+**Demo host, confirmed by Sahil on October 18:** brain, replay and analytics all run on his Windows laptop and share `DATA_DIR=C:\Users\sahil\la-hacks-2026\data`. There is no remote execution on the demo machine before the demo. Eric does not run commands there: Sahil runs the source check below against a live session and pastes its JSON output, and Eric verifies it. No Tailscale address is needed for the source check because every service it calls is on the same laptop. The [example handoff](handoffs/insights-ui.md) and [published fixture index](fixtures/insights/README.md) remain sufficient for Chloe's offline review. No native run is claimed until the pasted output is checked.
 
 ## Local reproducible check
 
@@ -32,36 +32,29 @@ Expect 0/16 low blocks, 1/4 throw breaks, 0/6 estimated punish conversions, curr
 
 ## Native host launch
 
-Use the deployed commit agreed by owners. Install analytics dependencies in the host's venv and set environment variables in the actual launch process. The brain entry point does not itself guarantee `.env` loading. Read the absolute `DATA_DIR` printed by Sahil's running brain; never substitute Eric's sample directory for a live set.
-
-PowerShell analytics terminal, from repo root:
+Use the deployed commit agreed by owners. Sahil keeps his existing launch commands for brain, replay and analytics on the laptop, all with the same folder. If analytics is restarted, the launcher below validates that folder before importing analytics and loads no `.env` file:
 
 ```powershell
-$dataDir = (Resolve-Path (Read-Host 'Absolute DATA_DIR printed by the brain')).Path
-$analyticsBind = Read-Host 'Laptop Tailscale IP, or 127.0.0.1 for a host-local app'
-$env:DATA_DIR = $dataDir
-$env:KUMITE_BRAIN_URL = 'http://127.0.0.1:8765'
-$env:KUMITE_REPLAY_URL = 'http://127.0.0.1:8766'
-$env:KUMITE_ANALYTICS_URL = "http://${analyticsBind}:8767"
+cd C:\Users\sahil\la-hacks-2026
 $env:SENTRY_ENVIRONMENT = 'demo'
-.\.venv\Scripts\python.exe -m analytics.demo_host serve --data-dir $dataDir --host $analyticsBind --port 8767 --file-only
+.\.venv\Scripts\python.exe -m analytics.demo_host serve --data-dir C:\Users\sahil\la-hacks-2026\data --host 127.0.0.1 --port 8767 --file-only
 ```
 
-Expect `Analytics DATA_DIR=<the same absolute folder as the brain>`, followed by Uvicorn on port 8767. The launcher requires existing `sessions/` and `recordings/`, creates no data directory, and sets `DATA_DIR` before importing analytics. `--file-only` disables database access for the first source/freshness rehearsal; cloud-backed trends remain a separate configured check. The launcher inherits Sentry settings and loads no `.env` file. Set the analytics DSN/release in this terminal when doing the separately agreed telemetry run.
+Expect `Analytics DATA_DIR=C:\Users\sahil\la-hacks-2026\data`, followed by Uvicorn on port 8767. `demo_host` exists only on the PR #22 branch until it merges; until then, keep the existing analytics launch command with `DATA_DIR` set to the same folder. `--file-only` disables database access; cloud-backed trends remain a separate configured check. The brain entry point does not itself guarantee `.env` loading, so set Sentry variables in the launch terminal.
 
-On Chloe's computer, with all three services on Sahil's laptop, set these before starting/restarting Electron from `app/` (replace the host with the actual Tailscale IP/hostname):
+Chloe's app reaches the services at `127.0.0.1` when it runs on the laptop. If it runs on another computer, it needs the laptop's reachable address for all three services, and the services must be bound to that interface by their owners; this has not been confirmed.
 
 ```powershell
-$demoHost = Read-Host 'Sahil laptop Tailscale IP or hostname'
+$demoHost = '127.0.0.1'
 $env:KUMITE_BRAIN_URL = "http://${demoHost}:8765"
 $env:KUMITE_REPLAY_URL = "http://${demoHost}:8766"
 $env:KUMITE_ANALYTICS_URL = "http://${demoHost}:8767"
 npm run dev
 ```
 
-The equivalent macOS launch from `app/` is `KUMITE_BRAIN_URL=http://HOST:8765 KUMITE_REPLAY_URL=http://HOST:8766 KUMITE_ANALYTICS_URL=http://HOST:8767 npm run dev`, substituting the agreed host. If an owner runs a service elsewhere, use that service's actual URL. Brain/replay must also be bound to reachable interfaces using their owner launch commands. Restart the app after changing addresses; the main process resolves them at startup.
+Restart the app after changing addresses; the main process resolves them at startup.
 
-Configure each service's own Sentry DSN privately; never reuse analytics/replay keys for the brain or print environment dumps. Sahil's promised brain run specifically uses `demo-laptop` and the full deployed main SHA as release; preserve that requirement rather than relabelling historical traces or forcing all projects to one label. Other service environments/releases must be recorded as actually configured.
+Configure each service's own Sentry DSN privately; never reuse analytics/replay keys for the brain or print environment dumps. Sahil's brain run uses `demo-laptop` and the full deployed main SHA as release; other service environments/releases must be recorded as actually configured.
 
 Start Garrett's replay service with the same data directory, then Sahil's normal offline brain/game process, then Chloe's app. Use owner launch commands for their environments. Keep the approved one-second round-provider budget and local fallback. The requested Luna migration remains Garrett/Sahil's responsibility; a model-name setting alone does not establish compatible structured output or latency.
 
@@ -75,22 +68,35 @@ Chloe's checker and its tests landed in PR #19 and are available on Eric's branc
 
 Snapshot mode proves healthy responses only. Advance-required mode must compare matching stats/producer-learning round watermarks; a new active stats round alone is insufficient. Record exit 0 for satisfied requirements, 1 for unusable responses and 2 for an otherwise healthy session with no required advance. Verify a real round completion during observation, allowing recording and learning flushes to arrive separately.
 
-## Prove the live folder is shared
+## Prove the live folder is shared (Sahil runs, pastes output)
 
-In another PowerShell terminal on Sahil's laptop, use the same absolute folder and actual analytics bind address from the launch terminal:
+Sahil runs this on the laptop in a new PowerShell window while a real session is being played. It reads the checker from the PR #22 branch in a separate, detached worktree, so the deployed checkout's files and branch are not changed. It uses the laptop's existing virtual environment and makes only GET requests to the local brain and analytics.
 
 ```powershell
-$dataDir = (Resolve-Path (Read-Host 'Absolute DATA_DIR printed by the brain')).Path
-$sessionId = Read-Host 'Current real session id from the brain'
-$analyticsHost = Read-Host 'Analytics bind IP used by the launch terminal'
-.\.venv\Scripts\python.exe -m analytics.demo_host check --data-dir $dataDir --session-id $sessionId --brain-url http://127.0.0.1:8765 --analytics-url "http://${analyticsHost}:8767"
+cd C:\Users\sahil\la-hacks-2026
+git fetch origin track-d-insights-host-handoff
+git worktree add --detach ..\kumite-source-check FETCH_HEAD
+cd ..\kumite-source-check
+$out = & C:\Users\sahil\la-hacks-2026\.venv\Scripts\python.exe -m analytics.demo_host check --data-dir C:\Users\sahil\la-hacks-2026\data --session-id latest --wait-for-round-seconds 300
+$code = $LASTEXITCODE
+$out | Set-Clipboard
+$out
+"exit $code"
 ```
 
-The check makes only GET requests. It compares the brain's immutable session identity and complete recording-prefix hash with the local canonical files, then compares remote stats and learning with the local file-backed reducer. It rechecks source identity after HTTP reads and retries a changing capture once. A stale copy with the same session id can therefore fail even if `/health` is healthy. No raw recording or credentials appear in the result.
+Start it during a round or just before one. It checks the newest session in `DATA_DIR/sessions`, which is the brain's newest-first ordering, then waits up to five minutes for the next completed round whose learning has been saved, and checks again. The JSON is copied to the clipboard; paste all of it plus the `exit` line. It contains the folder path, session id, round lists, service versions and SHA-256 hashes, and no credentials or recording content.
 
-Exit 0 means matched source/API snapshots with completed learning current; exit 1 means a mismatch, malformed/unavailable data or repeated source change; exit 2 means matched usable sources whose completed learning is still pending. The report includes current completed/pending round lists, version strings, local/brain prefix hashes and a pending recording-tail flag. It does not prove future writes, remote-app reachability, voice timing or native shutdown behavior. During continuous writes, retry an unavailable/changing snapshot after the next flush.
+| Exit | Meaning | Next step |
+| --- | --- | --- |
+| 0 | Brain recording prefix, analytics stats and learning match the local files before and after a later completed round | Paste output; Eric records the native source proof |
+| 2 | Sources match, but no new round completed with its learning saved within the wait | Play a round and rerun; paste the output anyway |
+| 1 | Mismatch, unavailable service or repeatedly rewritten source | Paste output; do not change services to make it pass |
 
-Retain this result before and after a real completed round, alongside the C1 watcher output. Require the later common completed round in both local/HTTP sources and no reset used as advancement. The current C1 reset caveat still applies; a watcher exit 0 alone is insufficient. Verify Chloe's selected live session and visible Stats/Learning converge after the actual files arrive, then record the observed delay.
+If analytics is not on `127.0.0.1:8767`, add `--analytics-url http://<address>:8767`. If `python` reports a missing module, run `C:\Users\sahil\la-hacks-2026\.venv\Scripts\python.exe -m pip install -r analytics\requirements.txt` from the worktree, then rerun. Remove the worktree afterwards with `cd C:\Users\sahil\la-hacks-2026; git worktree remove ..\kumite-source-check`.
+
+How it compares: the brain's recording bytes must match the local file's complete-line prefix. If no file changes during the check, remote stats and learning must equal the local reducer exactly (`"comparison": "exact"`). If the recording or learning grows during the check, which is normal mid-round, the earlier bytes must be unchanged and only completed rounds are compared: stats rounds that are closed, and learning rounds that are closed and already saved (`"comparison": "completed_rounds_while_appending"`). Metadata `recording` values relative to the brain's working directory resolve to `DATA_DIR/recordings/<session_id>.jsonl`. The check does not prove remote-app reachability, voice timing or native shutdown behavior.
+
+Retain the pasted result alongside the C1 watcher output. The C1 reset caveat still applies; a watcher exit 0 alone is insufficient. Verify Chloe's selected live session and visible Stats/Learning converge after the files arrive, then record the observed delay.
 
 Local automated rehearsal:
 
@@ -98,21 +104,21 @@ Local automated rehearsal:
 SENTRY_DSN= DATABASE_URL= .venv/bin/python analytics/tests/demo_host_smoke.py
 ```
 
-This starts the actual brain and analytics HTTP implementations on temporary ports, using a temporary copy of the real fixture. Scripted additions exercise partial recording tails, a later completed round, delayed learning and wrong-folder content. Expect two PASS lines and clean test-process shutdown, with original fixture hashes unchanged. Scripted additions are test data; this is not a Windows/game/native app observation.
+This starts the actual brain and analytics HTTP implementations on temporary ports, using a temporary copy of the real fixture with recorder-style relative metadata. Scripted additions exercise partial recording tails, a later completed round, delayed learning, the one-command before/after capture with `--session-id latest`, a check during continuous writes and wrong-folder content. Expect two PASS lines and clean test-process shutdown, with original fixture hashes unchanged. Scripted additions are test data; this is not a Windows/game/native app observation.
 
 ## Host acceptance observations
 
 | Check | Required observation | Current status |
 | --- | --- | --- |
-| Identity | Three health service identities; same real session in stats/learning | Native host pending |
-| Round advance | A later completed round reaches both stats and learning | Native host pending |
+| Identity | Three health service identities; same real session in stats/learning | Command sent to Sahil; awaiting pasted `demo_host check` output |
+| Round advance | A later completed round reaches both stats and learning | Same command (`--wait-for-round-seconds 300`); awaiting pasted output |
 | Delayed learning | Pending state catches up; no fabricated zero | Chloe/native host pending |
 | Reconnect/session change | Reconnection refetches authoritative data; late responses cannot cross sessions | Chloe/native host pending |
 | Ports/shutdown | Occupied port is handled; Ctrl-C releases processes/pad safely | Native host pending |
 | Database unavailable | Local stats/learning and file-backed trends stay usable | Native host pending; prior local regression retained |
 | Audio | Provider and local fallback tips are grounded and spoken promptly | Chloe/native host pending |
 | Display | Counts/status and selected session are readable at 1080p | Chloe's [static real-fixture review](../app/docs/acceptance/2026-10-18-stats-learning.md) retained; demo-host review pending |
-| Brain telemetry | Matching trace/waterfall, sampling config and on/off timing accepted | Sahil evidence pending |
+| Brain telemetry | Matching trace/waterfall, sampling config and on/off timing accepted | Sahil instrumenting now; trace URL, waterfall, full SHA release, `demo-laptop`, on/off p50/p95 with sample counts promised within the hour of 03:40 PT, October 18 |
 
 Only stop test processes you started. Do not kill owner-run services or alter live configuration to manufacture a passing result. Record machine/OS/Python/deployed commit, command, source session, observation period and exact result for each check.
 

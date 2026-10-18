@@ -20,7 +20,9 @@ Use host-local files on Sahil's laptop; Chloe's app connects over the existing s
 
 The insight format and examples remain review drafts. A public route and app live consumer require the existing four-owner interface agreement. Experimental routes and producer changes are separate decisions in the parallel plan. The checker reset issue remains documented for its owner; this remediation adds an independent snapshot/source check and does not claim to correct that watcher.
 
-Host-specific inputs requested from Eric: absolute brain `DATA_DIR`, Tailscale hostname/IP, and availability through an existing remote connection. Never publish the actual host's private configuration or credentials.
+Host-specific inputs, answered by Sahil on October 18: brain, replay and analytics all run on the laptop and share `C:\Users\sahil\la-hacks-2026\data`. There is no remote execution before the demo, so no Tailscale address is needed for the source check: Sahil runs the exact command in [INTEGRATION.md](../INTEGRATION.md#prove-the-live-folder-is-shared-sahil-runs-pastes-output) during a live session and pastes the output. He agreed to PR #22 provided it stays within `analytics/` and `tools/`. Never publish credentials.
+
+Follow-up changes for that constraint, all in `analytics/`: the check accepts `--session-id latest` and `--wait-for-round-seconds N`, so one run captures before and after a real completed round. While files grow mid-round it compares only completed rounds and confirms the earlier bytes are unchanged, instead of failing as "changing". Recorder metadata with a `recording` path relative to the brain's working directory resolves to `DATA_DIR/recordings/<session_id>.jsonl`, so the check runs from a separate detached worktree without touching the deployed checkout. Main's analytics and this branch produce identical stats and learning on both shipped samples.
 
 ## Publication isolation
 

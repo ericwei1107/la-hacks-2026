@@ -7,6 +7,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -39,7 +40,8 @@ def run():
         meta_path = root / 'sessions' / f'{REAL_ID}.json'
         metadata = json.loads(meta_path.read_text())
         recording = root / 'recordings' / f'{REAL_ID}.jsonl'
-        metadata['recording'] = str(recording)
+        metadata['recording'] = f'data/recordings/{REAL_ID}.jsonl'
+        assert not (ROOT / metadata['recording']).exists()
         meta_path.write_text(json.dumps(metadata), encoding='utf-8')
         brain_port, analytics_port = free_port(), free_port()
         brain_url, analytics_url = f'http://127.0.0.1:{brain_port}', f'http://127.0.0.1:{analytics_port}'
@@ -95,6 +97,42 @@ def run():
             assert current['exit_code'] == 0, current
             assert current['freshness']['pending_learning_rounds'] == []
             assert current['snapshot_id'] != pending['snapshot_id']
+            watcher = subprocess.Popen([sys.executable, '-m', 'analytics.demo_host', 'check', '--data-dir', str(root),
+                                        '--session-id', 'latest', '--wait-for-round-seconds', '60',
+                                        '--brain-url', brain_url, '--analytics-url', analytics_url],
+                                       cwd=ROOT, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            time.sleep(8)
+            with recording.open('ab') as stream:
+                stream.write(json.dumps({**new_event, 'round': 6}).encode() + b'\n')
+                stream.write(json.dumps({'t': 'event', 'session_id': REAL_ID, 'round': 6, 'frame': 100, 'kind': 'round_end', 'detail': {'winner': 1}}).encode() + b'\n')
+            time.sleep(3)
+            with (root / 'learning' / f'{REAL_ID}.jsonl').open('a', encoding='utf-8', newline='\n') as stream:
+                stream.write(json.dumps({'t': 'learning_round', 'session_id': REAL_ID, 'round': 6, 'prediction_accuracy': None, 'habits': {}}) + '\n')
+            out, err = watcher.communicate(timeout=90)
+            observed = json.loads(out)
+            assert watcher.returncode == 0 and observed['exit_code'] == 0 and observed['advanced'], (observed, err)
+            assert observed['session_id'] == REAL_ID
+            assert observed['before']['freshness']['completed_rounds'][-1] == 5, observed['before']
+            assert observed['after']['freshness']['completed_rounds'][-1] == 6, observed['after']
+            assert all(observed['after']['checks'].values()), observed['after']
+            stop = threading.Event()
+            def live_round():
+                frame = 0
+                while not stop.is_set():
+                    frame += 1
+                    with recording.open('ab') as stream:
+                        stream.write(json.dumps({**new_event, 'round': 7, 'frame': frame}).encode() + b'\n')
+                    time.sleep(.02)
+            writer = threading.Thread(target=live_round)
+            writer.start()
+            try:
+                time.sleep(.5)
+                live = inspect(root, REAL_ID, brain_url, analytics_url)
+            finally:
+                stop.set()
+                writer.join()
+            assert live['exit_code'] == 0 and live['comparison'] == 'completed_rounds_while_appending', live
+            assert all(live['checks'].values()) and live['freshness']['latest_recording_round'] == 7, live
             wrong = Path(temporary) / 'wrong'
             shutil.copytree(root, wrong)
             meta = json.loads((wrong / 'sessions' / f'{REAL_ID}.json').read_text())
@@ -108,7 +146,7 @@ def run():
             mismatch = inspect(wrong, REAL_ID, brain_url, analytics_url)
             assert mismatch['exit_code'] == 1, mismatch
             assert not mismatch.get('checks', {}).get('brain_recording_prefix', True), mismatch
-            print('PASS: actual brain/analytics HTTP routes share a temporary canonical source; complete-prefix reads, delayed learning and wrong-folder detection verified')
+            print('PASS: actual brain/analytics HTTP routes share a temporary canonical source; recorder-relative metadata, complete-prefix reads, delayed learning, one-command before/after round capture, checks during continuous writes and wrong-folder detection verified')
         finally:
             for process in processes:
                 if process.poll() is None:
