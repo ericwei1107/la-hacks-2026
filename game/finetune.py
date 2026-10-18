@@ -1,5 +1,7 @@
 import argparse
 import json
+import random
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -36,6 +38,30 @@ SIDESTEP_LABELS = {
     "none": {"opp_steps": False},
 }
 DEFAULT_OUT = "laya_decisions.jsonl"
+SAMPLES_DIR = Path(__file__).resolve().parent.parent / "data" / "samples"
+TEST_SESSION = "2026-10-18T07-30-06"
+VAL_FRACTION = 0.1
+VARIANTS = 4
+SEED = 0
+SPLITS = ("train", "val", "test")
+OPTIONS = {
+    "after_block": ("press", "throw", "block_high", "block_low", "duck", "ss_left", "ss_right", "backdash", "none"),
+    "low_defense": ("hit", "blocked", "low_parry", "jumped"),
+    "sidestep_dir": ("left", "right", "none"),
+    "throw_break": ("break_1", "break_2", "break_12", "none"),
+}
+INSTRUCTION = "Which option did the opponent take? Answer with exactly one option name from the list."
+DISTANCES = ("touching the bot", "at close range", "at mid range", "far away")
+ALLOWED_DISTANCES = {
+    "after_block": DISTANCES[:3],
+    "low_defense": DISTANCES[:3],
+    "sidestep_dir": DISTANCES[1:],
+    "throw_break": DISTANCES[:2],
+}
+HEALTHS = ("is healthy", "has low health", "has critical health")
+HEALTH_SENTENCE = re.compile(r"^The (opponent|bot) (is healthy|has low health|has critical health)\b")
+FAR_LEAD = re.compile(r"^The bot is far (ahead|behind) on health\.$")
+SENTENCE_SPLIT = re.compile(r"(?<=\.)\s+")
 
 
 def labels(situation, action):
@@ -303,7 +329,230 @@ def cmd_train(args):
     return 0
 
 
-COMMANDS = ("build", "eval", "bench", "train")
+def family(situation):
+    return situation.split(":")[0]
+
+
+def recording_paths(sources):
+    found = []
+    for source in sources:
+        source = Path(source)
+        if source.is_file():
+            found.append(source)
+            continue
+        if not source.is_dir():
+            continue
+        for path in sorted(source.rglob("*")):
+            if "learning" in path.relative_to(source).parts[:-1] or path.name.endswith(".learning.jsonl"):
+                continue
+            if path.suffix in (".jsonl", ".zip"):
+                found.append(path)
+    return found
+
+
+def session_points(path):
+    records = load_jsonl(path)
+    states = [r for r in records if r.get("t") == "state"]
+    if not states:
+        return None, [], None
+    sid = states[0]["session_id"]
+    human = states[0]["human_slot"]
+    recorded = [r for r in records if r.get("t") == "event" and r.get("kind") == "decision_point" and r.get("actor") == human]
+    if recorded:
+        return sid, recorded, "recorded"
+    replayed, _ = decision_points(path)
+    return sid, replayed, "replayed"
+
+
+def export_row(ev, origin):
+    text = (ev.get("detail") or {}).get("state_text")
+    options = OPTIONS.get(family(ev["situation"]))
+    if not text or not options or ev["action"] not in options:
+        return None
+    return {"session_id": ev["session_id"], "round": ev["round"], "frame": ev["frame"], "situation": ev["situation"],
+            "action": ev["action"], "text": text, "origin": origin}
+
+
+def gather(sources, log=print):
+    rows = []
+    skipped = Counter()
+    seen = {}
+    for path in recording_paths(sources):
+        sid, points, origin = session_points(path)
+        if sid is None:
+            continue
+        if sid in seen:
+            log(f"  {path.name}: session {sid} already read from {seen[sid]}; skipped")
+            continue
+        seen[sid] = path.name
+        kept = 0
+        for ev in points:
+            row = export_row(ev, origin)
+            if row is None:
+                skipped[(family(ev["situation"]), "no state_text" if not (ev.get("detail") or {}).get("state_text") else ev["action"])] += 1
+                continue
+            rows.append(row)
+            kept += 1
+        log(f"  {path.name}: {kept} decision points ({origin}) from {sid}")
+    return rows, skipped
+
+
+def pick_val(groups, fraction=VAL_FRACTION, seed=SEED):
+    keys = sorted(groups)
+    random.Random(seed).shuffle(keys)
+    target = fraction * sum(groups.values())
+    chosen, total = set(), 0
+    for key in keys:
+        if abs(total + groups[key] - target) < abs(total - target):
+            chosen.add(key)
+            total += groups[key]
+    return chosen
+
+
+def assign_splits(rows, test_session=TEST_SESSION, fraction=VAL_FRACTION, seed=SEED):
+    for row in rows:
+        row["split"] = "test" if test_session in row["session_id"] else "train"
+    if not any(r["split"] == "test" for r in rows):
+        raise SystemExit(f"no decision points from test session {test_session}")
+    groups = Counter((r["session_id"], r["round"]) for r in rows if r["split"] == "train")
+    val = pick_val(groups, fraction, seed)
+    for row in rows:
+        if row["split"] == "train" and (row["session_id"], row["round"]) in val:
+            row["split"] = "val"
+    return val
+
+
+def sentences(text):
+    return [s for s in SENTENCE_SPLIT.split(text.strip()) if s]
+
+
+def shift_distance(parts, situation, step):
+    allowed = ALLOWED_DISTANCES[family(situation)]
+    for i, part in enumerate(parts):
+        for k, words in enumerate(DISTANCES):
+            if part.endswith(f" {words}.") and part.startswith("The opponent is "):
+                j = k + step
+                if words not in allowed or not 0 <= j < len(DISTANCES) or DISTANCES[j] not in allowed:
+                    return None
+                return parts[:i] + [part[: -len(words) - 1] + DISTANCES[j] + "."] + parts[i + 1:]
+    return None
+
+
+def shift_health(parts, step):
+    found = [(i, HEALTH_SENTENCE.match(p)) for i, p in enumerate(parts)]
+    found = [(i, m) for i, m in found if m]
+    if len(found) != 2 or found[0][1].group(2) != found[1][1].group(2):
+        return None
+    j = HEALTHS.index(found[0][1].group(2)) + step
+    if not 0 <= j < len(HEALTHS):
+        return None
+    if j > 0 and any(FAR_LEAD.match(p) for p in parts):
+        return None
+    out = list(parts)
+    for i, m in found:
+        out[i] = out[i].replace(m.group(2), HEALTHS[j], 1)
+    return out
+
+
+def drop_recent(parts):
+    if parts and parts[0].startswith("Recently"):
+        return parts[1:]
+    return None
+
+
+def reorder(parts, rng):
+    if len(parts) < 2:
+        return None
+    out = list(parts)
+    while out == parts:
+        rng.shuffle(out)
+    return out
+
+
+def variants(row, count=VARIANTS, seed=SEED):
+    rng = random.Random(f"{seed}:{row['session_id']}:{row['round']}:{row['frame']}:{row['situation']}")
+    parts = sentences(row["text"])
+    ops = [lambda p: shift_distance(p, row["situation"], -1), lambda p: shift_distance(p, row["situation"], 1),
+           lambda p: shift_health(p, -1), lambda p: shift_health(p, 1), drop_recent]
+    rng.shuffle(ops)
+    seen = {row["text"]}
+    out = []
+    for op in ops:
+        changed = op(parts)
+        text = " ".join(changed) if changed else None
+        if text and text not in seen and len(out) < count:
+            seen.add(text)
+            out.append(text)
+    tries = 0
+    while len(out) < count and tries < 50:
+        tries += 1
+        changed = reorder(parts, rng)
+        text = " ".join(changed) if changed else None
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
+
+
+def prompt(text, situation):
+    options = OPTIONS[family(situation)]
+    return f"{text}\nOptions: {', '.join(options)}.\n{INSTRUCTION}"
+
+
+def pair(text, row):
+    return {"prompt": prompt(text, row["situation"]), "label": row["action"]}
+
+
+def export_lines(rows, count=VARIANTS, seed=SEED):
+    out = {name: [] for name in SPLITS}
+    for row in rows:
+        out[row["split"]].append(pair(row["text"], row))
+        if row["split"] == "train":
+            out["train"] += [pair(text, row) for text in variants(row, count, seed)]
+    return out
+
+
+def export(sources, out_dir, test_session=TEST_SESSION, fraction=VAL_FRACTION, count=VARIANTS, seed=SEED, log=print):
+    rows, skipped = gather(sources, log)
+    val = assign_splits(rows, test_session, fraction, seed)
+    lines = export_lines(rows, count, seed)
+    paths = {name: write(lines[name], Path(out_dir) / f"{name}.jsonl") for name in SPLITS}
+    return rows, skipped, val, lines, paths
+
+
+def export_report(rows, skipped, val, lines, paths, log=print):
+    train_rows = sum(1 for r in rows if r["split"] in ("train", "val"))
+    for name in SPLITS:
+        part = [r for r in rows if r["split"] == name]
+        sessions = sorted({r["session_id"] for r in part})
+        extra = f" ({len(part)} originals + {len(lines[name]) - len(part)} augmented)" if name == "train" else ""
+        log(f"{name}: {len(lines[name])} lines{extra} from {len(sessions)} session(s) -> {paths[name]}")
+        by_family = Counter(family(r["situation"]) for r in part)
+        for fam in OPTIONS:
+            if by_family[fam]:
+                actions = Counter(r["action"] for r in part if family(r["situation"]) == fam)
+                log(f"  {fam:<13} {by_family[fam]:>4}  " + ", ".join(f"{a} {n}" for a, n in actions.most_common()))
+    val_n = sum(1 for r in rows if r["split"] == "val")
+    log(f"val: {len(val)} (session, round) groups, {val_n}/{train_rows} pre-augmentation train examples "
+        f"({val_n / max(train_rows, 1):.1%})")
+    if skipped:
+        log("skipped: " + ", ".join(f"{s}/{a} {n}" for (s, a), n in skipped.most_common()))
+    log("samples:")
+    for name in SPLITS:
+        if lines[name]:
+            log(f"  {name}: " + json.dumps(lines[name][0]))
+
+
+def cmd_export(args):
+    sources = args.sources or [str(data_dir() / "recordings"), str(SAMPLES_DIR)]
+    out_dir = Path(args.out_dir) if args.out_dir else data_dir() / "finetune"
+    print(f"reading {', '.join(sources)}")
+    result = export(sources, out_dir, args.test_session, args.val_fraction, args.variants, args.seed)
+    export_report(*result)
+    return 0 if result[0] else 1
+
+
+COMMANDS = ("build", "export", "eval", "bench", "train")
 
 
 def main(argv=None):
@@ -316,6 +565,13 @@ def main(argv=None):
     b.add_argument("recordings", nargs="*", default=["data/samples"], help="recordings (.jsonl or .zip) or directories; default data/samples")
     b.add_argument("--heldout", help="session id or recording name (or a unique part) to hold out; default the latest session")
     b.add_argument("--out", help=f"output path; default DATA_DIR/finetune/{DEFAULT_OUT}")
+    e = sub.add_parser("export", help="decision points -> {prompt, label} train/val/test jsonl with a held-out test session")
+    e.add_argument("sources", nargs="*", help="recordings or directories; default DATA_DIR/recordings and data/samples")
+    e.add_argument("--test-session", default=TEST_SESSION, help="session id (or a unique part) held out as the test split")
+    e.add_argument("--val-fraction", type=float, default=VAL_FRACTION)
+    e.add_argument("--variants", type=int, default=VARIANTS, help="augmented variants per training example")
+    e.add_argument("--seed", type=int, default=SEED)
+    e.add_argument("--out-dir", help="default DATA_DIR/finetune")
     for name, help_ in (("eval", "accuracy of a Laya checkpoint on the held-out session"), ("bench", "p50/p95 latency of a 4-question batch")):
         p = sub.add_parser(name, help=help_)
         p.add_argument("--model", default="convaiinnovations/laya", help="HF repo id or local checkpoint directory")
@@ -337,7 +593,7 @@ def main(argv=None):
     t.add_argument("--grad-accum", type=int, default=8)
     t.add_argument("--seed", type=int, default=0)
     args = parser.parse_args(argv)
-    return {"build": cmd_build, "eval": cmd_eval, "bench": cmd_bench, "train": cmd_train}[args.command](args)
+    return {"build": cmd_build, "export": cmd_export, "eval": cmd_eval, "bench": cmd_bench, "train": cmd_train}[args.command](args)
 
 
 if __name__ == "__main__":
