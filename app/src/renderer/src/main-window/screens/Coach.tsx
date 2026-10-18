@@ -4,7 +4,7 @@ import { useChat, useConfig, usePostConfig, type ChatCitation, type SessionMeta 
 import { useFrame } from '../frame'
 import { keyLabel, usePushToTalkKey } from '../pushToTalk'
 import { Screen, ScreenBanner, useOfflineService } from '../Screen'
-import { useHoldToTalk } from '../../voice'
+import { stopSpeaking, useHoldToTalk, useVoice } from '../../voice'
 
 interface Turn {
   role: 'user' | 'coach'
@@ -14,11 +14,26 @@ interface Turn {
 }
 
 const threads = new Map<string, Turn[]>()
+const WAVEFORM = [[0, 8, 4], [5, 5, 10], [10, 1, 18], [15, 4, 12], [20, 0, 20], [25, 6, 8], [30, 3, 14], [35, 7, 6], [40, 2, 16], [45, 5, 10], [50, 8, 4], [55, 6, 8], [60, 8.5, 3]]
 
-function CoachAnswer({ turn, onCitation }: { turn: Turn; onCitation: (citation: ChatCitation) => void }) {
+function answerTag(sessionId: string, index: number): string {
+  return `coach:${sessionId}:${index}`
+}
+
+function CoachAnswer({ turn, speaking, onCitation }: { turn: Turn; speaking: boolean; onCitation: (citation: ChatCitation) => void }) {
   return (
     <div className="flex max-w-[680px] flex-col gap-3">
-      <span className="text-sm leading-[18px] font-bold text-primary-text">Coach</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm leading-[18px] font-bold text-primary-text">Coach</span>
+        {speaking && (
+          <span className="flex items-center gap-2">
+            <svg width="64" height="20" viewBox="0 0 64 20" className="shrink-0" aria-hidden="true">
+              {WAVEFORM.map(([x, y, height]) => <rect key={x} x={x} y={y} width="3" height={height} rx="1.5" fill="var(--color-primary)" />)}
+            </svg>
+            <span className="text-sm leading-[18px] font-bold text-primary-text">Speaking</span>
+          </span>
+        )}
+      </div>
       <p className={`text-lg leading-[30px] ${turn.failed ? 'text-text-muted' : 'text-text'}`}>{turn.text}</p>
       {turn.citations && turn.citations.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -48,15 +63,28 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
   const [turns, setTurns] = useState<Turn[]>(() => threads.get(session.session_id) ?? [])
   const [draft, setDraft] = useState('')
   const end = useRef<HTMLDivElement>(null)
+  const player = useVoice()
+  const mounted = useRef(true)
+  const answers = `coach:${session.session_id}:`
 
   useEffect(() => {
     threads.set(session.session_id, turns)
     end.current?.scrollIntoView({ block: 'end' })
   }, [session.session_id, turns])
 
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      stopSpeaking(answers)
+    }
+  }, [answers])
+
   const ask = async (message: string) => {
     if (!message || chat.isPending) return
+    stopSpeaking(answers)
     const history = turns.filter((turn) => !turn.failed).map(({ role, text }) => ({ role, text }))
+    const answerIndex = turns.length + 1
     setTurns((current) => [...current, { role: 'user', text: message }])
     try {
       const reply = await chat.mutateAsync({
@@ -66,6 +94,7 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
         history
       })
       setTurns((current) => [...current, { role: 'coach', text: reply.text, citations: reply.citations }])
+      if (mounted.current) player.speak(reply.text, answerTag(session.session_id, answerIndex))
     } catch (error) {
       setTurns((current) => [...current, { role: 'coach', text: `Couldn't reach the coach. ${(error as Error).message}`, failed: true }])
     }
@@ -127,6 +156,7 @@ function Conversation({ session, disabled }: { session: SessionMeta; disabled: b
             <CoachAnswer
               key={index}
               turn={turn}
+              speaking={player.speakingTag === answerTag(session.session_id, index)}
               onCitation={(citation) => open('replay', { sessionId: session.session_id, focus: citation })}
             />
           )

@@ -58,7 +58,7 @@ Each window has one voice player. It plays one clip at a time:
 
 - Asked to speak, it stops whatever it is playing or waiting for, asks the bridge for the clip, and plays it when it arrives.
 - Asked to stop, it ends playback and throws away any clip still on its way, so a slow clip can never start after the moment it belonged to.
-- It reports whether it is speaking, for the speaking indicators.
+- It reports whether it is speaking, and whose clip it is: each request carries a tag naming its caller (the round tip, or one Coach screen answer). A screen shows its speaking indicator only for its own clip, and a screen that goes away stops only its own clips, so leaving the Coach screen never cuts off a round tip.
 - It ignores requests to speak while the brain config's `voice` is not `true`, and when the bridge is missing or the speak call fails it plays nothing.
 
 Chromium blocks sound from a page the user has not interacted with, and between rounds the player's hands are on the game, perhaps before anyone has clicked the main window. So both windows are created with autoplay allowed without a user gesture, and the main window keeps running at full speed while the game covers it (shell).
@@ -101,9 +101,8 @@ Hold to talk is unavailable, and the button drawn disabled, under the same condi
 ## Open Questions & Future Decisions
 
 ### Deferred
-1. Spoken answers on the Coach screen, until the replay service's `/coach/chat` is ready. Until then an answer is text only.
-2. Holding to talk while the game has focus (HLD open question), for a quick follow-up question between rounds.
-3. OpenAI speech as the fallback when ElevenLabs is down (HLD, Voice). Until then a failure is text-only.
+1. Holding to talk while the game has focus (HLD open question), for a quick follow-up question between rounds.
+2. OpenAI speech as the fallback when ElevenLabs is down (HLD, Voice). Until then a failure is text-only.
 
 ## References
 
