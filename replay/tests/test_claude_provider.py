@@ -134,6 +134,9 @@ def test_chat_provider_retries_without_fallbacks_when_the_api_rejects_them(monke
     ({}, "local"),
 ])
 def test_settings_pick_the_model_provider(monkeypatch, env, expected):
+    from replay import config
+
+    monkeypatch.setattr(config, "load_dotenv", lambda *args, **kwargs: None)
     for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "KUMITE_LLM", "KUMITE_COACH_MODE"):
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
@@ -143,6 +146,9 @@ def test_settings_pick_the_model_provider(monkeypatch, env, expected):
 
 
 def test_app_uses_claude_when_the_key_is_present(monkeypatch, tmp_path):
+    from replay import config
+
+    monkeypatch.setattr(config, "load_dotenv", lambda *args, **kwargs: None)
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     monkeypatch.setenv("KUMITE_COACH_MODE", "auto")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
