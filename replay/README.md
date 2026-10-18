@@ -1,9 +1,11 @@
 # Replay and round coach
 
-First Track C milestone: `GET /health` and `POST /coach/round` on port 8766.
+Track C service: `GET /health`, `POST /coach/round`, `POST /analyze/{session_id}`
+and `GET /reports/{session_id}` on port 8766.
 The request is validated directly against the frozen round-summary JSON schema.
 Responses contain only `text` and `severity`, with 1–3 sentences and fewer than
-40 words. This milestone does not implement replay reports, Jev scoring, or chat.
+40 words. Post-set reports use Jev to rank character-generated candidates when
+available. Chat is not implemented.
 
 ## Windows setup
 
@@ -163,8 +165,8 @@ The reader validates known record schemas, preserves source line numbers, ignore
 unknown record types, and accepts new tactical source values. A truncated final
 write is ignored with a warning; malformed interior records, invalid known
 records, duplicate player slots, and mixed session IDs fail with a line number.
-Output uses an inspection-specific format, not `contracts/report.schema.json`;
-the future scored report and API endpoints remain separate work.
+Output uses an inspection-specific format, not `contracts/report.schema.json`.
+The scored report API described below consumes the same evidence extraction.
 
 The optional real-sample regression test runs when the extracted sample exists;
 synthetic edge-case tests run in every checkout:
@@ -172,6 +174,113 @@ synthetic edge-case tests run in every checkout:
 ```powershell
 .\replay\.venv\Scripts\python.exe -m pytest replay/tests -q
 ```
+
+## Post-set report API
+
+`POST /analyze/{session_id}` takes no body. It reads an extracted recording,
+validates it, generates options through Claude's
+`replay.options.generate_options(human_character, moment)` interface, scores
+available menus, and atomically saves `DATA_DIR/reports/<session_id>.json`.
+`GET /reports/{session_id}` reads and validates that saved report. Both return
+the frozen `contracts/report.schema.json` shape plus evidence and availability
+metadata. Missing recordings/reports return 404; invalid IDs, recordings or
+saved reports return 422. Reanalysis replaces the report without modifying
+the recording. Generation failures leave the previous saved report intact.
+
+The canonical input is `DATA_DIR/recordings/<session_id>.jsonl`. For development,
+the resolver also searches extracted `DATA_DIR/samples/**/*.jsonl` by the first
+record's session ID. Ambiguous samples return 422; install one canonical
+recording to select it. ZIPs are never read as JSONL or extracted by the API.
+Session metadata comes from `DATA_DIR/sessions/<session_id>.json`, or a sample's
+adjacent `.session.json`. Missing or invalid metadata produces `result: unknown`.
+Synthetic directories or session metadata label the report `synthetic: true`.
+
+Only explicit `decision_point` events attributed to the human are decision
+entries. `actual` retains the recorded action exactly; missing actions become
+`unknown` with `recorded_action: null`. Bot tactical choices never supply it.
+Round, frame, source JSONL line and original event accompany each decision.
+Ambiguous human identity is retained under `unattributed_decisions`. Observed
+health-loss windows are separate from causal claims; no avoidable-damage
+`cost` is invented. `went_well` cites observed hits, blocks or throw breaks,
+not presumed improvements. `good` is omitted because action/outcome labels
+are not reliably equivalent to option IDs.
+
+Habits are the three most frequent recorded situation/action pairs. Their
+`count` is observed, and `p` is the empirical action frequency among labeled
+decisions in that situation, explicitly identified by `p_source`. These are
+observations, not proof of a weakness. Mastery, improvement, and counterfactual
+minimum changes are not inferred. The report explicitly marks learning data
+as unevaluated; the upcoming live sample does not block report generation.
+Drills direct review of the cited decisions and comparison in practice.
+
+Configuration:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `KUMITE_JEV_MODE` | `auto` | `local` disables every Jev request, independently of the round coach |
+| `TYPESAFE_API_KEY` | `JEV_API_KEY`, then unset | Credential for TypeSafe Jev |
+| `JEV_MODEL` | `jev-latest` | TypeSafe model |
+
+The adapter uses the [official TypeSafe HTTP API](https://docs.typesafe.ai/primitives/choice)
+at `https://api.typesafe.ai/v1/systemone` through the already-pinned HTTPX
+dependency. No new SDK installation is required. It batches up to 12 choices
+per request with one context per choice, a 22-second request deadline, and no
+retries. Only recorded decision context is sent; future health-loss windows,
+session metadata and credentials are excluded from the state. Snapshot timing
+does not prove pre-action state. Candidate limitations are preserved. Choice
+keys, finite numeric probabilities, normalization and the selected maximum are
+validated; invalid responses are discarded, never repaired or renormalized.
+These probabilities describe model preference among candidates, not hit/win
+chances or a guarantee that the top move is legal at that exact frame.
+
+Missing keys/options/context, timeouts and invalid responses retain the action
+and evidence with `best: unavailable`, `options: []`, and an explicit
+`scoring.status: unavailable` reason. Candidate menus without probabilities
+remain under `candidates` when available. A failed batch does not discard valid
+scores from other batches. POST analysis has no between-round 8-second budget;
+`POST /coach/round` keeps its existing deadline and behavior.
+
+The neutral sample is already extracted locally. In a fresh checkout, extract
+it once into an empty destination; do not overwrite an existing extraction:
+
+```powershell
+Expand-Archive -LiteralPath data/samples/versus_djin_vs_kaz_l3_neutral.zip -DestinationPath data/samples/versus_djin_vs_kaz_l3_neutral
+.\replay\.venv\Scripts\python.exe contracts/validate.py data/samples/versus_djin_vs_kaz_l3_neutral/versus_djin_vs_kaz_l3_neutral.jsonl
+```
+
+Start offline for repeatable, free verification:
+
+```powershell
+$env:KUMITE_JEV_MODE = 'local'
+$env:KUMITE_COACH_MODE = 'local'
+.\replay\.venv\Scripts\python.exe -m uvicorn replay.main:app --host 127.0.0.1 --port 8766
+```
+
+In a second terminal:
+
+```powershell
+$sessionId = '2026-10-18T01-24-57_sahil_djin_vs_kaz'
+Invoke-RestMethod http://127.0.0.1:8766/health
+$report = Invoke-RestMethod -Method Post "http://127.0.0.1:8766/analyze/$sessionId"
+$report.scoring_summary
+$report.decision_points.Count
+Invoke-RestMethod "http://127.0.0.1:8766/reports/$sessionId"
+.\replay\.venv\Scripts\python.exe -m pytest replay/tests -q
+.\replay\.venv\Scripts\python.exe contracts/validate.py
+```
+
+Expected offline: 59 decision points, 0 scored, 59 unavailable, result
+`win 3-1`, and matching saved/returned reports. The neutral recording contains
+12,147 state records, 282 events, 372 bot tactical choices (220 default,
+152 reflex), and one plan. It has 59 explicit human decisions but no round
+summaries or learning records. Neither the upcoming live set nor PR #8's
+synthetic files are assumed present in this checkout.
+
+For live scoring after approving transmission of recorded contexts to TypeSafe,
+restart with `$env:KUMITE_JEV_MODE = 'auto'` and a configured key, then repeat
+POST analysis. Its result reports actual scoring availability rather than
+promising all decisions will score. Automated tests always disable Jev or use
+HTTPX mock transports; the optional extracted-sample test also runs offline.
 
 ## Follow-up after Jev
 
