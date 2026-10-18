@@ -26,4 +26,10 @@ curl -s localhost:8767/learning/<session_id> | python -c "import json,sys; print
 
 Expected: `{'before': 0.41, 'after': 0.68}`.
 
-`/team-status` closes this item automatically once `game/` writes under `eval/`.
+`/team-status` detects a JSON result path in committed `game/` code using this form (on one line; either quote style works):
+
+```python
+eval_path = data_dir / "eval" / f"{session_id}.json"
+```
+
+It reports `on_branch` until that code reaches `origin/main`, then `on_main`. An `"eval"` CLI command alone leaves the item `pending`. This is a source-code signal; it does not verify that the writer ran, wrote atomically, or produced valid results. Use the `/learning` check above to confirm the actual file. If the writer uses a different path construction, update the check to match it.
