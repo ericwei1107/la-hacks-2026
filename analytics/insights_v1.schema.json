@@ -129,7 +129,8 @@
         "state",
         "reason",
         "action",
-        "action_reviewed"
+        "action_reviewed",
+        "min_opportunities"
       ],
       "properties": {
         "mode": {
@@ -164,6 +165,10 @@
         },
         "action_reviewed": {
           "type": "boolean"
+        },
+        "min_opportunities": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

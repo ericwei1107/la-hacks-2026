@@ -4,6 +4,7 @@
     "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
     "action_status": "reviewed",
     "metric": "low_defense",
+    "min_opportunities": 5,
     "mode": "automatic",
     "population": "completed_rounds",
     "reason": "0/7 successful observed opportunities; 7 failures",

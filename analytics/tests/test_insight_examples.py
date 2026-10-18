@@ -54,6 +54,7 @@ class InsightExamplesTest(unittest.TestCase):
                 self.assertEqual(view['quality'], value['quality']['state'])
                 self.assertEqual(view['focus']['metric'], value['focus']['metric'])
                 self.assertEqual(view['focus']['action_reviewed'], view['focus']['action'] is not None)
+                self.assertEqual(view['focus']['min_opportunities'], 5)
                 for key, metric in value['metrics'].items():
                     self.assertEqual((view['metrics'][key]['successes'], view['metrics'][key]['opportunities'], view['metrics'][key]['state']),
                                      (metric['successes'], metric['opportunities'], metric['state']))

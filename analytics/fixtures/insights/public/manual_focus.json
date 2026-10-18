@@ -3,6 +3,7 @@
     "action": "Review these throws and practice the appropriate break against the recorded throw.",
     "action_reviewed": true,
     "metric": "throw_defense",
+    "min_opportunities": 5,
     "mode": "manual",
     "reason": "0/3 successful observed opportunities; 3 failures",
     "state": "early_signal"

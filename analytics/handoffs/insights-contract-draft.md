@@ -8,7 +8,7 @@
 | --- | --- |
 | Sahil | **Approved, including the `contracts/` additions** (October 18). Route: additive on :8767, reads only files the brain already writes under `DATA_DIR`. Contracts: adding `contracts/insights.schema.json`, its example and one new `api.md` row is fine, provided nothing existing is edited and `python contracts/validate.py` passes in the same commit |
 | Garrett | **Route approved** (October 18, Track C): no additional fields; keep it opt-in until all four approve; this does not approve the current punish calculation. **`contracts/` additions: yes still needed** (Sahil asked Garrett and Chloe for it, per `api.md`) |
-| Chloe | Pending: route and `contracts/` additions (asleep; Eric collects later) |
+| Chloe | **Approved with one condition, now met** (October 18): add `focus.min_opportunities` so the app doesn't copy the threshold. Added as a required integer in v1; it's additive, so tell Sahil and Garrett. Her optional move-name request is deferred |
 | Eric | Proposer |
 
 Against Sahil's conditions:

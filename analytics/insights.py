@@ -391,7 +391,8 @@ def public(snapshot):
                                         'event': copy.deepcopy(item['event'])} for item in metric['evidence']]}
                     for key, metric in snapshot['metrics'].items()},
         'focus': {'mode': focus['mode'], 'metric': focus['metric'], 'state': focus.get('state'), 'reason': focus['reason'],
-                  'action': focus['action'], 'action_reviewed': focus['action'] is not None and focus.get('action_status') == 'reviewed'},
+                  'action': focus['action'], 'action_reviewed': focus['action'] is not None and focus.get('action_status') == 'reviewed',
+                  'min_opportunities': focus['min_opportunities']},
         'habits': {name: {'first_detected_round': row['first_detected_round'], 'first_fixed_round': row['first_fixed_round'],
                           'current_round': row['current']['round'], 'fixed': row['current'].get('fixed'), 'regressed': row['current']['regressed'],
                           'last_regressed_round': max((item['round'] for item in row['history'] if item['regressed']), default=None)}
