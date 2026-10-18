@@ -4,7 +4,8 @@ param(
     [double]$LayaWeight = 1.0,
     [switch]$NoSpark,
     [switch]$NoApp,
-    [switch]$NoDemo
+    [switch]$NoDemo,
+    [switch]$NoShare
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,6 +18,13 @@ $Spark = "sahilmehta@spark-c686"
 $SparkIncoming = "${Spark}:~/kumite-llm/incoming"
 $HealthSeconds = 60
 $Rows = New-Object System.Collections.ArrayList
+$TailscaleIp = $null
+if (-not $NoShare) {
+    try { $TailscaleIp = (& tailscale ip -4 2>$null | Select-Object -First 1) } catch { $TailscaleIp = $null }
+    if ($TailscaleIp) { $TailscaleIp = $TailscaleIp.Trim() }
+    if (-not $TailscaleIp) { Write-Warning "tailscale ip -4 gave nothing; services stay on 127.0.0.1 (nobody else can reach them)" }
+}
+$Bind = if ($TailscaleIp) { "0.0.0.0" } else { "127.0.0.1" }
 
 foreach ($scope in "Machine", "User") {
     $saved = [Environment]::GetEnvironmentVariables($scope)
@@ -48,6 +56,12 @@ function Test-Http([string]$Url) {
     } catch {
         return $false
     }
+}
+
+function Shared-Note([int]$Port) {
+    if (-not $TailscaleIp) { return "" }
+    if (Test-Http "http://${TailscaleIp}:$Port/health") { return "; on $TailscaleIp too" }
+    return "; NOT on ${TailscaleIp}: close it (or demo-stop.ps1) so it restarts bound to $Bind"
 }
 
 function Test-Udp([int]$Port) {
@@ -87,21 +101,21 @@ if (Test-Udp 8768) {
 $title = "Kumite replay"
 $url = "http://127.0.0.1:8766/health"
 if (Test-Http $url) {
-    Add-Row $title "already running" "$url ok"
+    Add-Row $title "already running" ("$url ok" + (Shared-Note 8766))
 } else {
-    $p = Open-Window $title $Root "`$env:KUMITE_COACH_MODE='auto'; python -m uvicorn replay.main:app --host 127.0.0.1 --port 8766"
+    $p = Open-Window $title $Root "`$env:KUMITE_COACH_MODE='auto'; python -m uvicorn replay.main:app --host $Bind --port 8766"
     Add-Row $title "started" ("$url " + (Wait-Until { Test-Http $url } $p))
 }
 
 $title = "Kumite analytics"
 $url = "http://127.0.0.1:8767/health"
 if (Test-Http $url) {
-    Add-Row $title "already running" "$url ok"
+    Add-Row $title "already running" ("$url ok" + (Shared-Note 8767))
 } elseif (-not (Test-Path -LiteralPath (Join-Path $AnalyticsDir "analytics\demo_host.py"))) {
     Write-Warning "$AnalyticsDir\analytics\demo_host.py not found; continuing without analytics"
     Add-Row $title "MISSING" "no worktree at $AnalyticsDir"
 } else {
-    $p = Open-Window $title $AnalyticsDir "Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue; python -m analytics.demo_host serve --data-dir '$DataDir' --host 127.0.0.1 --port 8767 --file-only"
+    $p = Open-Window $title $AnalyticsDir "Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue; python -m analytics.demo_host serve --data-dir '$DataDir' --host $Bind --port 8767 --file-only"
     Add-Row $title "started" ("$url " + (Wait-Until { Test-Http $url } $p))
 }
 
@@ -164,10 +178,10 @@ if ($NoApp) {
 }
 
 $title = "Kumite bot"
-$botCmd = "python -m game.bot --player $Player --bot kazuya --difficulty $Difficulty --mode versus --loop --laya --laya-weight $LayaWeightArg --wait-for-match"
+$botCmd = "python -m game.bot --player $Player --bot kazuya --difficulty $Difficulty --mode versus --loop --laya --laya-weight $LayaWeightArg --wait-for-match --host $Bind"
 if (-not $NoDemo) { $botCmd += " --demo" }
 if (Test-Window $title) {
-    Add-Row $title "already running" "window open; close it or run demo-stop.ps1 for a new bot"
+    Add-Row $title "already running" ("window open; close it or run demo-stop.ps1 for a new bot" + (Shared-Note 8765))
 } else {
     if (Test-Tcp 8765) { Write-Warning "tcp 8765 is already in use; the bot's brain API will not bind until it is freed" }
     $p = Open-Window $title $Root $botCmd
@@ -181,6 +195,13 @@ Write-Host "==================== Kumite demo ===================="
 $Rows | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
 Write-Host "Bot: $botCmd"
 Write-Host ""
+if ($TailscaleIp) {
+    Write-Host "Shared on Tailscale ($TailscaleIp); Chloe's app/.env:"
+    Write-Host "  KUMITE_BRAIN_URL=http://${TailscaleIp}:8765"
+    Write-Host "  KUMITE_REPLAY_URL=http://${TailscaleIp}:8766"
+    Write-Host "  KUMITE_ANALYTICS_URL=http://${TailscaleIp}:8767"
+    Write-Host ""
+}
 Write-Host "1. Padserver window: type start, start (only if Tekken has not seen the 2P pad yet)."
 Write-Host "2. Tekken: Versus, Devil Jin (you, 1P) vs Kazuya (2P pad). The bot starts by itself at the round 1 intro."
 Write-Host "3. After a match, press F8 from the game to ask the coach; press F8 again to send (KUMITE_TALK_KEY in app/.env changes the key)."
