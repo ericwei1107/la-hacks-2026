@@ -18,7 +18,7 @@ Filled from Sahil's return (about 04:05 PT, repeated later in chat) using the [t
 - Structure: one `game.decision` transaction (op `decision`, 0.67 ms) with children `game.read` (0.17 ms), `game.tactical` (0.10 ms), `game.decode` (0.06 ms), `game.reflex` (0.01 ms) and `game.input` (0.01 ms). All five required operations are present as children. No errors.
 - Every span: release `e8f134fbceedd63607cf27acfbce7ea2067d24d3`, environment `demo-laptop`, client sample rate 0.05.
 - Transaction boundary (source): `hotloop.frames` opens the decision transaction before the snapshot read and keeps it open across the generator yield. It finishes when the generator resumes (ok) or is closed (cancelled). Frames that never yield are dropped.
-- Waterfall screenshot: sent privately to Eric at about 04:05; **not yet saved under `analytics/evidence/`**.
+- Waterfall screenshot: [brain-decision-waterfall-2026-10-18.png](brain-decision-waterfall-2026-10-18.png). It shows the same trace ID `c5e0b584bce7432a85d45b3f30eedf3a`, release `e8f134fbceed`, environment `demo-laptop`, CPython, 6 spans, 0.67 ms root duration, the five child spans under `decision`, and `client_sample_rate 0.05` in the span attributes. No keys or DSN are visible.
 - One sampled trace confirms the configured rate on its spans. It does not measure the realized sampling fraction.
 
 ## Tracing off / on timing
@@ -38,10 +38,9 @@ Difference: p50 +0.18 ms, p95 +0.56 ms. Both percentiles stay far below the 16.7
 
 ## Still open
 
-- Save the waterfall screenshot under `analytics/evidence/` (no keys visible).
 - Sahil's explicit overhead-acceptance statement; he reported the numbers but did not state a judgment.
 - Behavior when Sentry is unreachable (does transport ever block the hot loop?) was not reported.
 
 ## Status
 
-Brain decision trace **verified**: structure, release, environment and configured sampling. Timing comparison **received** (owner-measured). B5 closes once the screenshot is saved and Sahil confirms acceptance. Independent per-service traces still do not establish cross-service propagation.
+Brain decision trace **verified**: structure, release, environment and configured sampling. Timing comparison **received** (owner-measured). Waterfall screenshot **retained**. B5 closes once Sahil confirms the overhead is acceptable. Independent per-service traces still do not establish cross-service propagation.
