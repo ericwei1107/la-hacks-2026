@@ -25,7 +25,7 @@ MIN_PRESS = 2
 TRACE_BEFORE = 40
 TRACE_AFTER = 70
 VOTED = ("move_id", "frame_in_move", "dir", "hit_level", "free", "side", "target_move", "target_basic_state",
-         "target_status", "target_health", "target_reaction", "distance")
+         "target_status", "target_health", "target_reaction", "distance", "heat")
 
 
 def loops(gs_iter, slot, log=print):
@@ -44,6 +44,7 @@ def loops(gs_iter, slot, log=print):
             complete = gs["frame"] <= START_SLACK
         row = make_row(gs, slot)
         row["distance"] = round(math.hypot(row["target_x"] - gs["players"][slot]["x"], row["target_z"] - gs["players"][slot]["z"]))
+        row["heat"] = bool(gs["players"][slot].get("heat_active"))
         rows.append(row)
         if len(rows) > MAX_LOOP_FRAMES:
             log(f"  no reset after {MAX_LOOP_FRAMES} frames; using what was recorded")
@@ -118,6 +119,7 @@ def build_demo_route(name, rows, slot, names=None):
         "input_latency_frames": 2,
         "counter_hit": connect_row["target_reaction"] in COUNTER_HIT_REACTIONS,
         "trigger": "ki_charge" if connect_row["target_reaction"] in COUNTER_HIT_REACTIONS else "round_frame",
+        "heat": bool(start.get("heat")),
         "start_round_frame": start["frame"],
         "start_distance": start["distance"],
         "connect_distance": connect_row["distance"],
@@ -155,7 +157,7 @@ def consensus(loop_rows):
             continue
         row = dict(seen[0], frame=t)
         for key in VOTED:
-            row[key] = vote(r[key] for r in seen)
+            row[key] = vote(r.get(key) for r in seen)
         for key in ("pressed", "held"):
             row[key] = [b for b in BUTTONS if 2 * sum(b in r[key] for r in seen) >= len(seen)]
         out.append(row)
@@ -165,7 +167,7 @@ def consensus(loop_rows):
 
 def describe(route, log=print):
     log(f"  opener {route['launcher']} ({route['launcher_move_id']}) from {route['start_distance']} distance, "
-        f"{len(route['hits'])} hits, {route['damage']} damage")
+        f"{len(route['hits'])} hits, {route['damage']} damage{', starts in heat' if route.get('heat') else ''}")
     log("  opener inputs: " + fmt_events(route["launcher_inputs"]))
     log("  combo inputs:  " + fmt_events(route["inputs"]))
     log("  attacks: " + " ".join(f"{m}{'=' + n if n else ''}@+{o}" for (o, m), n in zip(route["attacks"], route["attack_names"])))
@@ -204,16 +206,18 @@ def capture(reader, args, log=print):
     return 1
 
 
-def replay_route(route, counter_hit=False):
+def replay_route(route, counter_hit=False, heat=False):
     route = dict(route)
     if counter_hit or route.get("counter_hit"):
         route["counter_hit"] = True
         route["trigger"] = "ki_charge"
+    if heat:
+        route["heat"] = True
     return route
 
 
 def replay_demo(reader, args):
-    route = replay_route(load_captured(args.name, args.dir), args.counter_hit)
+    route = replay_route(load_captured(args.name, args.dir), args.counter_hit, args.heat)
     print(f"{route['guide']}; the demo opener started at round frame {route.get('start_round_frame', 0)} from "
           f"{route['start_distance']} distance", flush=True)
     if args.wait_reset:
@@ -226,6 +230,9 @@ def replay_demo(reader, args):
     else:
         print(f"the opener waits for the same round frame as the demo, then Kazuya walks in until it will connect at "
               f"the demo's distance ({route.get('connect_distance')})", flush=True)
+    if route.get("heat"):
+        print("HEAT ROUTE: after each reset Kazuya heat bursts (2+3) first, waits for the burst to finish, then walks in; "
+              "leave practice heat settings so the gauge refills on reset", flush=True)
     pad = connect_pad()
     try:
         if args.trace:
@@ -302,6 +309,9 @@ def main(argv=None):
     parser.add_argument("--counter-hit", action="store_true",
                         help="fire the opener when you Ki charge (1+2+3+4) so it counter hits; on by default for routes "
                              "whose demo opener counter hit")
+    parser.add_argument("--heat", action="store_true",
+                        help="heat burst (2+3) before the opener so the combo runs in heat; on by default for routes "
+                             "whose demo started in heat")
     parser.add_argument("--trace", type=int, default=0, metavar="N",
                         help="print the first N failed attempts frame by frame next to the demo")
     parser.add_argument("--dir", default=str(CAPTURED_DIR))

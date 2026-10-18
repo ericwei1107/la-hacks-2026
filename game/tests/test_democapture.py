@@ -276,6 +276,50 @@ class DemoReplayTest(unittest.TestCase):
         self.assertEqual((plain["counter_hit"], plain["trigger"]), (False, "round_frame"))
         self.assertEqual(replay_route(plain)["trigger"], "round_frame")
 
+    def test_demo_in_heat_marks_route(self):
+        states = demo_states(1)
+        for gs in states:
+            gs["players"][SUBJECT]["heat_active"] = True
+        route = build_demo_route("h", next(loops(iter(states), SUBJECT)), SUBJECT)
+        self.assertTrue(route["heat"])
+        plain = build_demo_route("x", next(loops(iter(demo_states(1)), SUBJECT)), SUBJECT)
+        self.assertFalse(plain["heat"])
+        self.assertTrue(replay_route(plain, heat=True)["heat"])
+
+    def test_heat_route_bursts_and_waits_out_the_burst_before_walking(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = replay_route(build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"}), heat=True)
+        pad, device = fake_pad()
+        seq = Sequencer(pad, 2)
+        runner = ComboRunner(route, seq, 1, name="ws12")
+        bot, target = player(side=1), player()
+        buttons = {pad.config["buttons"]["2"], pad.config["buttons"]["3"]}
+        pressed = []
+        for f in range(43, 50):
+            self.assertIsNone(runner.on_state({"frame": f, "players": [target, bot]}))
+            seq.on_frame(f, bot)
+            pressed.append(set(device.pressed))
+        self.assertIn(buttons, pressed)
+        bursting = dict(bot, heat_active=True, free_movement=False, move_id=0x900)
+        for f in range(50, 110):
+            self.assertIsNone(runner.on_state({"frame": f, "players": [target, bursting]}))
+            seq.on_frame(f, bursting)
+        self.assertIsNone(runner.approach_start)
+        heated = dict(bot, heat_active=True)
+        self.assertEqual(lead_in(runner, seq, 110, target, heated), (110 + LEAD_IN, "ws1,2"))
+
+    def test_heat_route_stops_when_heat_never_activates(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = replay_route(build_demo_route("ws12", rows, SUBJECT, {0x696: "ws1,2"}), heat=True)
+        seq = Sequencer(fake_pad()[0], 2)
+        runner = ComboRunner(route, seq, 1, name="ws12")
+        bot, target = player(side=1), player()
+        for f in range(43, 200):
+            runner.on_state({"frame": f, "players": [target, bot]})
+            seq.on_frame(f, bot)
+        self.assertEqual(runner.status, "aborted")
+        self.assertIn("heat burst", runner.reason)
+
 
 if __name__ == "__main__":
     unittest.main()

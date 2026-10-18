@@ -20,6 +20,8 @@ RELEASE_FRAMES = 2
 MIN_WALK_FRAMES = 14
 IDLE_FRAMES = 30
 MAX_SETTLE_FRAMES = 90
+HEAT_BURST = "2+3"
+HEAT_WAIT_FRAMES = 60
 OPENER_HIT_WINDOW = 1
 CONNECT_TOLERANCE = 60
 FIRST_DIRECTION = re.compile(r"^([udfb]{1,2})(?=\+)")
@@ -160,6 +162,7 @@ class ComboRunner:
             self.attack_index = 0
             self.pending_attack = False
             self.charged = False
+            self.burst = None
             self.approach_start = None
             self.release_frame = None
             self.walked = False
@@ -300,6 +303,8 @@ class ComboRunner:
 
     def _captured_step(self, frame, bot, target, prev):
         if self.move is None:
+            if self.captured.get("heat") and self._heat(frame, bot):
+                return None
             ki = self.captured.get("trigger") == "ki_charge"
             if ki:
                 self.charged = self.charged or ki_charging(target)
@@ -386,6 +391,18 @@ class ComboRunner:
         reach = self.captured.get("learned_reach", self.captured.get("opener_reach"))
         want = self.captured.get("connect_distance")
         return None if reach is None or want is None else want + reach
+
+    def _heat(self, frame, bot):
+        if bot.get("heat_active"):
+            return self.burst is not None and not bot["free_movement"]
+        if self.burst is None:
+            if bot["free_movement"] and frame >= self.captured.get("start_round_frame", 0):
+                self.burst = self.seq.submit(HEAT_BURST, frame=frame, force=True, error=False, combo=self.name, link=0,
+                                             part="heat")
+            return True
+        if self.burst.done_frame is not None and frame - self.burst.done_frame > HEAT_WAIT_FRAMES:
+            self.stop(frame, reason="heat burst did not put the bot in heat (heat already used this round?)")
+        return True
 
     def _approach(self, frame, bot, target):
         fire = self.fire_distance()
