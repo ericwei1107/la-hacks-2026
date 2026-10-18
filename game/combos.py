@@ -16,6 +16,8 @@ FINISHED = ("done", "dropped", "interrupted", "aborted")
 KI_CHARGE = ("1", "2", "3", "4")
 COUNTER_HIT_REACTIONS = (10, 11)
 MAX_APPROACH_FRAMES = 40
+RELEASE_FRAMES = 2
+OPENER_HIT_WINDOW = 1
 FIRST_DIRECTION = re.compile(r"^([udfb]{1,2})(?=\+)")
 
 
@@ -155,6 +157,8 @@ class ComboRunner:
             self.pending_attack = False
             self.charged = False
             self.approach_start = None
+            self.release_frame = None
+            self.walked = False
             self.opener_distance = None
             self.reach = None
         else:
@@ -363,7 +367,11 @@ class ComboRunner:
 
     def _opener_landed(self, bot):
         hits = self.captured.get("hits") or []
-        return not hits or bot["move_id"] == int(hits[0][2], 16)
+        if not hits:
+            return True
+        ids = {int(hits[0][2], 16)} | {r["move_id"] for r in self.captured.get("frames", [])
+                                       if 0 <= r.get("offset", -1) <= OPENER_HIT_WINDOW}
+        return bot["move_id"] in ids
 
     def fire_distance(self):
         reach = self.captured.get("learned_reach", self.captured.get("opener_reach"))
@@ -376,11 +384,14 @@ class ComboRunner:
             return False
         if self.approach_start is None:
             self.approach_start = frame
-        if distance(bot, target) > fire and frame - self.approach_start < MAX_APPROACH_FRAMES:
-            self.seq.hold("f")
-            return True
+        if self.release_frame is None:
+            if distance(bot, target) > fire and frame - self.approach_start < MAX_APPROACH_FRAMES:
+                self.seq.hold("f")
+                self.walked = True
+                return True
+            self.release_frame = frame
         self.seq.hold("n")
-        return False
+        return self.walked and frame - self.release_frame < RELEASE_FRAMES
 
     def _submit_opener(self, frame):
         frames, _ = captured_frames(self.captured["launcher_inputs"])
