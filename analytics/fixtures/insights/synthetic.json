@@ -1,0 +1,1013 @@
+{
+  "calculation_version": 4,
+  "focus": {
+    "action": "Review these lows and practice recognizing low/mid choices; avoid crouching continuously.",
+    "action_status": "draft_awaiting_Garrett_review",
+    "metric": "low_defense",
+    "mode": "automatic",
+    "population": "completed_rounds",
+    "reason": "8/15 successful observed opportunities; 7 failures",
+    "rule_version": 1,
+    "state": "observed"
+  },
+  "format_version": 1,
+  "freshness": {
+    "completed_rounds": [
+      1,
+      2,
+      3
+    ],
+    "latest_learning_round": 3,
+    "latest_recording_round": 3,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "learning": {
+    "bandit_estimates": {
+      "after_block:df1|block_high": {
+        "low": 0.3,
+        "mid": 0.7
+      },
+      "after_block:df1|duck": {
+        "mid": 0.8,
+        "throw": 0.2
+      }
+    },
+    "finetune": {
+      "after": null,
+      "before": null
+    },
+    "habits": {
+      "after_block:df1": {
+        "current": {
+          "fixed": false,
+          "mastery": 0.62,
+          "n": 20,
+          "p": 0.6,
+          "regressed": false,
+          "round": 3
+        },
+        "first_detected_round": 1,
+        "first_fixed_round": null,
+        "history": [
+          {
+            "fixed": false,
+            "mastery": 0.2,
+            "n": 7,
+            "p": 0.86,
+            "regressed": false,
+            "round": 1
+          },
+          {
+            "fixed": false,
+            "mastery": 0.31,
+            "n": 13,
+            "p": 0.75,
+            "regressed": false,
+            "round": 2
+          },
+          {
+            "fixed": false,
+            "mastery": 0.62,
+            "n": 20,
+            "p": 0.6,
+            "regressed": false,
+            "round": 3
+          }
+        ],
+        "history_total": 3
+      },
+      "low_defense": {
+        "current": {
+          "fixed": true,
+          "mastery": 0.88,
+          "n": 15,
+          "p": 0.47,
+          "regressed": false,
+          "round": 3
+        },
+        "first_detected_round": 1,
+        "first_fixed_round": 3,
+        "history": [
+          {
+            "fixed": false,
+            "mastery": 0.22,
+            "n": 5,
+            "p": 0.8,
+            "regressed": false,
+            "round": 1
+          },
+          {
+            "fixed": false,
+            "mastery": 0.55,
+            "n": 10,
+            "p": 0.7,
+            "regressed": false,
+            "round": 2
+          },
+          {
+            "fixed": true,
+            "mastery": 0.88,
+            "n": 15,
+            "p": 0.47,
+            "regressed": false,
+            "round": 3
+          }
+        ],
+        "history_total": 3
+      },
+      "throw_break": {
+        "current": {
+          "fixed": false,
+          "mastery": 0.6,
+          "n": 3,
+          "p": 0.67,
+          "regressed": false,
+          "round": 3
+        },
+        "first_detected_round": null,
+        "first_fixed_round": null,
+        "history": [
+          {
+            "fixed": false,
+            "mastery": 0.35,
+            "n": 2,
+            "p": 0.5,
+            "regressed": false,
+            "round": 1
+          },
+          {
+            "fixed": false,
+            "mastery": 0.38,
+            "n": 2,
+            "p": 0.5,
+            "regressed": false,
+            "round": 2
+          },
+          {
+            "fixed": false,
+            "mastery": 0.6,
+            "n": 3,
+            "p": 0.67,
+            "regressed": false,
+            "round": 3
+          }
+        ],
+        "history_total": 3
+      }
+    },
+    "prediction_accuracy": [
+      {
+        "eligible_count": null,
+        "player_changed": false,
+        "round": 1,
+        "value": 0.41
+      },
+      {
+        "eligible_count": null,
+        "player_changed": false,
+        "round": 2,
+        "value": 0.58
+      },
+      {
+        "eligible_count": null,
+        "player_changed": true,
+        "round": 3,
+        "value": 0.71
+      }
+    ]
+  },
+  "metrics": {
+    "low_defense": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [
+        {
+          "opportunity": {
+            "frame": 162,
+            "line": 169,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "opportunity": {
+            "frame": 462,
+            "line": 474,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "opportunity": {
+            "frame": 942,
+            "line": 964,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 15,
+      "failures": 7,
+      "label": "Low defense",
+      "opportunities": 15,
+      "state": "observed",
+      "successes": 8,
+      "value": 0.533
+    },
+    "punish_conversion": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": true,
+      "evidence": [
+        {
+          "opportunity": {
+            "frame": 1192,
+            "line": 1219,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "success",
+          "response": {
+            "frame": 1211,
+            "line": 1240,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          }
+        },
+        {
+          "opportunity": {
+            "frame": 422,
+            "line": 2273,
+            "round": 2,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "success",
+          "response": {
+            "frame": 441,
+            "line": 2294,
+            "round": 2,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          }
+        },
+        {
+          "opportunity": {
+            "frame": 1192,
+            "line": 3058,
+            "round": 2,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "success",
+          "response": {
+            "frame": 1211,
+            "line": 3079,
+            "round": 2,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          }
+        }
+      ],
+      "evidence_total": 9,
+      "failures": 0,
+      "label": "Estimated punish conversion",
+      "opportunities": 9,
+      "state": "observed",
+      "successes": 9,
+      "value": 1.0
+    },
+    "throw_defense": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [
+        {
+          "opportunity": {
+            "frame": 712,
+            "line": 727,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "failure",
+          "response": null
+        },
+        {
+          "opportunity": {
+            "frame": 1612,
+            "line": 1648,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "success",
+          "response": {
+            "frame": 1620,
+            "line": 1658,
+            "round": 1,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          }
+        },
+        {
+          "opportunity": {
+            "frame": 1192,
+            "line": 4901,
+            "round": 3,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          },
+          "outcome": "success",
+          "response": {
+            "frame": 1200,
+            "line": 4911,
+            "round": 3,
+            "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+            "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+            "source": "recording"
+          }
+        }
+      ],
+      "evidence_total": 3,
+      "failures": 1,
+      "label": "Throw defense",
+      "opportunities": 3,
+      "state": "early_signal",
+      "successes": 2,
+      "value": 0.667
+    }
+  },
+  "moments": [
+    {
+      "event": {
+        "actor": 1,
+        "damage": 12,
+        "frame_advantage": 2,
+        "hit_level": "low",
+        "kind": "hit",
+        "move_id": 1755,
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 162,
+        "line": 169,
+        "round": 1,
+        "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+        "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 12,
+        "frame_advantage": 2,
+        "hit_level": "low",
+        "kind": "hit",
+        "move_id": 1755,
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 462,
+        "line": 474,
+        "round": 1,
+        "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+        "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 35,
+        "hit_level": "throw",
+        "kind": "throw",
+        "move_id": 1819,
+        "target": 0
+      },
+      "metric_outcomes": {
+        "throw_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "throw_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 712,
+        "line": 727,
+        "round": 1,
+        "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+        "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 12,
+        "frame_advantage": 2,
+        "hit_level": "low",
+        "kind": "hit",
+        "move_id": 1755,
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense"
+      ],
+      "outcome": "failure",
+      "reference": {
+        "frame": 942,
+        "line": 964,
+        "round": 1,
+        "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+        "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+        "source": "recording"
+      },
+      "response": null
+    },
+    {
+      "event": {
+        "actor": 1,
+        "damage": 22,
+        "frame_advantage": 5,
+        "hit_level": "mid",
+        "kind": "hit",
+        "move_id": 1711,
+        "target": 0
+      },
+      "metric_outcomes": {},
+      "metrics": [],
+      "outcome": "damage",
+      "reference": {
+        "frame": 684,
+        "line": 2541,
+        "round": 2,
+        "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+        "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+        "source": "recording"
+      },
+      "response": null
+    }
+  ],
+  "moments_total": 20,
+  "population": "completed_rounds",
+  "quality": {
+    "deliberate_retests": "unavailable",
+    "invalid_line_positions": [],
+    "skipped_recording_lines": 0,
+    "state": "observed",
+    "unsupported_records": 0
+  },
+  "report": {
+    "status": "unavailable",
+    "used_for_recommendation": false
+  },
+  "rounds": [
+    {
+      "metrics": {
+        "low_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 162,
+                "line": 169,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            },
+            {
+              "opportunity": {
+                "frame": 462,
+                "line": 474,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            },
+            {
+              "opportunity": {
+                "frame": 942,
+                "line": 964,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            }
+          ],
+          "evidence_total": 5,
+          "failures": 4,
+          "label": "Low defense",
+          "opportunities": 5,
+          "state": "observed",
+          "successes": 1,
+          "value": 0.2
+        },
+        "punish_conversion": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": true,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 1192,
+                "line": 1219,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 1211,
+                "line": 1240,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            }
+          ],
+          "evidence_total": 1,
+          "failures": 0,
+          "label": "Estimated punish conversion",
+          "opportunities": 1,
+          "state": "early_signal",
+          "successes": 1,
+          "value": 1.0
+        },
+        "throw_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 712,
+                "line": 727,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            },
+            {
+              "opportunity": {
+                "frame": 1612,
+                "line": 1648,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 1620,
+                "line": 1658,
+                "round": 1,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            }
+          ],
+          "evidence_total": 2,
+          "failures": 1,
+          "label": "Throw defense",
+          "opportunities": 2,
+          "state": "early_signal",
+          "successes": 1,
+          "value": 0.5
+        }
+      },
+      "round": 1
+    },
+    {
+      "metrics": {
+        "low_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 162,
+                "line": 2008,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            },
+            {
+              "opportunity": {
+                "frame": 422,
+                "line": 2273,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 422,
+                "line": 2273,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            },
+            {
+              "opportunity": {
+                "frame": 942,
+                "line": 2803,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "failure",
+              "response": null
+            }
+          ],
+          "evidence_total": 5,
+          "failures": 3,
+          "label": "Low defense",
+          "opportunities": 5,
+          "state": "observed",
+          "successes": 2,
+          "value": 0.4
+        },
+        "punish_conversion": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": true,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 422,
+                "line": 2273,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 441,
+                "line": 2294,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            },
+            {
+              "opportunity": {
+                "frame": 1192,
+                "line": 3058,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 1211,
+                "line": 3079,
+                "round": 2,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            }
+          ],
+          "evidence_total": 2,
+          "failures": 0,
+          "label": "Estimated punish conversion",
+          "opportunities": 2,
+          "state": "early_signal",
+          "successes": 2,
+          "value": 1.0
+        },
+        "throw_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [],
+          "evidence_total": 0,
+          "failures": 0,
+          "label": "Throw defense",
+          "opportunities": 0,
+          "state": "no_opportunities",
+          "successes": 0,
+          "value": null
+        }
+      },
+      "round": 2
+    },
+    {
+      "metrics": {
+        "low_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 162,
+                "line": 3843,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 162,
+                "line": 3843,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            },
+            {
+              "opportunity": {
+                "frame": 372,
+                "line": 4059,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 372,
+                "line": 4059,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            },
+            {
+              "opportunity": {
+                "frame": 582,
+                "line": 4275,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 582,
+                "line": 4275,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            }
+          ],
+          "evidence_total": 5,
+          "failures": 0,
+          "label": "Low defense",
+          "opportunities": 5,
+          "state": "observed",
+          "successes": 5,
+          "value": 1.0
+        },
+        "punish_conversion": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": true,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 162,
+                "line": 3843,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 181,
+                "line": 3864,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            },
+            {
+              "opportunity": {
+                "frame": 372,
+                "line": 4059,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 391,
+                "line": 4080,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            },
+            {
+              "opportunity": {
+                "frame": 582,
+                "line": 4275,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 601,
+                "line": 4296,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            }
+          ],
+          "evidence_total": 6,
+          "failures": 0,
+          "label": "Estimated punish conversion",
+          "opportunities": 6,
+          "state": "observed",
+          "successes": 6,
+          "value": 1.0
+        },
+        "throw_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [
+            {
+              "opportunity": {
+                "frame": 1192,
+                "line": 4901,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              },
+              "outcome": "success",
+              "response": {
+                "frame": 1200,
+                "line": 4911,
+                "round": 3,
+                "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+                "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04",
+                "source": "recording"
+              }
+            }
+          ],
+          "evidence_total": 1,
+          "failures": 0,
+          "label": "Throw defense",
+          "opportunities": 1,
+          "state": "early_signal",
+          "successes": 1,
+          "value": 1.0
+        }
+      },
+      "round": 3
+    }
+  ],
+  "rounds_total": 3,
+  "rule_version": 1,
+  "session_id": "2026-10-17T13-05-00_synth_djin_vs_kaz",
+  "snapshot_id": "58f3998ce702a50192e6fabf11d0f6762a5302232403256dc66d3599f6736308",
+  "sources": {
+    "evaluation": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    },
+    "learning": {
+      "available": true,
+      "consumed_bytes": 1270,
+      "pending_tail": false,
+      "sha256": "57c9499bd02d3fc7b0f54df54948d36cb8a8338b7f2ba69618c82b8e822f5204"
+    },
+    "metadata": {
+      "available": true,
+      "consumed_bytes": 766,
+      "pending_tail": false,
+      "sha256": "f8184bce7fccb81ad45d985aad5698e5a6951ab211e7bb5d503a07bfd800ff9e"
+    },
+    "recording": {
+      "available": true,
+      "consumed_bytes": 7420461,
+      "pending_tail": false,
+      "sha256": "4c557212fc8dc2b8ec31d11b603c60bf1b3c3c44d36a008c19275493dd0c5e04"
+    },
+    "report": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    }
+  },
+  "synthetic": true,
+  "tactical": {
+    "chosen_counts": {
+      "low": 15,
+      "mid": 2,
+      "throw": 3
+    },
+    "habit_driven_decisions": 15,
+    "interpretation": "Recorded choices, not hit rates or calibrated probabilities",
+    "reflex_records": 0
+  }
+}
