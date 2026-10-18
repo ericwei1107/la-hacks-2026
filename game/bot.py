@@ -2,7 +2,7 @@ import argparse
 import random
 import sys
 
-from game import api
+from game import api, laya
 from game.coach import Outlet, replay_url
 from game.detect import Detector
 from game.difficulty import Difficulty
@@ -110,6 +110,7 @@ def parse_args(argv=None, root=None):
     parser.add_argument("--no-api", action="store_true", help="do not serve the brain API on :8765")
     parser.add_argument("--host", default=api.HOST, help="address the brain API listens on, e.g. this laptop's Tailscale IP for remote clients")
     parser.add_argument("--seed", type=int)
+    parser.add_argument("--no-laya", action="store_true", help="do not load Laya at startup (DATA_DIR/models/laya-ft when present, else base)")
     args = parser.parse_args(argv)
     args.player = resolve_player(args, root)
     return args
@@ -125,6 +126,8 @@ def main(argv=None):
             print(f"brain API on http://{args.host}:{api.PORT} (DATA_DIR {data_dir().resolve()}); coach at {replay_url()}/coach/round", flush=True)
             outlet = Outlet(api.publish)
 
+    if not args.no_laya:
+        laya.start_background()
     reader = Reader(args.offsets)
     pad = None
     try:

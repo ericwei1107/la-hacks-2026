@@ -4,9 +4,11 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from game.finetune import (OPTIONS, QUESTIONS, assign_splits, balanced_train, build, drop_recent, export, label_counts, labels,
-                           main, majority_baseline, majority_labels, minority_count, pair, score, sentences, session_points,
-                           shift_distance, shift_health, split, variants)
+from game.finetune import (OPTIONS, QUESTIONS, TRAIN_META, assign_splits, balanced_train, build, drop_recent, export, label_counts,
+                           labels, main, majority_baseline, majority_labels, minority_count, pair, pick_action, run_eval, score,
+                           sentences, session_points, shift_distance, shift_health, split, split_prompt, train_laya, variants,
+                           yes_no_rows)
+from game.laya import FakeAgent, Laya
 
 SAMPLES = Path(__file__).resolve().parents[2] / "data" / "samples"
 NEUTRAL = SAMPLES / "versus_djin_vs_kaz_l3_neutral.zip"
@@ -205,6 +207,174 @@ class BaselineTest(unittest.TestCase):
                                ("val", [self.line("sidestep_dir", "left")]), ("test", [self.line("sidestep_dir", "none")])):
                 (Path(tmp) / f"{name}.jsonl").write_text("".join(json.dumps(x) + "\n" for x in part), encoding="utf-8")
             self.assertEqual(main(["baseline", "--dir", tmp]), 0)
+
+
+class FakeModel:
+    def __init__(self):
+        self.epoch = -1
+        self.mode = "eval"
+
+    def to(self, device):
+        return self
+
+    def train(self):
+        self.mode = "train"
+        return self
+
+
+class FakeTrainer:
+    class TrainConfig:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+    def __init__(self, quality=(0.5, 1.0, 0.0)):
+        self.quality = quality
+        self.saved = []
+
+    def resolve_device(self, device):
+        return "cpu"
+
+    def load_checkpoint(self, path):
+        return FakeModel(), object(), {"max_len": 64, "head_max_len": 32, "temperature_by_options": {"noul:2": 1.0}}
+
+    def items_from_rows(self, tok, rows, max_len, head_max_len):
+        return [{"state": r["state"], "q": q, "target": [0.0, 1.0] if v else [1.0, 0.0]}
+                for r in rows for q, v in r["expected"].items()], {}
+
+    def train_model(self, model, tok, items, config, device, max_len, head_max_len, on_epoch_end=None):
+        self.config = config
+        for epoch in range(config.epochs):
+            model.epoch = epoch
+            on_epoch_end(epoch, 1.0 / (epoch + 1))
+
+    def calibration_records(self, model, tok, items, device, max_len, head_max_len, batch_size=16):
+        q = self.quality[min(model.epoch, len(self.quality) - 1)]
+        out = []
+        for it in items:
+            truth = it["target"][1]
+            p = 0.5 if q == 0.5 else (truth if q == 1.0 else 1.0 - truth)
+            out.append((2, [0.0, 0.0] if p == 0.5 else ([0.0, 9.0] if p else [9.0, 0.0]), it["target"], 2))
+        return out
+
+    def save_checkpoint(self, model, tok, cfg, path):
+        Path(path).mkdir(parents=True, exist_ok=True)
+        (Path(path) / "model.safetensors").write_text(str(model.epoch), encoding="utf-8")
+        (Path(path) / "rl_agent_config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        self.saved.append(model.epoch)
+
+
+def split_lines():
+    rows = []
+    for k, text in enumerate(texts(24)):
+        situation, action = (("sidestep_dir", ("none", "right")[k // 2 % 2]) if k % 2 else
+                             ("after_block:df1", ("press", "block_high", "ss_right")[k % 3]))
+        rows.append(pair(text, {"situation": situation, "action": action}))
+    rows.append(pair(texts(25)[24], {"situation": "throw_break", "action": "break_1"}))
+    return rows
+
+
+def write_lines(path, lines):
+    Path(path).write_text("".join(json.dumps(x) + "\n" for x in lines), encoding="utf-8")
+    return path
+
+
+class TrainEvalTest(unittest.TestCase):
+    def test_pick_action_inverts_the_yes_no_labels(self):
+        prior = {"after_block": Counter({"press": 5, "throw": 1, "ss_right": 3, "ss_left": 1}), "sidestep_dir": Counter({"none": 9, "right": 2}),
+                 "low_defense": Counter({"hit": 9, "blocked": 1}), "throw_break": Counter({"none": 4, "break_1": 2})}
+        yes = {"p": 0.95}
+        no = {"p": 0.05}
+        self.assertEqual(pick_action("after_block", {"opp_presses": yes, "opp_ducks": no, "opp_steps": no, "opp_passive": no}, prior), "press")
+        self.assertEqual(pick_action("after_block", {"opp_presses": no, "opp_ducks": no, "opp_steps": yes, "opp_passive": no}, prior), "ss_right")
+        self.assertEqual(pick_action("sidestep_dir", {"opp_steps": yes}, prior), "right")
+        self.assertEqual(pick_action("sidestep_dir", {"opp_steps": no}, prior), "none")
+        self.assertEqual(pick_action("low_defense", {"opp_ducks": yes}, prior), "blocked")
+        self.assertEqual(pick_action("throw_break", {}, prior), "none")
+        self.assertEqual(pick_action("sidestep_dir", {"opp_steps": yes}, {"sidestep_dir": Counter({"left": 3, "right": 1})}), "left")
+        self.assertEqual(split_prompt(split_lines()[0]["prompt"])[1], "after_block")
+        rows = yes_no_rows(split_lines())
+        self.assertEqual(len(rows), 24)
+        self.assertEqual(set(rows[0]["questions"]), set(QUESTIONS))
+        self.assertEqual(rows[1]["expected"], {"opp_steps": False})
+
+    def test_train_keeps_the_epoch_with_the_best_val_balanced_accuracy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            base = tmp / "base"
+            base.mkdir()
+            lines = split_lines()
+            train = write_lines(tmp / "train.jsonl", lines)
+            val = write_lines(tmp / "val.jsonl", lines[:12])
+            trainer = FakeTrainer()
+            logs = []
+            meta = train_laya(train, val, tmp / "laya-ft", str(base), epochs=3, batch=32, micro=8, device="cpu", trainer=trainer,
+                              log=lambda m, **_: logs.append(m))
+            self.assertEqual([r["epoch"] for r in meta["epochs"]], [1, 2, 3])
+            self.assertEqual(meta["best_epoch"], 2)
+            self.assertEqual(meta["best"]["val_balanced"], 1.0)
+            self.assertLess(meta["epochs"][2]["val_balanced"], 1.0)
+            self.assertEqual((tmp / "laya-ft" / "model.safetensors").read_text(encoding="utf-8"), "1")
+            self.assertFalse((tmp / "laya-ft.tmp").exists())
+            self.assertEqual((trainer.config.micro_batch, trainer.config.grad_accum), (8, 4))
+            self.assertEqual(json.loads((tmp / "laya-ft" / TRAIN_META).read_text(encoding="utf-8"))["best_epoch"], 2)
+            self.assertEqual(sum("val balanced" in m for m in logs), 3)
+
+    def test_eval_scores_base_and_finetuned_and_writes_the_eval_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            lines = split_lines()
+            write_lines(tmp / "train.jsonl", lines)
+            write_lines(tmp / "test.jsonl", lines)
+            truth = {split_prompt(x["prompt"])[0]: (split_prompt(x["prompt"])[1], x["label"]) for x in lines}
+
+            def oracle(text, key):
+                fam, label = truth[text]
+                want = labels(f"{fam}:any" if fam == "after_block" else fam, label)
+                return 0.5 if key not in want else float(want[key])
+
+            ft_dir = tmp / "laya-ft"
+            ft_dir.mkdir()
+            (ft_dir / TRAIN_META).write_text(json.dumps({"trained_at": "2026-10-18T11:00:00Z"}), encoding="utf-8")
+            out = tmp / "eval" / "s.json"
+            record = run_eval(tmp, Laya(agent=FakeAgent(answer=0.5)), Laya(agent=FakeAgent(answer=oracle)),
+                              {"base": "base", "finetuned": str(ft_dir)}, out, "s", log=lambda *_, **__: None)
+            saved = json.loads(out.read_text(encoding="utf-8"))
+            self.assertEqual(saved, record)
+            for key in ("before", "after", "session_id", "model", "base", "finetuned", "baseline", "per_situation", "train_lines",
+                        "test_lines", "trained_at"):
+                self.assertIn(key, saved)
+            self.assertEqual(saved["model"], "laya")
+            self.assertEqual(saved["trained_at"], "2026-10-18T11:00:00Z")
+            self.assertTrue(0 <= saved["before"] <= 1 and 0 <= saved["after"] <= 1)
+            self.assertEqual(saved["finetuned"]["accuracy"], 1.0)
+            self.assertEqual(saved["per_situation"]["sidestep_dir"]["finetuned"]["balanced_accuracy"], 1.0)
+            self.assertEqual(saved["per_situation"]["throw_break"]["n"], 1)
+            self.assertEqual(saved["base"]["accuracy"], saved["baseline"]["accuracy"])
+            self.assertEqual(saved["test_lines"], len(lines))
+
+    def test_startup_prefers_the_finetuned_weights(self):
+        from unittest import mock
+        from game import laya as laya_mod
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict("os.environ", {"DATA_DIR": tmp}):
+            self.assertEqual(laya_mod.resolve_model(), (laya_mod.MODEL, "base"))
+            ft = Path(tmp) / "models" / "laya-ft"
+            ft.mkdir(parents=True)
+            (ft / "model.safetensors").write_text("x")
+            (ft / "rl_agent_config.json").write_text("{}")
+            self.assertEqual(laya_mod.resolve_model(), (str(ft), "fine-tuned"))
+            logs = []
+            got = laya_mod.startup(log=lambda m, **_: logs.append(m), rounds=5, factory=lambda model: Laya(model, agent=FakeAgent(answer=0.5)))
+            self.assertIsNotNone(got)
+            self.assertIn("fine-tuned", logs[0])
+            self.assertIn("p50", logs[1])
+            self.assertIn("p95", logs[1])
+
+            def broken(model):
+                raise SystemExit("laya missing")
+
+            logs.clear()
+            self.assertIsNone(laya_mod.startup(log=lambda m, **_: logs.append(m), factory=broken))
+            self.assertIn("plays without it", logs[-1])
 
 
 class ExportTest(unittest.TestCase):

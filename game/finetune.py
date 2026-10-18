@@ -3,7 +3,9 @@ import json
 import math
 import random
 import re
+import shutil
 import sys
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -47,6 +49,11 @@ MAX_VARIANTS = 8
 MAX_SHARE = 0.65
 POOL = 12
 SEED = 0
+FT_EPOCHS = 5
+FT_BATCH = 32
+FT_MICRO = 16
+FT_LAYERS = 8
+TRAIN_META = "kumite_finetune.json"
 SPLITS = ("train", "val", "test")
 OPTIONS = {
     "after_block": ("press", "throw", "block_high", "block_low", "duck", "ss_left", "ss_right", "backdash", "none"),
@@ -295,42 +302,324 @@ def load_dataset(path):
     return rows
 
 
-def cmd_eval(args):
-    from game.laya import Laya
-    rows = load_dataset(args.dataset)
-    model = Laya(args.model, args.device)
-    model.warmup()
-    print(f"loaded {args.model} on {model.device or 'auto'} in {model.load_seconds:.1f} s, warm-up {model.warmup_seconds:.2f} s")
-    result = evaluate(model, rows, args.threshold)
-    print_eval(f"{args.model} on the held-out session", result, majority_baseline(rows))
-    return 0
-
-
 def cmd_bench(args):
-    from game.laya import Laya
-    rows = load_dataset(args.dataset)
-    model = Laya(args.model, args.device)
-    stats = model.bench([r["text"] for r in rows], args.rounds)
-    print(f"loaded {args.model} on {model.device or 'auto'} in {model.load_seconds:.1f} s, warm-up {model.warmup_seconds:.2f} s")
+    from game.laya import WARMUP_TEXT, Laya, resolve_model
+    model = args.model or resolve_model()[0]
+    test = Path(args.dataset) if args.dataset else data_dir() / "finetune" / "test.jsonl"
+    texts = [split_prompt(line["prompt"])[0] for line in read_rows(test)] if test.exists() else [WARMUP_TEXT]
+    laya = Laya(model, args.device)
+    stats = laya.bench(texts, args.rounds)
+    print(f"loaded {model} on {laya.device or 'auto'} in {laya.load_seconds:.1f} s, warm-up {laya.warmup_seconds:.2f} s")
     print(f"{len(QUESTIONS)}-question batch, {stats['n']} calls: p50 {stats['p50_ms']} ms, p95 {stats['p95_ms']} ms, mean {stats['mean_ms']} ms "
           f"(budget: 4 frames = 66.7 ms)")
     return 0
 
 
+def split_prompt(prompt):
+    text, rest = prompt.rsplit("\nOptions: ", 1)
+    return text, OPTION_FAMILIES[rest.split(".\n", 1)[0]]
+
+
+def situation_key(fam):
+    return f"{fam}:any" if fam == "after_block" else fam
+
+
+def question_specs(keys=QUESTIONS):
+    return {q: {"type": "noul", "instructions": QUESTIONS[q]} for q in QUESTIONS if q in keys}
+
+
+def yes_no_rows(lines):
+    rows = []
+    for line in lines:
+        text, fam = split_prompt(line["prompt"])
+        want = labels(situation_key(fam), line["label"])
+        if want:
+            rows.append({"state": text, "questions": question_specs(want), "expected": {q: bool(want[q]) for q in question_specs(want)}})
+    return rows
+
+
+def pick_action(fam, answers, prior):
+    counts = prior.get(fam) or Counter()
+    best, best_key = None, None
+    for i, action in enumerate(OPTIONS[fam]):
+        want = labels(situation_key(fam), action)
+        ps = [(answers.get(q) or {}).get("p") for q in want]
+        if not want or any(p is None for p in ps):
+            continue
+        ll = sum(math.log(max(p if v else 1.0 - p, 1e-6)) for p, v in zip(ps, want.values()))
+        key = (round(ll, 9), counts[action], -i)
+        if best_key is None or key > best_key:
+            best, best_key = action, key
+    if best is not None:
+        return best
+    return top_share(counts)[0] if counts else OPTIONS[fam][0]
+
+
+def score_predictions(lines, preds):
+    by_class = {}
+    for line, pred in zip(lines, preds):
+        hits = by_class.setdefault((line_family(line), line["label"]), [0, 0])
+        hits[0] += pred == line["label"]
+        hits[1] += 1
+
+    def summary(classes):
+        n = sum(v[1] for v in classes)
+        return {"n": n, "accuracy": round(sum(v[0] for v in classes) / n, 4),
+                "balanced": round(sum(v[0] / v[1] for v in classes) / len(classes), 4)}
+
+    out = {}
+    for fam in OPTIONS:
+        classes = [v for (f, _), v in by_class.items() if f == fam]
+        if classes:
+            out[fam] = summary(classes)
+    if by_class:
+        out["overall"] = summary(list(by_class.values()))
+    return out
+
+
+def noul_p(logits, temperature):
+    z = [float(v) / temperature for v in logits]
+    return 1.0 / (1.0 + math.exp(max(min(z[0] - z[1], 60.0), -60.0)))
+
+
+def val_items(trainer, tok, lines, max_len, head_max_len):
+    items, spans = [], []
+    for line in lines:
+        rows = yes_no_rows([line])
+        if not rows:
+            spans.append(None)
+            continue
+        got, _ = trainer.items_from_rows(tok, rows, max_len, head_max_len)
+        keys = list(rows[0]["questions"])
+        spans.append((len(items), keys) if len(got) == len(keys) else None)
+        if len(got) == len(keys):
+            items += got
+    return items, spans
+
+
+def val_predictions(lines, spans, records, temperature, prior):
+    preds = []
+    for line, span in zip(lines, spans):
+        answers = {}
+        if span is not None:
+            start, keys = span
+            answers = {q: {"p": noul_p(records[start + k][1], temperature)} for k, q in enumerate(keys)}
+        preds.append(pick_action(line_family(line), answers, prior))
+    return preds
+
+
+def base_checkpoint(model):
+    from game.laya import hub_snapshot
+    path = Path(model)
+    if path.is_dir():
+        return path
+    snap = hub_snapshot(model)
+    if snap is not None:
+        return snap
+    from huggingface_hub import snapshot_download
+    return Path(snapshot_download(model, allow_patterns=["model.safetensors", "rl_agent_config.json", "encoder/*", "tokenizer/*"]))
+
+
+def encoder_layers(model):
+    encoder = model.encoder
+    for path in (("layers",), ("encoder", "layer"), ("layer",)):
+        node = encoder
+        for name in path:
+            node = getattr(node, name, None)
+        if node is not None:
+            return list(node)
+    raise SystemExit("cannot find the encoder layers to freeze; run without --train-layers")
+
+
+def freeze_lower(model, keep):
+    layers = encoder_layers(model)
+    for p in model.encoder.parameters():
+        p.requires_grad_(False)
+    for layer in layers[max(0, len(layers) - keep):]:
+        for p in layer.parameters():
+            p.requires_grad_(True)
+    for name, p in model.encoder.named_parameters():
+        if "final_norm" in name or name.startswith("norm"):
+            p.requires_grad_(True)
+    return len(layers)
+
+
+def replace_dir(src, dst):
+    dst = Path(dst)
+    if dst.exists():
+        shutil.rmtree(dst)
+    Path(src).rename(dst)
+
+
+def train_laya(train_path, val_path, out_dir, base=None, epochs=FT_EPOCHS, batch=FT_BATCH, micro=FT_MICRO, device="cuda",
+               seed=SEED, train_layers=None, trainer=None, log=print):
+    from game.laya import MODEL
+    if trainer is None:
+        import laya.train as trainer
+    base = base or MODEL
+    out_dir = Path(out_dir)
+    train_lines, val_lines = read_rows(train_path), read_rows(val_path)
+    if not train_lines or not val_lines:
+        raise SystemExit(f"need both {train_path} and {val_path}; run python -m game.finetune export first")
+    base_dir = base_checkpoint(base)
+    dev = trainer.resolve_device(device)
+    started = time.perf_counter()
+    model, tok, cfg = trainer.load_checkpoint(str(base_dir))
+    model.to(dev)
+    max_len, head_max_len = cfg.get("max_len", 512), cfg.get("head_max_len", 192)
+    items, skipped = trainer.items_from_rows(tok, yes_no_rows(train_lines), max_len, head_max_len)
+    if not items:
+        raise SystemExit(f"{train_path} produced no yes/no training items (skipped {skipped})")
+    total_layers = freeze_lower(model, train_layers) if train_layers else None
+    v_items, spans = val_items(trainer, tok, val_lines, max_len, head_max_len)
+    prior = label_counts(train_lines)
+    temperature = float((cfg.get("temperature_by_options") or {}).get("noul:2", 1.0))
+    micro = max(1, min(micro, batch))
+    config = trainer.TrainConfig(epochs=epochs, micro_batch=micro, grad_accum=max(1, batch // micro), seed=seed, log_every=0)
+    layers_note = f", top {train_layers}/{total_layers} encoder layers trainable" if total_layers is not None else ""
+    log(f"base {base_dir} on {dev}: {len(train_lines)} train lines -> {len(items)} yes/no items, {len(val_lines)} val lines; "
+        f"batch {micro}x{config.grad_accum}, up to {epochs} epochs{layers_note}; loaded in {time.perf_counter() - started:.0f} s", flush=True)
+    tmp = out_dir.with_name(out_dir.name + ".tmp")
+    history, best = [], {}
+    save_cfg = dict(cfg, max_len=max_len, head_max_len=head_max_len)
+
+    def on_epoch(epoch, loss):
+        records = trainer.calibration_records(model, tok, v_items, dev, max_len, head_max_len, batch_size=batch) if v_items else []
+        model.train()
+        result = score_predictions(val_lines, val_predictions(val_lines, spans, records, temperature, prior))["overall"]
+        row = {"epoch": epoch + 1, "train_loss": round(float(loss), 4), "val_accuracy": result["accuracy"],
+               "val_balanced": result["balanced"], "seconds": round(time.perf_counter() - started, 1)}
+        history.append(row)
+        improved = not best or (row["val_balanced"], row["val_accuracy"]) > (best["val_balanced"], best["val_accuracy"])
+        if improved:
+            best.clear()
+            best.update(row)
+            if tmp.exists():
+                shutil.rmtree(tmp)
+            trainer.save_checkpoint(model, tok, save_cfg, str(tmp))
+        log(f"epoch {row['epoch']}/{epochs}: train loss {row['train_loss']:.4f}, val accuracy {row['val_accuracy']:.1%}, "
+            f"val balanced {row['val_balanced']:.1%}{'  (best so far, saved)' if improved else ''}  [{row['seconds']:.0f} s]", flush=True)
+
+    trainer.train_model(model, tok, items, config, dev, max_len, head_max_len, on_epoch_end=on_epoch)
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    replace_dir(tmp, out_dir)
+    meta = {"base": base, "base_dir": str(base_dir), "best_epoch": best["epoch"], "best": best, "epochs": history,
+            "train_lines": len(train_lines), "train_items": len(items), "val_lines": len(val_lines), "batch": batch,
+            "micro_batch": micro, "train_layers": train_layers, "device": str(dev), "seed": seed,
+            "trained_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "seconds": round(time.perf_counter() - started, 1)}
+    (out_dir / TRAIN_META).write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return meta
+
+
 def cmd_train(args):
-    from laya.train import TrainConfig, finetune
-    base = Path(args.base)
-    if not base.is_dir():
-        from huggingface_hub import snapshot_download
-        print(f"downloading {args.base} to {args.local_base}")
-        base = Path(snapshot_download(args.base, local_dir=args.local_base))
-    train_path = Path(args.train or data_dir() / "finetune" / "train.jsonl")
-    held_path = Path(args.heldout or data_dir() / "finetune" / "heldout.jsonl")
-    config = TrainConfig(epochs=args.epochs, micro_batch=args.micro_batch, grad_accum=args.grad_accum, seed=args.seed,
-                         eval_data=str(held_path) if held_path.exists() else None)
-    summary = finetune(str(train_path), str(base), args.out, config, device=args.device or "auto")
-    print(json.dumps(summary, indent=2, default=str))
-    print(f"fine-tuned checkpoint in {args.out}; evaluate with: python -m game.finetune eval --model {args.out}")
+    folder = data_dir() / "finetune"
+    out = Path(args.out) if args.out else data_dir() / "models" / "laya-ft"
+    meta = train_laya(args.train or folder / "train.jsonl", args.val or folder / "val.jsonl", out, args.base, args.epochs,
+                      args.batch, args.micro_batch, args.device, args.seed, args.train_layers)
+    best = meta["best"]
+    print(f"best epoch {best['epoch']}: val accuracy {best['val_accuracy']:.1%}, val balanced {best['val_balanced']:.1%}; "
+          f"saved to {out} in {meta['seconds'] / 60:.1f} min; evaluate with: python -m game.finetune eval")
+    return 0
+
+
+def test_session_id(prefix=TEST_SESSION):
+    for folder in ("recordings", "sessions"):
+        found = sorted((data_dir() / folder).glob(f"{prefix}*"))
+        if found:
+            return found[0].name.split(".")[0]
+    return prefix
+
+
+def evaluate_split(laya, lines, prior, batch_size=FT_BATCH):
+    answers = laya.predict_batch([split_prompt(line["prompt"])[0] for line in lines], None, batch_size)
+    preds = [pick_action(line_family(line), a, prior) for line, a in zip(lines, answers)]
+    return score_predictions(lines, preds), preds
+
+
+def eval_record(sid, results, train_lines, test_lines, trained_at, names):
+    def flat(result):
+        overall = result.get("overall", {})
+        return {"n": overall.get("n"), "accuracy": overall.get("accuracy"), "balanced_accuracy": overall.get("balanced")}
+
+    per = {}
+    counts = label_counts(test_lines)
+    for fam in OPTIONS:
+        if fam in counts:
+            per[fam] = {"n": sum(counts[fam].values()), "labels": dict(counts[fam].most_common())}
+            for key, result in results.items():
+                row = result.get(fam, {})
+                per[fam][key] = {"accuracy": row.get("accuracy"), "balanced_accuracy": row.get("balanced")}
+    return {
+        "before": results["base"]["overall"]["balanced"],
+        "after": results["finetuned"]["overall"]["balanced"],
+        "metric": "balanced_accuracy",
+        "session_id": sid,
+        "model": "laya",
+        "base": dict(flat(results["base"]), model=names["base"]),
+        "finetuned": dict(flat(results["finetuned"]), model=names["finetuned"]),
+        "baseline": dict(flat(results["baseline"]), model="majority class from train.jsonl"),
+        "per_situation": per,
+        "answer_mapping": "4 yes/no questions -> the situation's action whose yes/no labels are most likely; ties go to the "
+                          "action more common in train; throw_break has no question and falls back to the train majority",
+        "train_lines": len(train_lines),
+        "test_lines": len(test_lines),
+        "trained_at": trained_at,
+        "evaluated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+
+def write_atomic(path, record):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    return path
+
+
+def eval_table(results, log=print):
+    cols = ("baseline", "base", "finetuned")
+    log(f"  {'situation':<13} {'n':>3}  " + "  ".join(f"{c + ' acc':>13} {c + ' bal':>13}" for c in cols))
+    for key in list(OPTIONS) + ["overall"]:
+        if key not in results["baseline"]:
+            continue
+        cells = "  ".join(f"{results[c].get(key, {}).get('accuracy', 0):>13.1%} {results[c].get(key, {}).get('balanced', 0):>13.1%}"
+                          for c in cols)
+        log(f"  {key:<13} {results['baseline'][key]['n']:>3}  {cells}")
+
+
+def run_eval(folder, base_laya, ft_laya, names, out_path, sid, log=print):
+    lines = {name: read_rows(Path(folder) / f"{name}.jsonl") for name in ("train", "test")}
+    if not lines["train"] or not lines["test"]:
+        raise SystemExit(f"need train.jsonl and test.jsonl in {folder}; run python -m game.finetune export first")
+    prior = label_counts(lines["train"])
+    majority = majority_labels(lines["train"])
+    results = {"baseline": score_predictions(lines["test"], [majority.get(line_family(x)) for x in lines["test"]])}
+    for key, laya in (("base", base_laya), ("finetuned", ft_laya)):
+        laya.load()
+        results[key], _ = evaluate_split(laya, lines["test"], prior)
+        laya.release()
+    meta_path = Path(names["finetuned"]) / TRAIN_META
+    trained_at = json.loads(meta_path.read_text(encoding="utf-8")).get("trained_at") if meta_path.exists() else None
+    record = eval_record(sid, results, lines["train"], lines["test"], trained_at, names)
+    write_atomic(out_path, record)
+    log(f"test session {sid}: {len(lines['test'])} lines; base {names['base']}, fine-tuned {names['finetuned']}")
+    eval_table(results, log)
+    log("throw_break has no yes/no question, so both models answer with the train majority there")
+    log(f"wrote {out_path} (before {record['before']:.1%} -> after {record['after']:.1%} balanced accuracy)")
+    return record
+
+
+def cmd_eval(args):
+    from game.laya import MODEL, Laya, finetuned_dir, has_weights
+    folder = Path(args.dir) if args.dir else data_dir() / "finetune"
+    ft = Path(args.model) if args.model else finetuned_dir()
+    if not has_weights(ft):
+        raise SystemExit(f"no fine-tuned weights in {ft}; run python -m game.finetune train first")
+    base = args.base or MODEL
+    sid = test_session_id()
+    out = Path(args.out) if args.out else data_dir() / "eval" / f"{sid}.json"
+    run_eval(folder, Laya(base, args.device), Laya(str(ft), args.device), {"base": base, "finetuned": str(ft)}, out, sid)
     return 0
 
 
@@ -701,26 +990,28 @@ def main(argv=None):
     e.add_argument("--out-dir", help="default DATA_DIR/finetune")
     bl = sub.add_parser("baseline", help="majority-class accuracy and balanced accuracy on the exported val and test splits")
     bl.add_argument("--dir", help="folder with train/val/test.jsonl; default DATA_DIR/finetune")
-    for name, help_ in (("eval", "accuracy of a Laya checkpoint on the held-out session"), ("bench", "p50/p95 latency of a 4-question batch")):
-        p = sub.add_parser(name, help=help_)
-        p.add_argument("--model", default="convaiinnovations/laya", help="HF repo id or local checkpoint directory")
-        p.add_argument("--device", help="cuda, cpu; default Laya's own order (cuda first)")
-        p.add_argument("--dataset", help=f"default DATA_DIR/finetune/{DEFAULT_OUT}")
-        if name == "eval":
-            p.add_argument("--threshold", type=float, default=0.5)
-        else:
-            p.add_argument("--rounds", type=int, default=50)
-    t = sub.add_parser("train", help="fine-tune on the laptop with laya.train.finetune (fallback when Veri is unavailable)")
-    t.add_argument("--base", default="convaiinnovations/laya", help="HF repo id or local checkpoint directory")
-    t.add_argument("--local-base", default=str(data_dir() / "finetune" / "laya_base"), help="where a downloaded base checkpoint is kept")
-    t.add_argument("--out", default=str(data_dir() / "finetune" / "laya_tekken"))
-    t.add_argument("--train")
-    t.add_argument("--heldout")
-    t.add_argument("--device")
-    t.add_argument("--epochs", type=int, default=4)
-    t.add_argument("--micro-batch", type=int, default=4)
-    t.add_argument("--grad-accum", type=int, default=8)
-    t.add_argument("--seed", type=int, default=0)
+    ev = sub.add_parser("eval", help="base vs fine-tuned Laya on test.jsonl next to the majority baseline; writes DATA_DIR/eval/<session>.json")
+    ev.add_argument("--dir", help="folder with train/test.jsonl; default DATA_DIR/finetune")
+    ev.add_argument("--base", help="base model; default convaiinnovations/laya")
+    ev.add_argument("--model", help="fine-tuned checkpoint; default DATA_DIR/models/laya-ft")
+    ev.add_argument("--device", help="cuda, cpu; default Laya's own order (cuda first)")
+    ev.add_argument("--out", help="default DATA_DIR/eval/<test session id>.json")
+    p = sub.add_parser("bench", help="p50/p95 latency of a 4-question batch")
+    p.add_argument("--model", help="default DATA_DIR/models/laya-ft when present, else convaiinnovations/laya")
+    p.add_argument("--device", help="cuda, cpu; default Laya's own order (cuda first)")
+    p.add_argument("--dataset", help="prompt/label jsonl whose state texts are benchmarked; default DATA_DIR/finetune/test.jsonl")
+    p.add_argument("--rounds", type=int, default=50)
+    t = sub.add_parser("train", help="fine-tune Laya's 4 yes/no questions on the exported train.jsonl, early-stopped on val.jsonl")
+    t.add_argument("--base", help="HF repo id or local checkpoint directory; default convaiinnovations/laya")
+    t.add_argument("--out", help="default DATA_DIR/models/laya-ft")
+    t.add_argument("--train", help="default DATA_DIR/finetune/train.jsonl")
+    t.add_argument("--val", help="default DATA_DIR/finetune/val.jsonl")
+    t.add_argument("--device", default="cuda")
+    t.add_argument("--epochs", type=int, default=FT_EPOCHS)
+    t.add_argument("--batch", type=int, default=FT_BATCH)
+    t.add_argument("--micro-batch", type=int, default=FT_MICRO, help="lower this (batch stays the same via accumulation) if CUDA runs out of memory")
+    t.add_argument("--train-layers", type=int, default=FT_LAYERS, help="train only the top N encoder layers plus the head; 0 trains all")
+    t.add_argument("--seed", type=int, default=SEED)
     args = parser.parse_args(argv)
     return {"build": cmd_build, "export": cmd_export, "baseline": cmd_baseline, "eval": cmd_eval, "bench": cmd_bench, "train": cmd_train}[args.command](args)
 
