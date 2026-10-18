@@ -1,12 +1,12 @@
 # Replay and round coach
 
-Track C service: `GET /health`, `POST /coach/round`, `POST /analyze/{session_id}`
-and `GET /reports/{session_id}` on port 8766.
+Track C service: `GET /health`, `POST /coach/round`, `POST /coach/chat`,
+`POST /analyze/{session_id}` and `GET /reports/{session_id}` on port 8766.
 The request is validated directly against the frozen round-summary JSON schema.
 Responses contain only `text` and `severity`, with 1–3 sentences and at most
 20 words to fit the between-round voice window. This is stricter than the frozen
 contract's under-40-word limit. Post-set reports use Jev to rank character-generated candidates when
-available. Chat is not implemented.
+available. Post-set chat returns evidence-grounded explanations and round/frame citations.
 
 ## Windows setup
 
@@ -335,16 +335,109 @@ Invoke-RestMethod "http://127.0.0.1:8766/reports/$sessionId"
 ```
 
 Expect mastery only for situations present in the latest valid snapshot, with
-source evidence. The live sample was absent from main at `843dcb1`; this
-follow-up was verified offline against PR #8's explicitly synthetic DATA_DIR
-bundle (35 human decisions, round-3 mastery, and three round summaries), plus
-unit tests. Synthetic values are not measured player learning. The real
-`live_learning` recording still needs an integration check after it lands.
+source evidence. Earlier integration used PR #8's explicitly synthetic DATA_DIR
+bundle (35 human decisions, round-3 mastery, and three round summaries).
+Synthetic values are not measured player learning. Main at `a360f8d` also
+contains the real live-learning set `2026-10-18T05-14-03_sahil_djin_vs_kaz`.
+Offline integration with `DATA_DIR=./data/samples/live_learning` verified its
+58 human decisions, four summaries, result `loss 1-3`, and round-4/line-4 mastery:
+sidestep and low defense `0.1714`, throw breaking `0.543`. These are recorded
+learner estimates. The live low-defense habit was not fixed. No live Jev pass
+was run on this newer sample.
 
-## Coach chat handoff
+## Coach chat
 
-`POST /coach/chat` is not implemented yet. The planned app boundary accepts
-history entries with `role: user` or `role: coach`, each containing `text`, as
-allowed by `contracts/api.md`. When connecting model history, `coach` maps to
-the provider's `assistant` role. The round-tip word limit applies only to
-`POST /coach/round`; it does not define the future chat-answer length.
+`POST /coach/chat` accepts `{session_id, player, message, history}` and returns
+only `{text, citations: [{frame, round}]}`, following `contracts/api.md`.
+History entries use `role: user` or `role: coach`, with `text`. The SDK boundary
+maps `coach` to `assistant`. The client supplies earlier messages for the selected
+set; the service stores no conversation state. History helps interpret follow-up
+questions but is never treated as factual game evidence. `player` is display
+context, not authentication or proof of who appears in the recording.
+
+Chat reads the extracted session recording and any saved contract-valid report.
+It never triggers analysis or Jev implicitly. Missing reports still permit
+recording and character-data questions; absent scores are identified. Missing
+recordings return 404, invalid recordings return 422, and malformed chat requests
+return 422. Synthetic sessions are labeled in every answer. Known records with
+non-finite numeric values are rejected.
+
+The read-only tools are `get_habits`, `get_mastery`, `find_moments`,
+`get_state_at`, `get_frame_data`, `list_punishers`, and `get_learning_curve`.
+All are scoped to the selected set. Original decision labels supply actions;
+bot choices and input buttons do not supply human intent. Counts use decisions
+with exact, unambiguous human context. Stale or conflicting snapshots are marked
+uncertain; exact-state queries do not quietly choose a nearby or conflicting
+snapshot. Frame counters reset each round, so citations contain both values.
+Health values are not avoidable damage. Saved Jev preferences must agree with
+the original decision and current verified option menu; probabilities retain
+their preference meaning and candidate limitations.
+
+Frame-data answers name only uniquely verified moves belonging to characters
+in the recording. Hypothetical punishers come from the human's character data
+and explicitly leave range, timing and string completion unverified. Mastery
+comes from validated local learning snapshots. Learning/mastery tools can filter
+by situation, so a low-blocking question does not return unrelated estimates.
+`get_learning_curve(session)`
+calls `GET /learning/{session}` at `KUMITE_ANALYTICS_URL` (default
+`http://127.0.0.1:8767`), validates the frozen metrics schema/session, and uses
+only recorded rounds. Analytics has a 1.2-second overall deadline, no redirects,
+and a local-estimate fallback. Learning or frame-data facts without recorded
+frame evidence have empty citations; frame numbers are never invented to fill
+the response. Learner estimates do not prove improvement.
+
+In `KUMITE_COACH_MODE=auto` with `OPENAI_API_KEY`, chat uses the installed
+OpenAI SDK's [Responses function-calling interface](https://developers.openai.com/api/docs/guides/function-calling)
+with `OPENAI_CHAT_MODEL` (default: the configured coach model). The agent can
+make up to three model calls and eight tool calls, with a four-second per-call
+HTTP timeout, no retries, and an eight-second overall provider deadline.
+It selects up to three server-prepared fact IDs; the service renders those
+verified sentences and citations. Free-form model prose, unknown IDs, refusals,
+invalid tool arguments, API errors and timeouts cannot introduce new claims or
+move names. Provider failure uses deterministic local retrieval. This trades
+unrestricted prose for bounded, auditable answers.
+
+`KUMITE_COACH_MODE=local` disables chat model calls as well as round-tip model
+selection. Learning questions can still read the configured analytics service.
+Inputs allow a 4,000-character question and up to 100 history entries of 4,000
+characters; the model sees only the last eight entries, each limited to 2,000
+characters. Replies contain at most three complete evidence facts and 2,400
+characters; oversized facts are replaced with a clarification rather than cut
+mid-claim. This post-set budget is separate from the 20-word/one-second round-tip
+budget. No new packages are required, and existing round/report routes remain
+unchanged.
+
+Run from the repository root with the already extracted neutral sample:
+
+```powershell
+$env:DATA_DIR = './data'
+$env:KUMITE_COACH_MODE = 'local'
+$env:KUMITE_JEV_MODE = 'local'
+.\replay\.venv\Scripts\python.exe -m uvicorn replay.main:app --host 127.0.0.1 --port 8766
+```
+
+In another terminal:
+
+```powershell
+$question = @{
+    session_id = '2026-10-18T01-24-57_sahil_djin_vs_kaz'
+    player = 'sahil'
+    message = 'Show my low-defense decisions'
+    history = @()
+} | ConvertTo-Json -Depth 6
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8766/coach/chat -ContentType 'application/json' -Body $question
+.\replay\.venv\Scripts\python.exe -m pytest replay/tests -q
+.\replay\.venv\Scripts\python.exe contracts/validate.py
+```
+
+Expect a factual answer about the logged human decisions and citations to real
+round/frame coordinates. Try `What do I do after his b4?` for verified move data,
+or `Have I improved?` for learning availability. Local answers have no model
+charges; analytics failures clearly mark the learning curve unavailable. Set
+`KUMITE_COACH_MODE=auto` and restart for optional model-guided retrieval. Automated
+checks use mocked Responses/analytics transports; paid live-model and ElevenLabs
+voice verification are separate integration checks. Local chat was also checked
+against the real live-learning sample: recorded low-defense decisions cite
+round 2/frame 462 and round 2/frame 1225, and low-blocking/throw-breaking questions
+return the appropriate latest estimates with no invented frame citations or
+claims of improvement.
