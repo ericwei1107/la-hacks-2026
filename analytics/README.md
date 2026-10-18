@@ -6,6 +6,24 @@ The real analytics service serves stats, learning metrics and per-session trends
 
 `data/samples/live_learning/` is a real L3 set, session `2026-10-18T05-14-03_sahil_djin_vs_kaz`. Set `DATA_DIR` to that folder. Detection/exploitation is measured; low-defense mastery is absent. Recorded accuracy is 0.60 → 0.7333 → 0.9048 → 1.00, and `after_block:any` has a fixed event followed by regression. Fine-tune values remain null. See [local verification and exact run commands](LIVE_LEARNING_VERIFICATION.md); approved cloud ingestion and aggregate/API parity are verified (four rounds imported; repeat imported zero).
 
+## Internal insights and demo export
+
+```sh
+.venv/bin/python -m analytics.insights 2026-10-18T05-14-03_sahil_djin_vs_kaz --data-dir ./data/samples/live_learning --output-dir ./data/analytics
+```
+
+Expect deterministic JSON/Markdown with source fingerprints, original-line citations, completed-round counts **0/16 lows, 1/4 throws, 0/6 estimated punishes**, low-defense focus, first/current habit history and null fine-tune values. The export initializes neither telemetry nor database/provider clients. Generated files stay under ignored `data/analytics`; sample bundles are protected against export writes.
+
+Metric/evidence/focus rules are in [METRICS.md](METRICS.md). [INSIGHTS_PROPOSAL.md](INSIGHTS_PROPOSAL.md) describes the implemented internal format and proposed shared route. **The new insight HTTP route is not registered:** all-owner contract agreement is still required. Existing stats/learning/trends and stored calculation version 4 remain compatible.
+
+Use [INTEGRATION.md](INTEGRATION.md) for real report and Windows-host checks and [submission drafts/claim ledger](submission/README.md) for B7/B9. Chloe's C1 checker and C2 app changes landed in PRs #19/#20. Their [integration review](evidence/pr20-integration.md) records passing local checks and a checker reset follow-up. Sahil's brain evidence, growing-session/native host acceptance and requested Luna migration remain separate owner gates.
+
+Chloe's focus review package is in [fixtures/insights/README.md](fixtures/insights/README.md): eleven internal examples and their public v1 views under `fixtures/insights/public/`, with [display rules](handoffs/insights-ui.md) and the v1 TypeScript type in the [proposal](INSIGHTS_PROPOSAL.md). Run `.venv/bin/python -m analytics.insight_examples --check` to verify both sets match the builder.
+
+`GET /insights/{session_id}?limit=5` serves the public v1 view (`insights_v1.schema.json`) only when the service starts with `KUMITE_EXPERIMENTAL_INSIGHTS=1`; it is not a frozen contract until the four owners agree. Errors: 404 unknown session, 422 bad id or limit, 503 unavailable or changing sources. `python -m analytics.insights <id> --data-dir <dir> --public` prints the same JSON. For a growing session without the game, use the [mock live scenario](../tools/mock/README.md#live-refresh-scenario).
+
+For live sets, run analytics on Sahil's laptop with the brain's absolute folder: `.venv/bin/python -m analytics.demo_host serve --data-dir /absolute/brain/data --file-only`. Use the runbook's native PowerShell equivalents and `analytics.demo_host check` to prove matching brain recording content and stats/learning. The [remediation plan](handoffs/insights-host-plan.md) tracks publication and host inputs; local source/HTTP verification does not establish native gameplay or app acceptance.
+
 ## Run
 
 ```sh

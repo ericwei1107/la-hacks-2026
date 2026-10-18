@@ -6,6 +6,8 @@ Planning date: October 18, 2026, America/Los_Angeles. Owner: Eric, Track D. Insp
 
 **Confirmed product choices.** Eric selected a demo-ready core followed by a broader roadmap, beginner/intermediate players choosing what to practice as the primary audience, and improvements to Chloe's existing Stats and Learning screens. Shared contracts and owner implementation still follow the ownership rules below.
 
+**Latest coordination.** Sahil accepts the existing-screen direction (option 1) and will confirm the concrete subset with Chloe. Her capacity/dates remain pending. The [concurrent work plan](TRACK_D_PARALLEL_PLAN.md) allocates the heavier backend/evidence workload to Eric and bounds Chloe's checker and app pass; it does not mark roadmap implementation complete. As revised on October 18, it records that C1/C2 are merged and DA1–DA3's backend and generated review examples are published in [PR #22](https://github.com/ericwei1107/la-hacks-2026/pull/22), and puts the shared insight interface and the Windows host run on the critical path.
+
 **Ownership.** Eric implements analytics calculations, evidence extraction, mocks, historical analysis, exports and verification in `analytics/` and `tools/mock/`. Chloe owns presentation, interactions, refresh hooks and the app's intent/spec workflow. Sahil owns game signals, predictor/bandit instrumentation, training controls and the fine-tune/evaluation pipeline. Garrett owns move validation, report decisions, coaching and drills. Changes to frozen `contracts/` require all four owners' agreement. Draft handoffs for review; sending messages is a separate authorized action.
 
 **Current foundation, inspected rather than newly reverified.**

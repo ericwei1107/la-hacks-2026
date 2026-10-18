@@ -1,0 +1,135 @@
+{
+  "focus": {
+    "action": null,
+    "action_reviewed": false,
+    "metric": null,
+    "min_opportunities": 5,
+    "mode": "automatic",
+    "reason": "More observations needed",
+    "state": null
+  },
+  "format_version": 1,
+  "freshness": {
+    "latest_completed_round": 1,
+    "latest_learning_round": 1,
+    "latest_recording_round": 1,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "habits": {},
+  "metrics": {
+    "low_defense": {
+      "estimated": false,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "frame_advantage": -12,
+            "hit_level": "low",
+            "kind": "block",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1,
+            "line": 1,
+            "round": 1
+          },
+          "outcome": "success",
+          "response": {
+            "frame": 1,
+            "line": 1,
+            "round": 1
+          }
+        }
+      ],
+      "evidence_total": 1,
+      "failures": 0,
+      "label": "Low defense",
+      "opportunities": 1,
+      "state": "early_signal",
+      "successes": 1,
+      "value": 1.0
+    },
+    "punish_conversion": {
+      "estimated": true,
+      "evidence": [
+        {
+          "event": {
+            "actor": 1,
+            "frame_advantage": -12,
+            "hit_level": "low",
+            "kind": "block",
+            "target": 0
+          },
+          "opportunity": {
+            "frame": 1,
+            "line": 1,
+            "round": 1
+          },
+          "outcome": "failure",
+          "response": null
+        }
+      ],
+      "evidence_total": 1,
+      "failures": 1,
+      "label": "Estimated punish conversion",
+      "opportunities": 1,
+      "state": "early_signal",
+      "successes": 0,
+      "value": 0.0
+    },
+    "throw_defense": {
+      "estimated": false,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Throw defense",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    }
+  },
+  "moments": [
+    {
+      "event": {
+        "actor": 1,
+        "frame_advantage": -12,
+        "hit_level": "low",
+        "kind": "block",
+        "target": 0
+      },
+      "metric_outcomes": {
+        "low_defense": {
+          "outcome": "success",
+          "response": {
+            "frame": 1,
+            "line": 1,
+            "round": 1
+          }
+        },
+        "punish_conversion": {
+          "outcome": "failure",
+          "response": null
+        }
+      },
+      "metrics": [
+        "low_defense",
+        "punish_conversion"
+      ],
+      "outcome": "mixed",
+      "reference": {
+        "frame": 1,
+        "line": 1,
+        "round": 1
+      },
+      "response": null
+    }
+  ],
+  "moments_total": 1,
+  "quality": "observed",
+  "recording_sha256": "8d549e86aec4824d21428c475abea88bf7c9a3961201a09b0aefd3a88f3d9d57",
+  "session_id": "insight-example",
+  "snapshot_id": "3338b8ee2b377b38c44ab65f6086f4b2caf51ab8738e96f7d03e7e9ad655ede1",
+  "synthetic": true
+}

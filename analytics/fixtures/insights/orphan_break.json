@@ -1,0 +1,217 @@
+{
+  "calculation_version": 4,
+  "focus": {
+    "action": null,
+    "metric": null,
+    "min_opportunities": 5,
+    "mode": "automatic",
+    "reason": "More observations needed",
+    "rule_version": 1
+  },
+  "format_version": 1,
+  "freshness": {
+    "completed_rounds": [
+      1
+    ],
+    "latest_learning_round": 1,
+    "latest_recording_round": 1,
+    "learning_ahead_rounds": [],
+    "pending_learning_rounds": []
+  },
+  "learning": {
+    "bandit_estimates": {},
+    "finetune": {
+      "after": null,
+      "before": null
+    },
+    "habits": {},
+    "prediction_accuracy": [
+      {
+        "eligible_count": null,
+        "player_changed": false,
+        "round": 1,
+        "value": null
+      }
+    ]
+  },
+  "metrics": {
+    "low_defense": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Low defense",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    },
+    "punish_conversion": {
+      "anomalies": [],
+      "definition_version": 1,
+      "estimated": true,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": 0,
+      "label": "Estimated punish conversion",
+      "opportunities": 0,
+      "state": "no_opportunities",
+      "successes": 0,
+      "value": null
+    },
+    "throw_defense": {
+      "anomalies": [
+        {
+          "count": 1,
+          "evidence": [
+            {
+              "frame": 1,
+              "line": 1,
+              "round": 1,
+              "session_id": "insight-example",
+              "sha256": "5f5637b80e3307f6c3674e0f7f88eff771bcbabc4e014b7f55bd8d7721a1ab62",
+              "source": "recording"
+            }
+          ],
+          "kind": "orphan_throw_break"
+        },
+        {
+          "kind": "successes_exceed_opportunities"
+        }
+      ],
+      "definition_version": 1,
+      "estimated": false,
+      "evidence": [],
+      "evidence_total": 0,
+      "failures": null,
+      "label": "Throw defense",
+      "opportunities": 0,
+      "state": "invalid",
+      "successes": 1,
+      "value": null
+    }
+  },
+  "moments": [],
+  "moments_total": 0,
+  "population": "completed_rounds",
+  "quality": {
+    "deliberate_retests": "unavailable",
+    "invalid_line_positions": [],
+    "skipped_recording_lines": 0,
+    "state": "observed",
+    "unsupported_records": 0
+  },
+  "report": {
+    "status": "unavailable",
+    "used_for_recommendation": false
+  },
+  "rounds": [
+    {
+      "metrics": {
+        "low_defense": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [],
+          "evidence_total": 0,
+          "failures": 0,
+          "label": "Low defense",
+          "opportunities": 0,
+          "state": "no_opportunities",
+          "successes": 0,
+          "value": null
+        },
+        "punish_conversion": {
+          "anomalies": [],
+          "definition_version": 1,
+          "estimated": true,
+          "evidence": [],
+          "evidence_total": 0,
+          "failures": 0,
+          "label": "Estimated punish conversion",
+          "opportunities": 0,
+          "state": "no_opportunities",
+          "successes": 0,
+          "value": null
+        },
+        "throw_defense": {
+          "anomalies": [
+            {
+              "count": 1,
+              "evidence": [
+                {
+                  "frame": 1,
+                  "line": 1,
+                  "round": 1,
+                  "session_id": "insight-example",
+                  "sha256": "5f5637b80e3307f6c3674e0f7f88eff771bcbabc4e014b7f55bd8d7721a1ab62",
+                  "source": "recording"
+                }
+              ],
+              "kind": "orphan_throw_break"
+            },
+            {
+              "kind": "successes_exceed_opportunities"
+            }
+          ],
+          "definition_version": 1,
+          "estimated": false,
+          "evidence": [],
+          "evidence_total": 0,
+          "failures": null,
+          "label": "Throw defense",
+          "opportunities": 0,
+          "state": "invalid",
+          "successes": 1,
+          "value": null
+        }
+      },
+      "round": 1
+    }
+  ],
+  "rounds_total": 1,
+  "rule_version": 1,
+  "session_id": "insight-example",
+  "snapshot_id": "0d72e49b7ac26bb73f58706960097cda2bd860634e0c09b9e280668a0b05c926",
+  "sources": {
+    "evaluation": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    },
+    "learning": {
+      "available": true,
+      "consumed_bytes": 112,
+      "pending_tail": false,
+      "sha256": "70aeeafbe217390beae6cd126b226066a70c764765879b95df1d9cdd04bc2c0b"
+    },
+    "metadata": {
+      "available": true,
+      "consumed_bytes": 230,
+      "pending_tail": false,
+      "sha256": "06a1c10e3096f88701daebe93bb1825a6dc5ea66dd6ff448e37f36c06ada8ea5"
+    },
+    "recording": {
+      "available": true,
+      "consumed_bytes": 265,
+      "pending_tail": false,
+      "sha256": "5f5637b80e3307f6c3674e0f7f88eff771bcbabc4e014b7f55bd8d7721a1ab62"
+    },
+    "report": {
+      "available": false,
+      "consumed_bytes": 0,
+      "pending_tail": false,
+      "sha256": null
+    }
+  },
+  "synthetic": true,
+  "tactical": {
+    "chosen_counts": {},
+    "habit_driven_decisions": 0,
+    "interpretation": "Recorded choices, not hit rates or calibrated probabilities",
+    "reflex_records": 0
+  }
+}
