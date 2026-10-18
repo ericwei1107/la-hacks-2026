@@ -104,12 +104,14 @@ def captured_links(route, limit=None):
     return links
 
 
-def captured_frames(inputs, cut=None):
+def captured_frames(inputs, cut=None, until=None):
     events = sorted((e for e in inputs if cut is None or e[0] <= cut), key=lambda e: e[0])
     if not events:
         return [], 0
     start = events[0][0]
     end = max(max(o + 1, o + hold) for o, _, _, hold in events)
+    if until is not None:
+        end = max(end, until + 1)
     frames = []
     direction = "n"
     k = 0
@@ -439,7 +441,7 @@ class ComboRunner:
         return frame - self.release_frame < RELEASE_FRAMES or not settled
 
     def _submit_opener(self, frame):
-        frames, _ = captured_frames(self.captured["launcher_inputs"])
+        frames, _ = captured_frames(self.captured["launcher_inputs"], until=0)
         error = None
         if self.difficulty is not None:
             frames, error = apply_execution_error(frames, self.difficulty.execution_error, self.seq.rng)

@@ -95,6 +95,13 @@ class DemoCaptureTest(unittest.TestCase):
         rows = [{"frame": f, "target_health": 190, "offset": 0} for f in range(10)]
         self.assertIsNone(build_demo_route("x", rows, SUBJECT))
 
+    def test_opener_holds_its_last_direction_until_the_connect(self):
+        opener = [[-19, "f", [], 0], [-18, "n", [], 0], [-16, "f", ["2"], 2], [-15, "n", [], 0], [-10, "f", [], 0]]
+        frames, start = captured_frames(opener, until=0)
+        self.assertEqual(start, -19)
+        self.assertEqual(frames[-12:], [("f", ())] * 11 + [("n", ())])
+        self.assertEqual(captured_frames(opener)[0][-2:], [("f", ()), ("n", ())])
+
     def test_widen_keeps_a_release_before_the_same_button(self):
         self.assertEqual(widen([[0, "n", ["1"], 1], [2, "n", ["1"], 1]]), [[0, "n", ["1"], 1], [2, "n", ["1"], 2]])
         self.assertEqual(widen([[0, "n", ["1"], 1], [1, "n", ["2"], 1]]), [[0, "n", ["1"], 2], [1, "n", ["2"], 2]])
@@ -121,7 +128,7 @@ class DemoReplayTest(unittest.TestCase):
         runner = ComboRunner(route, seq, 1, name="ws12")
         bot, target = player(side=1), player()
         self.assertEqual(lead_in(runner, seq, 100, target, bot), (100 + LEAD_IN, "ws1,2"))
-        self.assertEqual(runner.move.frames, captured_frames(route["launcher_inputs"])[0])
+        self.assertEqual(runner.move.frames, captured_frames(route["launcher_inputs"], until=0)[0])
         self.assertEqual(device.pressed, {"DPAD_DOWN"})
 
     def test_walks_14_frames_then_stands_30_before_the_opener(self):
