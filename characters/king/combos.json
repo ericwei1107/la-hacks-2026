@@ -1,0 +1,106 @@
+{
+  "character": "king",
+  "character_id": 2,
+  "game_version": "3.02.02",
+  "notation_note": "Routes are copied from the Wavu Wiki combo pages in Wavu notation. T! is tornado, CD is crouch dash, H. is heat, WS is while standing, MCR/JGR/SNK are stance prefixes. dmg is the first bracketed number on the wiki line (listed damage). Verify routes in practice mode before relying on them; spacing and character-size caveats are on the wiki.",
+  "source": "Wavu Wiki combo pages (Kazuya, King, Devil Jin, Shaheen)",
+  "bnb": {
+    "regular_launch": {
+      "route": "4 b+3 T! f,f,F+2+4",
+      "dmg": null,
+      "note": "e.g. after uf+4"
+    },
+    "low_launch": {
+      "route": "df+4,3 1,2 uf+3+4 T! JGR.2+4",
+      "dmg": null,
+      "note": "e.g. after db+2"
+    },
+    "instant_tornado": {
+      "route": "T! f,f,F+2+4",
+      "dmg": null,
+      "note": "e.g. after FC.df+1 or a low parry"
+    }
+  },
+  "launchers": {
+    "uf+4": {
+      "reliable": {
+        "route": "4 b+2,4 b+3 T! 2 f,f,F:2+4",
+        "dmg": 59
+      },
+      "optimized": {
+        "route": "4 dash df+4,3 1,2 uf+3+4 T! JGR.2 f,hcf:1",
+        "dmg": 59,
+        "note": "less damage for an imperfect throw input"
+      }
+    },
+    "ws1+2": {
+      "reliable": {
+        "route": "f+3 df+4,3 b+1,2 T! f+3+4 JGR.2 f,hcf:1",
+        "dmg": 55
+      },
+      "optimized": {
+        "route": "4 dash df+4,3 1,2 uf+3+4 T! JGR.2 f,hcf:1",
+        "dmg": 59
+      }
+    },
+    "db+2": {
+      "reliable": {
+        "route": "df+4,3 1 1,2 uf+3+4 T! JGR.2 f,hcf:1",
+        "dmg": 50
+      },
+      "optimized": {
+        "route": "df+4,3 b+1,2 T! f+3+4 JGR.2 1 f,f,F:2+4",
+        "dmg": 52
+      }
+    },
+    "df+2,1": {
+      "reliable": {
+        "route": "df+4,3 b+1,2 T! f+2,d+1,2",
+        "dmg": 63,
+        "note": "counter hit"
+      },
+      "optimized": {
+        "route": "df+4,3 b+1,2 T! 3+4 4",
+        "dmg": 64,
+        "note": "counter hit"
+      }
+    },
+    "b+1,2": {
+      "reliable": {
+        "route": "T! f+3+4 JGR.2 df+4,3 f,hcf:1",
+        "dmg": 65,
+        "note": "counter hit"
+      },
+      "optimized": {
+        "route": "T! 3+4 JGS.3 f,f,F:2+4",
+        "dmg": 68
+      }
+    },
+    "FC.df+1": {
+      "reliable": {
+        "route": "f,f,F:2+4",
+        "dmg": 49,
+        "note": "instant tornado; less damage for an imperfect input"
+      },
+      "optimized": null
+    }
+  },
+  "wall": [
+    {
+      "route": "f,F+4 T! 3,2,2*",
+      "dmg": 30,
+      "note": "wall carry, Jaguar mix-up"
+    },
+    {
+      "route": "b+1,2 T! 3,2,2",
+      "dmg": 29,
+      "note": "wall carry"
+    },
+    {
+      "route": "b+1,2 T! f,hcf:1",
+      "dmg": 40,
+      "note": "wall splat"
+    }
+  ],
+  "heat": []
+}

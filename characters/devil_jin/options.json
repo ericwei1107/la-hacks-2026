@@ -1,0 +1,513 @@
+{
+  "character": "devil_jin",
+  "character_id": 12,
+  "game_version": "3.02.02",
+  "note": "Option move lists are derived from moves.json and throws.json by frame data (startup, on block, hit level, launcher, tracking) then curated; every command exists in moves.json or throws.json. Inputs name movement the sequencer must provide.",
+  "inputs": {
+    "backdash": "b,b",
+    "sidestep_left": "ssl",
+    "sidestep_right": "ssr",
+    "block": "block",
+    "duck": "d",
+    "wait": "n",
+    "dash": "f,f",
+    "wavedash": "f,n,d,df"
+  },
+  "abstract_options": {
+    "poke": "Fast safe-ish high or mid to keep the opponent honest",
+    "frame_trap": "Fast move used while plus so an opponent who presses gets counter-hit",
+    "mid": "Mid-hitting attack that beats ducking and low defence",
+    "mid_launcher": "Mid that launches on hit; use against a ducker or a passive opponent",
+    "low": "Low-hitting attack that beats standing block",
+    "throw": "Throw; beats block and is broken only by the right button",
+    "tracking": "Homing or side-tracking move that catches sidesteps",
+    "safe": "Move that is not punishable by an i10 on block",
+    "plus_pressure": "Move that leaves the user plus on block, keeping the turn",
+    "block": "Block and wait for the opponent's move",
+    "backdash": "Backdash out of range",
+    "sidestep_left": "Sidestep to the user's left",
+    "sidestep_right": "Sidestep to the user's right",
+    "wait": "Hold still at distance and watch"
+  },
+  "prediction_map": {
+    "opp_presses": [
+      "frame_trap",
+      "block",
+      "backdash"
+    ],
+    "opp_ducks": [
+      "mid_launcher",
+      "mid"
+    ],
+    "opp_steps": [
+      "tracking"
+    ],
+    "opp_passive": [
+      "low",
+      "throw"
+    ]
+  },
+  "situations": {
+    "plus_close": {
+      "description": "The user is plus on block at touching or close range and has the turn",
+      "default": "frame_trap",
+      "options": {
+        "frame_trap": [
+          "1",
+          "2",
+          "db+1",
+          "ws4",
+          "d+2"
+        ],
+        "throw": [
+          "1+3",
+          "2+4",
+          "df+2+3"
+        ],
+        "low": [
+          "d+2",
+          "db+1",
+          "d+3",
+          "db+2",
+          "d+4",
+          "db+3"
+        ],
+        "mid_launcher": [
+          "ws2",
+          "b+1+3",
+          "d+3+4",
+          "d+1",
+          "u+4"
+        ],
+        "plus_pressure": [
+          "f,n,d,df+2 (electric)",
+          "1",
+          "b+1+2"
+        ]
+      }
+    },
+    "even_close": {
+      "description": "Frame advantage is even at touching or close range",
+      "default": "poke",
+      "options": {
+        "poke": [
+          "1",
+          "2",
+          "ws4",
+          "b+1",
+          "df+1",
+          "ws1"
+        ],
+        "throw": [
+          "1+3",
+          "2+4",
+          "df+2+3"
+        ],
+        "low": [
+          "d+2",
+          "db+1",
+          "d+3",
+          "db+2",
+          "d+4",
+          "db+3"
+        ],
+        "mid": [
+          "df+1",
+          "b+1+3",
+          "b+4",
+          "f+2",
+          "uf+4",
+          "df+4"
+        ],
+        "block": [
+          "block"
+        ]
+      }
+    },
+    "minus_close": {
+      "description": "The user is at a small disadvantage at close range and the opponent has the turn",
+      "default": "block",
+      "options": {
+        "block": [
+          "block"
+        ],
+        "safe": [
+          "1",
+          "2",
+          "ws4",
+          "d+2",
+          "db+1",
+          "b+1"
+        ],
+        "backdash": [
+          "backdash"
+        ],
+        "sidestep_left": [
+          "sidestep_left"
+        ],
+        "sidestep_right": [
+          "sidestep_right"
+        ],
+        "poke": [
+          "1",
+          "2"
+        ]
+      }
+    },
+    "minus_big": {
+      "description": "The user is at a big disadvantage; expect to be punished or pressured",
+      "default": "block",
+      "options": {
+        "block": [
+          "block"
+        ],
+        "backdash": [
+          "backdash"
+        ],
+        "sidestep_left": [
+          "sidestep_left"
+        ],
+        "sidestep_right": [
+          "sidestep_right"
+        ]
+      }
+    },
+    "neutral_mid": {
+      "description": "Mid range with no frame state; poking range",
+      "default": "poke",
+      "options": {
+        "poke": [
+          "1",
+          "2",
+          "ws4",
+          "b+1",
+          "df+1",
+          "ws1"
+        ],
+        "mid": [
+          "df+1",
+          "b+1+3",
+          "b+4",
+          "f+2",
+          "uf+4",
+          "df+4"
+        ],
+        "tracking": [
+          "b+1",
+          "df+2",
+          "uf+3+4",
+          "4",
+          "1+2"
+        ],
+        "low": [
+          "d+2",
+          "db+1",
+          "d+3"
+        ],
+        "wait": [
+          "wait"
+        ],
+        "sidestep_left": [
+          "sidestep_left"
+        ],
+        "sidestep_right": [
+          "sidestep_right"
+        ],
+        "backdash": [
+          "backdash"
+        ]
+      }
+    },
+    "neutral_far": {
+      "description": "Far range; the user must close distance or wait",
+      "default": "wait",
+      "options": {
+        "wait": [
+          "wait"
+        ],
+        "approach": [
+          "dash"
+        ],
+        "mid": [
+          "df+1",
+          "b+1+3",
+          "b+4"
+        ],
+        "mid_launcher": [
+          "ws2",
+          "b+1+3"
+        ]
+      }
+    },
+    "opp_whiff": {
+      "description": "The opponent just whiffed a move within reach",
+      "default": "whiff_punish",
+      "options": {
+        "whiff_punish": "punishers.json whiff[N] where N is the opponent's recovery frames",
+        "mid_launcher": [
+          "ws2",
+          "b+1+3",
+          "d+3+4",
+          "d+1",
+          "u+4"
+        ],
+        "poke": [
+          "1",
+          "2",
+          "ws4"
+        ]
+      }
+    },
+    "opp_knockdown": {
+      "description": "The opponent is on the ground and about to get up",
+      "default": "mid",
+      "options": {
+        "mid": [
+          "df+1",
+          "b+1+3",
+          "b+4",
+          "f+2"
+        ],
+        "low": [
+          "d+2",
+          "db+1",
+          "d+3",
+          "db+2"
+        ],
+        "throw": [
+          "1+3",
+          "2+4",
+          "df+2+3"
+        ],
+        "wait": [
+          "wait"
+        ]
+      }
+    },
+    "opp_wall": {
+      "description": "The opponent's back is near the wall",
+      "default": "mid_launcher",
+      "options": {
+        "mid_launcher": [
+          "ws2",
+          "b+1+3",
+          "d+3+4",
+          "d+1",
+          "u+4"
+        ],
+        "plus_pressure": [
+          "f,n,d,df+2 (electric)",
+          "1",
+          "b+1+2"
+        ],
+        "throw": [
+          "1+3",
+          "2+4",
+          "df+2+3"
+        ],
+        "mid": [
+          "df+1",
+          "b+1+3",
+          "b+4",
+          "f+2"
+        ]
+      }
+    }
+  },
+  "decision_points": {
+    "after_block": {
+      "description": "The player just blocked a move and is at a frame disadvantage",
+      "options": [
+        {
+          "id": "punish",
+          "description": "Punish the blocked move with the fastest launcher that fits the frame gap",
+          "source": "punishers.json tiers[N] best_standing"
+        },
+        {
+          "id": "block_high",
+          "description": "Stand and block high; correct against highs and mids",
+          "input": "block"
+        },
+        {
+          "id": "block_low",
+          "description": "Crouch-block; correct against lows",
+          "input": "d"
+        },
+        {
+          "id": "duck",
+          "description": "Duck the attack and take the whiff punish if it was high",
+          "input": "d"
+        },
+        {
+          "id": "sidestep_left",
+          "description": "Sidestep left to dodge linear attacks",
+          "input": "ssl"
+        },
+        {
+          "id": "sidestep_right",
+          "description": "Sidestep right to dodge linear attacks",
+          "input": "ssr"
+        },
+        {
+          "id": "backdash",
+          "description": "Backdash out of range to whiff the follow-up",
+          "input": "b,b"
+        },
+        {
+          "id": "press_poke",
+          "description": "Interrupt with a fast poke",
+          "moves": [
+            "1",
+            "2",
+            "ws4"
+          ]
+        }
+      ]
+    },
+    "opp_whiff": {
+      "description": "The opponent whiffed a move in range",
+      "options": [
+        {
+          "id": "whiff_punish",
+          "description": "Launch or punish the whiff with the fastest move that reaches",
+          "source": "punishers.json whiff[N]"
+        },
+        {
+          "id": "poke",
+          "description": "Poke safely instead of committing to a launcher",
+          "moves": [
+            "1",
+            "2",
+            "ws4"
+          ]
+        },
+        {
+          "id": "mid_launcher",
+          "description": "Throw out a mid launcher at the end of the whiff",
+          "moves": [
+            "ws2",
+            "b+1+3",
+            "d+3+4"
+          ]
+        },
+        {
+          "id": "wait",
+          "description": "Stay out of range and let them reset",
+          "input": "n"
+        }
+      ]
+    },
+    "throw": {
+      "description": "The player was grabbed by a throw",
+      "options": [
+        {
+          "id": "break_1",
+          "description": "Press 1 to break the throw",
+          "input": "1"
+        },
+        {
+          "id": "break_2",
+          "description": "Press 2 to break the throw",
+          "input": "2"
+        },
+        {
+          "id": "break_1+2",
+          "description": "Press 1+2 to break the throw",
+          "input": "1+2"
+        },
+        {
+          "id": "no_break",
+          "description": "Do nothing and take the throw damage",
+          "input": "n"
+        }
+      ]
+    },
+    "wakeup": {
+      "description": "The player is getting up from a knockdown",
+      "options": [
+        {
+          "id": "block_high",
+          "description": "Get up and stand-block",
+          "input": "block"
+        },
+        {
+          "id": "block_low",
+          "description": "Get up and crouch-block",
+          "input": "d"
+        },
+        {
+          "id": "backdash",
+          "description": "Get up and backdash away",
+          "input": "b,b"
+        },
+        {
+          "id": "poke",
+          "description": "Get up with a fast poke",
+          "moves": [
+            "1",
+            "2"
+          ]
+        },
+        {
+          "id": "throw",
+          "description": "Get up and throw to beat a blocking opponent",
+          "moves": [
+            "1+3",
+            "2+4"
+          ]
+        }
+      ]
+    },
+    "neutral": {
+      "description": "The distance bucket changed in neutral",
+      "options": [
+        {
+          "id": "poke",
+          "description": "Poke from mid range",
+          "moves": [
+            "1",
+            "2",
+            "ws4"
+          ]
+        },
+        {
+          "id": "mid",
+          "description": "Use a mid that beats ducking",
+          "moves": [
+            "df+1",
+            "b+1+3",
+            "b+4"
+          ]
+        },
+        {
+          "id": "low",
+          "description": "Use a low that beats standing block",
+          "moves": [
+            "d+2",
+            "db+1",
+            "d+3"
+          ]
+        },
+        {
+          "id": "tracking",
+          "description": "Use a homing or tracking move against a sidestepper",
+          "moves": [
+            "b+1",
+            "df+2",
+            "uf+3+4"
+          ]
+        },
+        {
+          "id": "backdash",
+          "description": "Backdash to reset spacing",
+          "input": "b,b"
+        },
+        {
+          "id": "wait",
+          "description": "Hold still and watch the opponent",
+          "input": "n"
+        }
+      ]
+    }
+  }
+}

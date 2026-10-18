@@ -1,0 +1,101 @@
+{
+  "character": "devil_jin",
+  "character_id": 12,
+  "game_version": "3.02.02",
+  "notation_note": "Routes are copied from the Wavu Wiki combo pages in Wavu notation. T! is tornado, CD is crouch dash, H. is heat, WS is while standing, MCR/JGR/SNK are stance prefixes. dmg is the first bracketed number on the wiki line (listed damage). Verify routes in practice mode before relying on them; spacing and character-size caveats are on the wiki.",
+  "source": "Wavu Wiki combo pages (Kazuya, King, Devil Jin, Shaheen)",
+  "bnb": {
+    "regular_launch": {
+      "route": "3,1 b,f+2,1,d+2 T! df+3,2,4",
+      "dmg": null,
+      "note": "e.g. after d+3+4"
+    },
+    "instant_tornado": {
+      "route": "3,1 b,f+2,1,2",
+      "dmg": null,
+      "note": "e.g. after ws2"
+    }
+  },
+  "launchers": {
+    "f,n,d,df+2": {
+      "reliable": {
+        "route": "u+1+2 3,1,2 T! MCR.4,2,1,UF",
+        "dmg": 55,
+        "note": "after EWGF, simple"
+      },
+      "optimized": {
+        "route": "DEWGF 3,1 bf+2,1,d2 T! df+3,2,4",
+        "dmg": 52,
+        "note": "wall carry"
+      }
+    },
+    "d+3+4": {
+      "reliable": {
+        "route": "3,1,2 T! ws3,F <MCR.4,2,1,UF",
+        "dmg": 47
+      },
+      "optimized": {
+        "route": "df+2 2 iWS3,f < MCR.4,1 iWS3,F~MCR.3 T! cd.1,UF",
+        "dmg": 54,
+        "note": "hard"
+      }
+    },
+    "ws2": {
+      "reliable": {
+        "route": "dash up, u+1+2 u+1 MCR.4,2,1,UF",
+        "dmg": 43,
+        "note": "easy"
+      },
+      "optimized": {
+        "route": "dash up, u+1+2 3,1 iWS3,F MCR.4,2,1,UF",
+        "dmg": 53
+      }
+    },
+    "u+4": {
+      "reliable": {
+        "route": "FLY.1 b+2,1 T! ws3,F <MCR.4,2,1,UF",
+        "dmg": 50
+      },
+      "optimized": {
+        "route": "FLY.1 iWS.3,F MCR.3 T! ws3,F MCR.4,2,1,UF",
+        "dmg": 55
+      }
+    },
+    "f,n,d,df+3": {
+      "reliable": {
+        "route": "1+4 b+2,1 T! dash SSR 3,1,ff df+3,2,4",
+        "dmg": 34
+      },
+      "optimized": {
+        "route": "db+1 WS.3,f~MCR.4,1 iWS3,f~MCR.3 T! cd.1,UF",
+        "dmg": 45,
+        "note": "hard"
+      }
+    },
+    "b+4": {
+      "reliable": {
+        "route": "df+1 2 df+3,2,4 T! f,n,d,df+1,u",
+        "dmg": 37,
+        "note": "counter hit, floor breaks"
+      },
+      "optimized": {
+        "route": "df+3,2,4 T! ws3,F <MCR.4,2,1,UF",
+        "dmg": 44,
+        "note": "counter hit, floor breaks"
+      }
+    }
+  },
+  "wall": [],
+  "heat": [
+    {
+      "route": "u+1+2 3,1,ff 2 df+3,2,4 T! dash 2+3 ws3,F MCR.2,2,H.f f,n,d,df+1,u",
+      "dmg": 74,
+      "note": "after EWGF"
+    },
+    {
+      "route": "3,1,ff 2 df+3,2,4 T! dash 2+3 ws3,F MCR.2,2,H.f f,n,d,df+1,u",
+      "dmg": 61,
+      "note": "after d+3+4"
+    }
+  ]
+}

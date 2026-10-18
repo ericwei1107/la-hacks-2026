@@ -1,0 +1,7984 @@
+{
+  "character": "king",
+  "character_id": 2,
+  "game_version": "3.02.02",
+  "usage": "tiers[N] lists moves with startup <= N frames, best first; use the tier equal to the opponent's frame disadvantage (clamped to 10..20). standing is for opponents who are standing, crouching drops high moves that whiff over a crouching opponent. whiff[N] is for punishing a whiffed move that leaves N frames of recovery before the opponent can act. Ranked by input difficulty (easy, medium for while-standing moves, hard for motion inputs), then launcher, then summed hit damage, then startup.",
+  "min_tier": 10,
+  "max_tier": 20,
+  "tiers": {
+    "10": {
+      "standing": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "best_standing": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      "best_crouching": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      }
+    },
+    "11": {
+      "standing": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "best_standing": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      "best_crouching": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      }
+    },
+    "12": {
+      "standing": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "best_standing": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      "best_crouching": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      }
+    },
+    "13": {
+      "standing": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        }
+      ],
+      "best_standing": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      "best_crouching": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      }
+    },
+    "14": {
+      "standing": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "b+2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 16,
+          "difficulty": "easy",
+          "move_id": "0x6D9"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "best_standing": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      "best_crouching": {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      }
+    },
+    "15": {
+      "standing": [
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x622"
+        },
+        {
+          "command": "b+2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 16,
+          "difficulty": "easy",
+          "move_id": "0x6D9"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "best_standing": {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      "best_crouching": {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      }
+    },
+    "16": {
+      "standing": [
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+3",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": "0x67E"
+        },
+        {
+          "command": "f+1+2",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x622"
+        },
+        {
+          "command": "b+2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 16,
+          "difficulty": "easy",
+          "move_id": "0x6D9"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws3",
+          "startup": 16,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "best_standing": {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      "best_crouching": {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      }
+    },
+    "17": {
+      "standing": [
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x683"
+        },
+        {
+          "command": "b+3",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": "0x67E"
+        },
+        {
+          "command": "f+1+2",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x622"
+        },
+        {
+          "command": "b+2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 16,
+          "difficulty": "easy",
+          "move_id": "0x6D9"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws3",
+          "startup": 16,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "best_standing": {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      "best_crouching": {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      }
+    },
+    "18": {
+      "standing": [
+        {
+          "command": "f+4",
+          "startup": 18,
+          "launcher": true,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x65E"
+        },
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x683"
+        },
+        {
+          "command": "b+3",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": "0x67E"
+        },
+        {
+          "command": "f+1+2",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x622"
+        },
+        {
+          "command": "1+2",
+          "startup": 18,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6F8"
+        },
+        {
+          "command": "b+2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 16,
+          "difficulty": "easy",
+          "move_id": "0x6D9"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws3",
+          "startup": 16,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws1+2",
+          "startup": 18,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "f+4",
+          "startup": 18,
+          "launcher": true,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x65E"
+        },
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "1+2",
+          "startup": 18,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6F8"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws1+2",
+          "startup": 18,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "best_standing": {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      "best_crouching": {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      }
+    },
+    "19": {
+      "standing": [
+        {
+          "command": "f+4",
+          "startup": 18,
+          "launcher": true,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x65E"
+        },
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x683"
+        },
+        {
+          "command": "b+3",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": "0x67E"
+        },
+        {
+          "command": "f+1+2",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x622"
+        },
+        {
+          "command": "1+2",
+          "startup": 18,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6F8"
+        },
+        {
+          "command": "b+2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 16,
+          "difficulty": "easy",
+          "move_id": "0x6D9"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws3",
+          "startup": 16,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws1+2",
+          "startup": 18,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "f+4",
+          "startup": 18,
+          "launcher": true,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x65E"
+        },
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "1+2",
+          "startup": 18,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6F8"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws1+2",
+          "startup": 18,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "best_standing": {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      "best_crouching": {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      }
+    },
+    "20": {
+      "standing": [
+        {
+          "command": "f+2+3",
+          "startup": 20,
+          "launcher": true,
+          "damage": 27,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+4",
+          "startup": 18,
+          "launcher": true,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x65E"
+        },
+        {
+          "command": "uf+1",
+          "startup": 20,
+          "launcher": true,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x683"
+        },
+        {
+          "command": "b+3",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": "0x67E"
+        },
+        {
+          "command": "f+1+2",
+          "startup": 16,
+          "launcher": false,
+          "damage": 23,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "4",
+          "startup": 13,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "easy",
+          "move_id": "0x62C"
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x622"
+        },
+        {
+          "command": "1+2",
+          "startup": 18,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6F8"
+        },
+        {
+          "command": "b+2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 16,
+          "difficulty": "easy",
+          "move_id": "0x6D9"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+1",
+          "startup": 12,
+          "launcher": false,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x9D9"
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "2",
+          "startup": 10,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x61E"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0x653"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws3",
+          "startup": 16,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws1+2",
+          "startup": 18,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "crouching": [
+        {
+          "command": "f+2+3",
+          "startup": 20,
+          "launcher": true,
+          "damage": 27,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+4",
+          "startup": 18,
+          "launcher": true,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": "0x65E"
+        },
+        {
+          "command": "uf+4",
+          "startup": 15,
+          "launcher": true,
+          "damage": 13,
+          "difficulty": "easy",
+          "move_id": "0x603"
+        },
+        {
+          "command": "b+1+3",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "b+2+4:3+4",
+          "startup": 10,
+          "launcher": false,
+          "damage": 25,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+1+4",
+          "startup": 17,
+          "launcher": false,
+          "damage": 21,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "f+3",
+          "startup": 15,
+          "launcher": false,
+          "damage": 18,
+          "difficulty": "easy",
+          "move_id": "0x65B"
+        },
+        {
+          "command": "df+3",
+          "startup": 14,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6AF"
+        },
+        {
+          "command": "1+2",
+          "startup": 18,
+          "launcher": false,
+          "damage": 17,
+          "difficulty": "easy",
+          "move_id": "0x6F8"
+        },
+        {
+          "command": "df+1",
+          "startup": 14,
+          "launcher": false,
+          "damage": 15,
+          "difficulty": "easy",
+          "move_id": "0x6AA"
+        },
+        {
+          "command": "d+3+4",
+          "startup": 16,
+          "launcher": false,
+          "damage": 14,
+          "difficulty": "easy",
+          "move_id": null
+        },
+        {
+          "command": "df+2",
+          "startup": 13,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x6AC"
+        },
+        {
+          "command": "f+2",
+          "startup": 15,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x654"
+        },
+        {
+          "command": "d+3",
+          "startup": 17,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "easy",
+          "move_id": "0x699"
+        },
+        {
+          "command": "df+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 10,
+          "difficulty": "easy",
+          "move_id": "0x6B2"
+        },
+        {
+          "command": "d+2",
+          "startup": 11,
+          "launcher": false,
+          "damage": 8,
+          "difficulty": "easy",
+          "move_id": "0x697"
+        },
+        {
+          "command": "d+4",
+          "startup": 14,
+          "launcher": false,
+          "damage": 6,
+          "difficulty": "easy",
+          "move_id": "0x69B"
+        },
+        {
+          "command": "d+1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 5,
+          "difficulty": "easy",
+          "move_id": "0xF5"
+        },
+        {
+          "command": "ws1+2",
+          "startup": 18,
+          "launcher": true,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": null
+        },
+        {
+          "command": "ws4",
+          "startup": 11,
+          "launcher": false,
+          "damage": 20,
+          "difficulty": "medium",
+          "move_id": "0x6C4"
+        },
+        {
+          "command": "ws1",
+          "startup": 10,
+          "launcher": false,
+          "damage": 12,
+          "difficulty": "medium",
+          "move_id": "0x6BC"
+        },
+        {
+          "command": "ws2",
+          "startup": 14,
+          "launcher": false,
+          "damage": 11,
+          "difficulty": "medium",
+          "move_id": "0x6BD"
+        }
+      ],
+      "best_standing": {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      "best_crouching": {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      }
+    }
+  },
+  "whiff": {
+    "10": [
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      }
+    ],
+    "11": [
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      }
+    ],
+    "12": [
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      }
+    ],
+    "13": [
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      }
+    ],
+    "14": [
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "15": [
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "16": [
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "17": [
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "18": [
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "19": [
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "20": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "21": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "22": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "23": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "24": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "25": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "26": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "27": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "28": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "29": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ],
+    "30": [
+      {
+        "command": "f+2+3",
+        "startup": 20,
+        "launcher": true,
+        "damage": 27,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+4",
+        "startup": 18,
+        "launcher": true,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x65E"
+      },
+      {
+        "command": "uf+1",
+        "startup": 20,
+        "launcher": true,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "uf+4",
+        "startup": 15,
+        "launcher": true,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x603"
+      },
+      {
+        "command": "b+1+3",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+2+4:3+4",
+        "startup": 10,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 25,
+        "difficulty": "easy",
+        "move_id": "0x683"
+      },
+      {
+        "command": "b+3",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": "0x67E"
+      },
+      {
+        "command": "f+1+2",
+        "startup": 16,
+        "launcher": false,
+        "damage": 23,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "f+1+4",
+        "startup": 17,
+        "launcher": false,
+        "damage": 21,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "4",
+        "startup": 13,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "easy",
+        "move_id": "0x62C"
+      },
+      {
+        "command": "f+3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 18,
+        "difficulty": "easy",
+        "move_id": "0x65B"
+      },
+      {
+        "command": "df+3",
+        "startup": 14,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6AF"
+      },
+      {
+        "command": "3",
+        "startup": 15,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x622"
+      },
+      {
+        "command": "1+2",
+        "startup": 18,
+        "launcher": false,
+        "damage": 17,
+        "difficulty": "easy",
+        "move_id": "0x6F8"
+      },
+      {
+        "command": "b+2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 16,
+        "difficulty": "easy",
+        "move_id": "0x6D9"
+      },
+      {
+        "command": "df+1",
+        "startup": 14,
+        "launcher": false,
+        "damage": 15,
+        "difficulty": "easy",
+        "move_id": "0x6AA"
+      },
+      {
+        "command": "d+3+4",
+        "startup": 16,
+        "launcher": false,
+        "damage": 14,
+        "difficulty": "easy",
+        "move_id": null
+      },
+      {
+        "command": "b+1",
+        "startup": 12,
+        "launcher": false,
+        "damage": 13,
+        "difficulty": "easy",
+        "move_id": "0x9D9"
+      },
+      {
+        "command": "df+2",
+        "startup": 13,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x6AC"
+      },
+      {
+        "command": "f+2",
+        "startup": 15,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x654"
+      },
+      {
+        "command": "d+3",
+        "startup": 17,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "easy",
+        "move_id": "0x699"
+      },
+      {
+        "command": "2",
+        "startup": 10,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x61E"
+      },
+      {
+        "command": "df+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 10,
+        "difficulty": "easy",
+        "move_id": "0x6B2"
+      },
+      {
+        "command": "d+2",
+        "startup": 11,
+        "launcher": false,
+        "damage": 8,
+        "difficulty": "easy",
+        "move_id": "0x697"
+      },
+      {
+        "command": "d+4",
+        "startup": 14,
+        "launcher": false,
+        "damage": 6,
+        "difficulty": "easy",
+        "move_id": "0x69B"
+      },
+      {
+        "command": "1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0x653"
+      },
+      {
+        "command": "d+1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 5,
+        "difficulty": "easy",
+        "move_id": "0xF5"
+      },
+      {
+        "command": "ws3",
+        "startup": 16,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws1+2",
+        "startup": 18,
+        "launcher": true,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": null
+      },
+      {
+        "command": "ws4",
+        "startup": 11,
+        "launcher": false,
+        "damage": 20,
+        "difficulty": "medium",
+        "move_id": "0x6C4"
+      },
+      {
+        "command": "ws1",
+        "startup": 10,
+        "launcher": false,
+        "damage": 12,
+        "difficulty": "medium",
+        "move_id": "0x6BC"
+      },
+      {
+        "command": "ws2",
+        "startup": 14,
+        "launcher": false,
+        "damage": 11,
+        "difficulty": "medium",
+        "move_id": "0x6BD"
+      }
+    ]
+  }
+}
