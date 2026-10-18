@@ -23,8 +23,7 @@ def test_low_tip_names_verified_bot_move():
     assert len(text.split()) < 40
 
 
-@pytest.mark.parametrize("suffix,name", [("b4", "Flash Tornado"), ("f4", "Right Splits Kick"),
-                                         ("0x674", "Flash Tornado")])
+@pytest.mark.parametrize("suffix,name", [("f4", "Right Splits Kick"), ("0x680", "Right Splits Kick")])
 def test_after_block_compact_labels_name_bot_move(suffix, name):
     summary = copy.deepcopy(EXAMPLE)
     summary["top_habits"][0].update(situation=f"after_block:{suffix}", action="press")
@@ -33,6 +32,15 @@ def test_after_block_compact_labels_name_bot_move(suffix, name):
     assert name in result.text
     assert "guard" in result.text.lower()
     assert "guaranteed" not in result.text.lower()
+
+
+def test_unsupported_after_block_habit_cannot_override_grounded_low_advice():
+    summary = copy.deepcopy(EXAMPLE)
+    summary["top_habits"].insert(0, {"situation": "after_block:b4", "action": "press", "p": 0.99, "n": 10})
+    summary["biggest_moments"][0]["move_id"] = 0x6DB
+    result = tip(summary)
+    assert "Crouch Shin Kick" in result.text
+    assert "Flash Tornado" not in result.text
 
 
 def test_unverified_and_shared_ids_keep_generic_fallback():

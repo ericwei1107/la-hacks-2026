@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
 from replay.config import ROOT
+from replay.evidence import decision_fingerprint
 from replay.inspection import build_inspection
 from replay.learning import latest_mastery
 from replay.reader import read_recording
@@ -65,6 +66,7 @@ class ReportService:
         self.data_dir = Path(data_dir).resolve()
         self.scorer = scorer or JevScorer.from_env()
         self.option_generator = option_generator or default_options
+        self._analysis_locks = {}
 
     def locate(self, session_id):
         checked_id(session_id)
@@ -108,6 +110,28 @@ class ReportService:
         return {}
 
     async def analyze(self, session_id):
+        checked_id(session_id)
+        entry = self._analysis_locks.setdefault(session_id, [asyncio.Lock(), 0])
+        entry[1] += 1
+        try:
+            async with entry[0]:
+                transaction = asyncio.create_task(self._analyze(session_id))
+                cancelled = False
+                while not transaction.done():
+                    try:
+                        await asyncio.shield(transaction)
+                    except asyncio.CancelledError:
+                        cancelled = True
+                result = transaction.result()
+                if cancelled:
+                    raise asyncio.CancelledError
+                return result
+        finally:
+            entry[1] -= 1
+            if not entry[1]:
+                del self._analysis_locks[session_id]
+
+    async def _analyze(self, session_id):
         path = await asyncio.to_thread(self.locate, session_id)
         recording = await asyncio.to_thread(read_recording, path)
         if recording.session_id != session_id:
@@ -138,6 +162,7 @@ class ReportService:
                 "situation": moment["situation"] or "unknown", "actual": moment["human_action"] or "unknown",
                 "recorded_action": moment["human_action"], "best": "unavailable", "options": [],
                 "candidates": options, "limitations": option_limits,
+                "evidence_fingerprint": decision_fingerprint(moment, options),
                 "missing_information": [value for value in moment["missing_information"]
                                         if not value.startswith("Move names, legal alternatives")],
                 "evidence": moment["evidence"], "context": moment["context"],

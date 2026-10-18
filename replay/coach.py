@@ -8,7 +8,8 @@ from typing import Literal
 from openai import AsyncOpenAI
 from pydantic import BaseModel, ConfigDict, create_model, field_validator
 
-from replay.move_coaching import specific_tip
+from replay.character_data import CharacterDataError, load_character
+from replay.move_coaching import labeled_move, specific_tip
 from replay.observability import agent_span, outcome
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,19 @@ class CoachTip(BaseModel):
 @dataclass(frozen=True)
 class Advice:
     tips: tuple[CoachTip, ...]
+
+
+def guarding_supported(summary: dict, situation: str) -> bool:
+    if situation == "after_block:bot_plus":
+        return True
+    if not situation.startswith("after_block:"):
+        return False
+    try:
+        bot = load_character(summary.get("bot_character"))
+        move = labeled_move(bot, situation.split(":", 1)[1])
+        return move is not None and type(move.get("on_block")) is int and move["on_block"] > 0
+    except (CharacterDataError, OSError, KeyError, ValueError, TypeError):
+        return False
 
 
 def generic_advice(summary: dict) -> Advice:
@@ -62,13 +76,13 @@ def generic_advice(summary: dict) -> Advice:
                 text=f"Missed throw breaks are a pattern across {count} observations. Practice recognizing throws and using the matching break input.",
                 severity="warn",
             ),))
-        if situation.startswith("after_block:") and action == "press":
+        if action == "press" and guarding_supported(summary, situation):
             return Advice((CoachTip(
                 text=f"Pressing after blocking is a pattern across {count} observations. Try guarding through the opponent's follow-up before pressing.",
                 severity="warn",
             ),))
     return Advice((CoachTip(
-        text="There isn't enough evidence for a repeated weakness. Focus on guarding and watch the opponent after you block.",
+        text="There isn't enough evidence for a repeated weakness. Review the recorded exchanges before choosing a specific practice focus.",
         severity="info",
     ),))
 
@@ -86,7 +100,7 @@ def grounded_advice(summary: dict) -> Advice:
             continue
         relevant = ((habit["situation"] == "low_defense" and habit["action"] == "hit")
                     or (habit["situation"] == "throw_break" and habit["action"] == "none")
-                    or (habit["situation"].startswith("after_block:") and habit["action"] == "press"))
+                    or (habit["action"] == "press" and guarding_supported(summary, habit["situation"])))
         if not relevant:
             continue
         text = specific_tip(summary, habit)
