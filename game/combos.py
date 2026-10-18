@@ -303,9 +303,11 @@ class ComboRunner:
                     return None
             elif frame < self.captured.get("start_round_frame", 0):
                 return None
-            if not self._ready(bot):
+            raw = self.captured.get("launcher_inputs_replay")
+            ready = (bot["free_movement"] or self.walked) if raw else self._ready(bot)
+            if not ready:
                 return None
-            if self.captured.get("launcher_inputs_replay"):
+            if raw:
                 if self._approach(frame, bot, target):
                     return None
                 self.opener_distance = distance(bot, target)

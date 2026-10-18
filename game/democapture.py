@@ -22,7 +22,7 @@ from game.readout import run_gate
 MAX_LOOP_FRAMES = 1800
 START_SLACK = 5
 MIN_PRESS = 2
-TRACE_BEFORE = 3
+TRACE_BEFORE = 40
 TRACE_AFTER = 70
 VOTED = ("move_id", "frame_in_move", "dir", "hit_level", "free", "side", "target_move", "target_basic_state",
          "target_status", "target_health", "target_reaction", "distance")

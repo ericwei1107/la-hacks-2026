@@ -144,9 +144,9 @@ class DemoReplayTest(unittest.TestCase):
 
         lines = []
         compare(Run(), route, after=2, log=lambda m, **_: lines.append(m))
-        self.assertEqual(len(lines), 7)
-        self.assertIn("+0 |    n+1 0x0696", lines[4])
-        self.assertTrue(lines[4].endswith("| n 0x0696 0 0x0773  1000 12"), lines[4])
+        self.assertEqual(len(lines), 9)
+        self.assertIn("+0 |    n+1 0x0696", lines[6])
+        self.assertTrue(lines[6].endswith("| n 0x0696 0 0x0773  1000 12"), lines[6])
         lines.clear()
         Run.connect_frame = None
         compare(Run(), route, log=lambda m, **_: lines.append(m))
@@ -218,6 +218,15 @@ class DemoReplayTest(unittest.TestCase):
         self.assertEqual(runner.connect_frame, 61)
         self.assertIsNone(runner.reach)
         self.assertNotIn("learned_reach", route)
+
+    def test_unnamed_opener_waits_while_bot_is_busy(self):
+        rows = next(loops(iter(demo_states(1)), SUBJECT))
+        route = build_demo_route("x", rows, SUBJECT)
+        self.assertEqual(route["launcher"], "0x0696")
+        runner = ComboRunner(route, Sequencer(fake_pad()[0], 2), 1, name="x")
+        busy = player(side=1, free_movement=False, frames_until_actionable=10)
+        self.assertIsNone(runner.on_state({"frame": 60, "players": [player(), busy]}))
+        self.assertEqual(runner.on_state({"frame": 61, "players": [player(), player(side=1)]}), "0x0696")
 
     def test_counter_hit_opener_marks_route(self):
         rows = next(loops(iter(demo_states(1)), SUBJECT))
