@@ -124,6 +124,7 @@ THROW_START = 30
 THROW_CLEAR = 5
 THROW_LIMIT_FRAMES = 180
 CONNECT_LAG = 2
+START_SLACK = 4
 INPUT_IDS = {0x53, 0x58, 0x5A, 0x5B, 0x5A7, 0x5C1, 0x5C2, 0x5C6, 0x5C7, 0x5C8, 0x5DB, 0x5DC, 0x5DD, 0x6F2, 0x6F4, 0x6F5, 0x6F7, 0x6F8,
              0x90E, 0x914, 0x915}
 
@@ -408,6 +409,7 @@ class Learning:
         self.pulls = []
         self.next_pull = None
         self.learned_ids = {}
+        self.prev_bot_reacting = False
         self.session_id = None
         self.learning_path = None
         self.round = None
@@ -688,7 +690,7 @@ class Learning:
         ids = entry_ids(entry) | self.learned_ids.get(chosen, set())
         self.next_pull = {"key": f"{key}|{action}", "arm": chosen, "cls": cls, "entry": entry, "ids": ids, "start_ids": ids - INPUT_IDS,
                           "frame": None, "round": None, "health": None, "started": False, "start_frame": None, "base_move": None,
-                          "busy": False, "thrown": False, "move": None}
+                          "busy": False, "lapsed": False, "thrown": False, "move": None}
         return entry
 
     @property
@@ -737,13 +739,18 @@ class Learning:
             return 0.0
         return max(0, pull["health"] - human_health) / REWARD_DAMAGE
 
-    def _learn_id(self, pull, bot):
-        if pull["cls"] not in ATTACK_CLASSES or not pull["started"] or pull["move"] is None or bot["move_id"] == pull["base_move"]:
+    def _learn_id(self, pull, bot, frame):
+        if pull["cls"] not in ATTACK_CLASSES or not pull["started"] or pull["move"] is None or pull["lapsed"]:
             return
+        move = pull["move"]
         if bot["free_movement"] or bot["hit_reaction"] != 0:
+            if pull["busy"] or move.cancelled or (move.done_frame is not None and frame > move.done_frame + START_SLACK):
+                pull["lapsed"] = True
+                if not pull["ids"]:
+                    self._settle(pull, None)
             pull["busy"] = False
             return
-        if bot["hit_level"] == "none" or bot["move_id"] in INPUT_IDS:
+        if bot["move_id"] == pull["base_move"] or bot["hit_level"] == "none" or bot["move_id"] in INPUT_IDS:
             return
         if bot["move_id"] in pull["ids"]:
             pull["busy"] = True
@@ -761,7 +768,8 @@ class Learning:
 
     def _track_bot_move(self, state):
         bot = state["players"][1 - state["human_slot"]]
-        human_health = state["players"][state["human_slot"]]["health"]
+        struck = bot["hit_reaction"] != 0 and not bot["free_movement"] and not self.prev_bot_reacting
+        self.prev_bot_reacting = bot["hit_reaction"] != 0
         for pull in list(self.pulls):
             if state["round"] != pull["round"] or state["frame"] < pull["frame"]:
                 continue
@@ -774,10 +782,10 @@ class Learning:
                     self._start(pull, state)
             elif not pull["started"] and bot["move_id"] in pull["start_ids"]:
                 self._start(pull, state)
-            if pull["started"] and pull["cls"] in ATTACK_CLASSES and not pull["thrown"] and bot["hit_reaction"] != 0 and not bot["free_movement"]:
+            if pull["started"] and pull["cls"] in ATTACK_CLASSES and not pull["thrown"] and struck and state["frame"] > pull["start_frame"]:
                 self._settle(pull, 0.0)
                 continue
-            self._learn_id(pull, bot)
+            self._learn_id(pull, bot, state["frame"])
 
     def _resolve(self, ev, state):
         if ev.get("t") != "event":

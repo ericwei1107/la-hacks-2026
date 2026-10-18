@@ -760,6 +760,70 @@ class LearningTest(unittest.TestCase):
         finally:
             rig.close()
 
+    def test_learning_stops_when_the_move_is_over(self):
+        from game.sequencer import Move
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("low_defense", "hit", False)
+            L = rig.learning
+            boosts = L.boosts(state_at(600))
+            sweep = [e for e in OPTIONS["classes"]["low"] if e["notation"] == "f,n,d,DF+4"]
+            L.pick("low", sweep, boosts["low"], L3)
+            cancelled = Move("f,n,d,DF+4", [], start_frame=600)
+            L.decided("low", boosts, state_at(600), cancelled)
+            L.step(state_at(602, bot={"move_id": 0x6F2, "free_movement": 0, "frame_in_move": 1, "move_total": 6}), [])
+            cancelled.cancelled = True
+            cancelled.done_frame = 604
+            L.step(state_at(610), [])
+            self.assertEqual(L.pulls, [])
+            L.step(state_at(615, bot={"move_id": 0x659, "free_movement": 0, "frame_in_move": 1, "move_total": 27, "hit_level": 0xA000050F, "hit_level_name": "high"}), [])
+            L.step(state_at(625), [dict(hit(625, 10), move_id=0x659)])
+            self.assertEqual(L.learned_ids, {})
+            self.assertEqual(sweep[0]["move_ids"], [])
+            L.pick("low", sweep, boosts["low"], L3)
+            L.decided("low", boosts, state_at(700), Move("f,n,d,DF+4", [], start_frame=700))
+            busy = {"free_movement": 0, "frame_in_move": 1, "move_total": 50, "hit_level": 0x20000112, "hit_level_name": "low"}
+            L.step(state_at(712, bot=dict(busy, move_id=0x6F9)), [])
+            self.assertEqual(L.pull["ids"], {0x6F9})
+            L.step(state_at(740), [{"t": "event", "session_id": SID, "frame": 740, "round": 1, "kind": "whiff", "actor": 1, "move_id": 0x6F9, "hit_level": "low", "detail": {"start_frame": 712}}])
+            self.assertEqual(L.pulls, [])
+            L.pick("low", sweep, boosts["low"], L3)
+            L.decided("low", boosts, state_at(800), Move("f,n,d,DF+4", [], start_frame=800))
+            L.step(state_at(812, bot=dict(busy, move_id=0x6F9)), [])
+            L.step(state_at(850), [])
+            L.step(state_at(860, bot={"move_id": 0x6DB, "free_movement": 0, "frame_in_move": 1, "move_total": 46, "hit_level": 0x20000112, "hit_level_name": "low"}), [])
+            self.assertEqual(L.pull["ids"], {0x6F9})
+            self.assertTrue(L.pull["lapsed"])
+            L.step(state_at(870, human={"health": 170}), [dict(hit(870, 20), move_id=0x6DB)])
+            self.assertEqual(len(L.pulls), 1)
+            self.assertNotIn(0x6DB, L.learned_ids["f,n,d,DF+4"])
+        finally:
+            rig.close()
+
+    def test_prepress_out_of_blockstun_is_not_an_interruption(self):
+        from game.sequencer import Move
+        rig = LearningRig()
+        try:
+            for _ in range(5):
+                rig.feed("after_block:df1", "press", False, adv=-4)
+            L = rig.learning
+            stunned = {"move_id": 0x720, "free_movement": 0, "frame_in_move": 15, "move_total": 19, "hit_reaction": 1}
+            L.step(state_at(590, bot=stunned), [])
+            probe = state_at(600, situation="defense", adv=-4, bot=dict(stunned, frame_in_move=18))
+            boosts = L.boosts(probe)
+            df1 = [e for e in OPTIONS["classes"]["mid"] if e["notation"] == "df+1"]
+            L.pick("mid", df1, boosts["mid"], L3)
+            L.decided("mid", boosts, probe, Move("df+1", [], start_frame=600))
+            L.step(state_at(601, bot=dict(stunned, frame_in_move=19)), [])
+            self.assertEqual(len(L.pulls), 1)
+            L.step(state_at(603, bot={"move_id": 0x6A6, "free_movement": 0, "frame_in_move": 1, "move_total": 41}), [])
+            L.step(state_at(620), [dict(hit(620, 14), move_id=0x6A6)])
+            self.assertEqual(L.pulls, [])
+            self.assertAlmostEqual(L.bandit.arms[f"{PLUS_KEY}|press"]["df+1"][0], 14 / 25, places=3)
+        finally:
+            rig.close()
+
     def test_hit_in_the_throw_clearance_is_not_double_counted(self):
         rig = LearningRig()
         try:
