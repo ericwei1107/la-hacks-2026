@@ -2,6 +2,7 @@ import json
 import math
 import pickle
 import random
+import time
 from collections import Counter, deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -119,6 +120,8 @@ COUNTERS = {
     },
 }
 STATE_HISTORY = 240
+SAVE_ATTEMPTS = 3
+SAVE_RETRY_S = 0.05
 MAX_PULLS = 4
 THROW_START = 30
 THROW_CLEAR = 5
@@ -427,6 +430,7 @@ class Learning:
         self.fixed_round = {}
         self.rounds = []
         self.events = []
+        self.warnings = []
         self.observations = 0
 
     def read_profile(self):
@@ -450,12 +454,39 @@ class Learning:
         }
 
     def save(self):
-        self.profile_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.profile_path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.profile(), indent=2), encoding="utf-8")
-        tmp.replace(self.profile_path)
-        self.predictor.save(self.predictor_path)
-        return self.profile_path
+        saved = None
+        for attempt in range(SAVE_ATTEMPTS):
+            try:
+                self.profile_path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = self.profile_path.with_suffix(".tmp")
+                tmp.write_text(json.dumps(self.profile(), indent=2), encoding="utf-8")
+                tmp.replace(self.profile_path)
+                saved = self.profile_path
+                break
+            except OSError as e:
+                error = e
+                time.sleep(SAVE_RETRY_S)
+        if saved is None:
+            self.warn(f"profile save skipped, will retry next round: {error}")
+        try:
+            self.predictor.save(self.predictor_path)
+        except (OSError, pickle.PicklingError) as e:
+            self.warn(f"predictor save skipped, will retry next round: {e}")
+        return saved
+
+    def warn(self, message):
+        self.warnings.append(message)
+        print(f"warning: {message}", flush=True)
+
+    def append_learning(self, record):
+        try:
+            self.learning_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.learning_path, "a", encoding="utf-8", newline="\n") as fh:
+                fh.write(dumps(record) + "\n")
+            return True
+        except OSError as e:
+            self.warn(f"learning file write skipped for round {record.get('round')}: {e}")
+            return False
 
     def _begin(self, state):
         if self.session_id != state["session_id"]:
@@ -911,9 +942,7 @@ class Learning:
         winner = (ev.get("detail") or {}).get("winner") if ev else None
         round_rec = self.round_record(state)
         self.rounds.append(round_rec)
-        self.learning_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.learning_path, "a", encoding="utf-8", newline="\n") as fh:
-            fh.write(dumps(round_rec) + "\n")
+        self.append_learning(round_rec)
         summary = self.summary(state, winner)
         self.mastery.forget()
         self.history = self.history[-19:] + [{"session_id": state["session_id"], "round": state["round"], "winner": winner,

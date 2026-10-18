@@ -1008,6 +1008,47 @@ class LearningTest(unittest.TestCase):
             rig.close()
 
 
+class SaveFailureTest(unittest.TestCase):
+    def test_locked_profile_and_learning_file_warn_and_continue(self):
+        from unittest import mock
+        rig = LearningRig(predictor=forest is not None)
+        try:
+            for _ in range(4):
+                rig.feed("low_defense", "hit", False)
+            L = rig.learning
+            real_replace = Path.replace
+            real_open = open
+
+            def locked_replace(self, target):
+                raise PermissionError(13, "The process cannot access the file because it is being used by another process", str(target))
+
+            def locked_open(path, *args, **kwargs):
+                if str(path).endswith(".jsonl"):
+                    raise PermissionError(13, "locked", str(path))
+                return real_open(path, *args, **kwargs)
+
+            with mock.patch.object(Path, "replace", locked_replace), mock.patch("builtins.open", locked_open), \
+                    mock.patch("game.learning.time.sleep"):
+                out = rig.end_round(winner=1)
+            self.assertEqual([r["t"] for r in out], ["round_summary"])
+            self.assertEqual(list(SUMMARY_V.iter_errors(out[0])), [])
+            self.assertTrue(any("profile save skipped" in w for w in L.warnings))
+            self.assertTrue(any("learning file write skipped" in w for w in L.warnings))
+            self.assertFalse(L.profile_path.exists())
+            self.assertEqual(L.round, None)
+            self.assertEqual(len(L.rounds), 1)
+            rig.feed("low_defense", "hit", False)
+            out = rig.end_round(winner=1)
+            self.assertEqual([r["t"] for r in out], ["round_summary"])
+            self.assertTrue(L.profile_path.exists())
+            self.assertEqual(json.loads(L.profile_path.read_text())["habits"]["low_defense"]["hit"][1], 1)
+            lines = L.learning_path.read_text().splitlines()
+            self.assertEqual([json.loads(x)["round"] for x in lines], [2])
+            self.assertIs(Path.replace, real_replace)
+        finally:
+            rig.close()
+
+
 class TacticalIntegrationTest(unittest.TestCase):
     def test_habit_source_and_plan_update(self):
         with tempfile.TemporaryDirectory() as tmp:
