@@ -1,14 +1,14 @@
 # Draft contract change: GET /insights/{session_id}
 
-**Status: draft for four-owner review. Nothing here is in `contracts/`.** Sahil has approved the route and the `contracts/` additions; Garrett has approved the route and still needs to say yes to the `contracts/` additions; Chloe is pending. The contracts PR is opened only after Sahil, Garrett, Chloe and Eric have each approved. Until then the route stays behind `KUMITE_EXPERIMENTAL_INSIGHTS=1` (real analytics) and `--experimental-insights` (mock), and the app keeps its insights source off.
+**Status: draft for four-owner review. Nothing here is in `contracts/`.** Sahil has approved the route and the `contracts/` additions; Chloe has approved the route (with `focus.min_opportunities`) and the `contracts/` additions; Garrett approved the route before `focus.min_opportunities` was added and still needs to accept that field and say yes to the `contracts/` additions. The contracts PR is opened only after Sahil, Garrett, Chloe and Eric have each approved. Until then the route stays behind `KUMITE_EXPERIMENTAL_INSIGHTS=1` (real analytics) and `--experimental-insights` (mock), and the app keeps its insights source off.
 
 ## Approvals
 
 | Owner | Status |
 | --- | --- |
 | Sahil | **Approved, including the `contracts/` additions** (October 18). Route: additive on :8767, reads only files the brain already writes under `DATA_DIR`. Contracts: adding `contracts/insights.schema.json`, its example and one new `api.md` row is fine, provided nothing existing is edited and `python contracts/validate.py` passes in the same commit |
-| Garrett | **Route approved** (October 18, Track C): no additional fields; keep it opt-in until all four approve; this does not approve the current punish calculation. **`contracts/` additions: yes still needed** (Sahil asked Garrett and Chloe for it, per `api.md`) |
-| Chloe | **Approved with one condition, now met** (October 18): add `focus.min_opportunities` so the app doesn't copy the threshold. Added as a required integer in v1; it's additive, so tell Sahil and Garrett. Her optional move-name request is deferred |
+| Garrett | **Route approved** (October 18, Track C): no additional fields; keep it opt-in until all four approve; this does not approve the current punish calculation. **Pending:** his approval predates `focus.min_opportunities`, which his "no additional fields" condition covers, so he needs to accept that field; and his yes on the `contracts/` additions (Sahil asked for it, per `api.md`). On October 18 he asked which field was meant, because the pushed branch (`95b65a6`) does not have it yet |
+| Chloe | **Approved with one condition, now met** (October 18): add `focus.min_opportunities` so the app doesn't copy the threshold. Added as a required integer in v1; it's additive, so tell Sahil and Garrett. Her optional move-name request is deferred. Eric relayed her yes to the `contracts/` additions on October 18 |
 | Eric | Proposer |
 
 Against Sahil's conditions:
@@ -52,6 +52,8 @@ Freezing this does not freeze internal export fields, the focus rule or the five
 >
 > Could each of you reply approve or request changes? Chloe: does it cover what the card needs? Garrett: action text stays marked unreviewed until you approve it, and punish focus stays off. Sahil: it only reads existing files. Once all four approve I'll open the contracts PR (schema, example, one `api.md` row).
 
-## Follow-up to Garrett and Chloe (Eric)
+## Follow-up to Garrett (Eric)
 
-> Sahil approved adding the insights contract: `contracts/insights.schema.json`, `contracts/examples/insights.json` and one new row in `contracts/api.md`, with nothing existing edited and `contracts/validate.py` passing in the same commit. Per `api.md` I need your yes too before I open that PR. Garrett: you've approved the route; is the `contracts/` addition also a yes? Chloe: does the v1 view cover the focus card (`analytics/handoffs/insights-ui.md`), and is the contracts addition a yes? Until then the route stays behind `KUMITE_EXPERIMENTAL_INSIGHTS=1`.
+> The field is `focus.min_opportunities`: a required integer (minimum 1, currently 5) on the `focus` object. It's the number of observations a metric needs before it can be picked as the automatic focus, so the app can show "3 lows seen, need 5" without copying the backend rule. Chloe asked for it as her approval condition. Nothing else changed: no existing field was renamed, removed or retyped, and the internal export already had the threshold. It isn't on the pushed branch yet (PR #25 is at `95b65a6`); it's commit `55a50e4`, which I'll push shortly. Then it's in `analytics/insights_v1.schema.json` under `focus.required` and in `analytics/fixtures/insights/public/real.json` as `"min_opportunities": 5`.
+>
+> Since your approval said no additional fields: are you OK with this one, and is adding the contract (`contracts/insights.schema.json`, its example, one new `api.md` row, nothing existing edited) a yes? Sahil and Chloe have both said yes.
