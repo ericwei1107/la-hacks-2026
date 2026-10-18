@@ -20,18 +20,19 @@ Design: `shell-design.md`
 
 ## The bridge
 
-- [ ] **SHELL-BRIDGE-001**: The preload script shall expose one object to every window's page as `window.kumite`, holding `platform` (the operating system platform as `process.platform` reports it), `services`, `speak` and `transcribe`.
+- [ ] **SHELL-BRIDGE-001**: The preload script shall expose one object to every window's page as `window.kumite`, holding `platform` (the operating system platform as `process.platform` reports it), `services`, `overlay`, `speak` and `transcribe`.
 - [ ] **SHELL-BRIDGE-002**: The `window.kumite.services` object shall hold, for each of `brain`, `replay` and `analytics`, the resolved `url`, its `source`, and its `warning` when one exists.
 - [ ] **SHELL-BRIDGE-003**: The preload script shall obtain `window.kumite.services` from the main process with one synchronous IPC call made while the preload runs, so the object is complete before any page script executes.
-- [ ] **SHELL-BRIDGE-004**: The bridge shall pass to a window no value read from the process environment or `app/.env` other than the three resolved service addresses and their warnings.
+- [ ] **SHELL-BRIDGE-004**: The bridge shall pass to a window no value read from the process environment or `app/.env` other than the three resolved service addresses, their warnings, and the overlay mode.
 - [ ] **SHELL-BRIDGE-005**: When a page calls `window.kumite.speak` with a text, the bridge shall pass the text to the main process's speak call over an asynchronous IPC call and resolve with that call's result.
+- [ ] **SHELL-BRIDGE-007**: The preload script shall set `window.kumite.overlay` to `always` when `KUMITE_OVERLAY` is `1` or `on` in the process environment or `app/.env`, and to `demo` otherwise, obtained from the main process with one synchronous IPC call while the preload runs.
 - [ ] **SHELL-BRIDGE-006**: When a page calls `window.kumite.transcribe` with a recording and its MIME type, the bridge shall pass both to the main process's transcribe call over an asynchronous IPC call and resolve with that call's result.
 
 ## Windows
 
 - [ ] **SHELL-WIN-001**: The main process shall open the main window at 1440 × 900 with a 1024 × 640 minimum, titled "Kumite", loading the renderer's `index.html`, and show it once its first frame is ready.
 - [ ] **SHELL-WIN-002**: Both windows shall load the shared preload with context isolation on, Node integration off and the sandbox on.
-- [ ] **SHELL-WIN-003**: When `KUMITE_OVERLAY` is `1` or `on` in the process environment or `app/.env`, the main process shall open the overlay window, loading the renderer's `overlay.html`; otherwise it shall not open the overlay window.
+- [ ] **SHELL-WIN-003**: Unless `KUMITE_OVERLAY` is `0` or `off` in the process environment or `app/.env`, the main process shall open the overlay window, loading the renderer's `overlay.html`.
 - [ ] **SHELL-WIN-004**: The overlay window shall cover the full bounds of the primary display and be frameless, transparent, shadowless and absent from the taskbar.
 - [ ] **SHELL-WIN-005**: The overlay window shall stay on top at the `screen-saver` level and, on macOS, show on every workspace including full-screen ones.
 - [ ] **SHELL-WIN-006**: The overlay window shall ignore all mouse events and shall not be focusable.
@@ -49,7 +50,8 @@ Design: `shell-design.md`
 | SHELL-ADDR-002, SHELL-ADDR-004 – SHELL-ADDR-013 | `src/main/services.ts` (`resolveServiceAddresses`) |
 | SHELL-ADDR-003 | `src/shared/bridge.ts` (`DEFAULT_SERVICE_URLS`) |
 | SHELL-BRIDGE-001 – SHELL-BRIDGE-004 | `src/preload/index.ts`, answered by `src/main/index.ts` (the `SERVICES_CHANNEL` handler) |
+| SHELL-BRIDGE-007 | `src/preload/index.ts`, answered by `src/main/index.ts` (the `OVERLAY_CHANNEL` handler) with `src/main/services.ts` (`overlayMode`) |
 | SHELL-BRIDGE-005, SHELL-BRIDGE-006 | `src/preload/index.ts`, answered by `src/main/voice.ts` (`handleVoice`) |
 | SHELL-WIN-001, SHELL-WIN-002, SHELL-WIN-009, SHELL-WIN-011 | `src/main/index.ts` (`createMainWindow`) |
 | SHELL-WIN-010 | `src/main/index.ts` (`webPreferences`) |
-| SHELL-WIN-003 – SHELL-WIN-008 | `src/main/index.ts` (`createOverlayWindow`), `src/main/services.ts` (`overlayEnabled`) |
+| SHELL-WIN-003 – SHELL-WIN-008 | `src/main/index.ts` (`createOverlayWindow`), `src/main/services.ts` (`overlayMode`) |

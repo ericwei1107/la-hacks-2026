@@ -22,9 +22,12 @@ export type TranscribeResult =
   | { ok: true; text: string }
   | { ok: false; reason: VoiceFailure; status?: number }
 
+export type OverlayMode = 'always' | 'demo'
+
 export interface KumiteApi {
   platform: string
   services: ServiceAddresses
+  overlay: OverlayMode
   speak: (text: string) => Promise<SpeakResult>
   transcribe: (recording: Uint8Array<ArrayBuffer>, mimeType: string) => Promise<TranscribeResult>
 }
@@ -36,6 +39,8 @@ export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
 }
 
 export const SERVICES_CHANNEL = 'kumite:services'
+
+export const OVERLAY_CHANNEL = 'kumite:overlay'
 
 export const SPEAK_CHANNEL = 'kumite:speak'
 
