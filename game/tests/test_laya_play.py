@@ -169,11 +169,29 @@ class TacticalLayaTest(unittest.TestCase):
             self.assertEqual(ask["prediction"]["low_defense"]["action"], "blocked")
             self.assertTrue(ask["changed"])
             self.assertEqual(rec["tactical"]["boosts"]["mid"]["action"], "blocked")
-        line = fmt_record(recs[0])
-        self.assertIn("laya ", line)
-        self.assertIn("| laya v4 after_block=", line)
-        self.assertIn("low_defense=blocked:", line)
+        for rec in recs:
+            line = fmt_record(rec)
+            boost = rec["tactical"]["boosts"].get(rec["chosen"])
+            if boost:
+                self.assertEqual(line, f"laya decided: target {boost['situation']}={boost['action']} p={boost['p']:.2f} "
+                                       f"-> {rec['chosen']} {rec['tactical']['move']}")
+            else:
+                self.assertIn("| laya v4 after_block=", line)
+                self.assertIn("low_defense=blocked:", line)
+        decided = [fmt_record(r) for r in recs if r["tactical"]["boosts"].get(r["chosen"])]
+        self.assertTrue(any(l.startswith("laya decided: target low_defense=blocked p=") for l in decided))
         self.assertEqual(rig.tactical.laya_stats["answered"], len(recs))
+
+    def test_console_line_shapes(self):
+        base = {"t": "tactical", "round": 1, "frame": 300, "chosen": "mid", "probabilities": {"mid": 0.6},
+                "tactical": {"move": "df+1", "situation": "neutral", "distance_bucket": "close",
+                             "boosts": {"mid": {"situation": "low_defense", "action": "blocked", "p": 0.714, "factor": 1.5}}}}
+        self.assertEqual(fmt_record({**base, "source": "laya"}),
+                         "laya decided: target low_defense=blocked p=0.71 -> mid df+1")
+        habit = fmt_record({**base, "source": "habit"})
+        self.assertTrue(habit.startswith("r1 f   300 habit        mid -> df+1 p=0.6"))
+        unboosted = {**base, "source": "laya", "chosen": "high", "tactical": {**base["tactical"], "laya": {"ready": True, "version": 2, "prediction": {}}}}
+        self.assertTrue(fmt_record(unboosted).startswith("r1 f   300 laya         high -> df+1"))
 
     def test_not_ready_falls_back_to_the_habit_choice(self):
         rig = laya_rig(self.root, FakeOracle(None))

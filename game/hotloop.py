@@ -48,6 +48,10 @@ def fmt_record(rec):
                 f"fixed {rec.get('newly_fixed', [])}; regressed {rec.get('regressed', [])}; {habits or 'no habits yet'}")
     if rec.get("t") == "tactical" and rec.get("source") != "reflex":
         detail = rec.get("tactical") or {}
+        boost = (detail.get("boosts") or {}).get(rec.get("chosen"))
+        if rec.get("source") == "laya" and boost:
+            return (f"laya decided: target {boost['situation']}={boost['action']} p={boost['p']:.2f} "
+                    f"-> {rec.get('chosen')} {detail.get('move')}")
         p = rec.get("probabilities", {}).get(rec.get("chosen"))
         extra = " ".join(f"{k}={v}" for k, v in detail.items()
                          if k in ("situation", "distance_bucket", "frame_advantage", "direction", "hit_level") and v is not None)
